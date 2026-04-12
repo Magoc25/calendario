@@ -4,6 +4,15 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Calendário — Marlon Costa</title>
+<!-- PWA -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#3b5bdb">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Cal MGC">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Serif+Display&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -4036,11 +4045,80 @@ setTimeout(scheduleAlerts,1500);
 // Init Supabase and auto-sync from cloud on page load
 const _sbReady=initSupabase();
 if(_sbReady){
-  syncFromCloud(true).then(()=>{
-    // Re-render after sync in case data changed
-    render();
-  });
+  syncFromCloud(true).then(()=>{render();});
 }
+
+/* ═══════ PWA — SERVICE WORKER ═══════ */
+let _swReg=null;
+
+async function registerSW(){
+  if(!('serviceWorker' in navigator))return;
+  try{
+    _swReg=await navigator.serviceWorker.register('./sw.js',{scope:'./'});
+    console.log('[PWA] Service Worker registrado');
+    // Listen for alert-fired messages from SW
+    navigator.serviceWorker.addEventListener('message',e=>{
+      if(e.data?.type==='ALERT_FIRED'){
+        firedAlerts.add(e.data.key);saveFired();
+      }
+    });
+    // Ping SW to check for missed alerts
+    _swReg.active?.postMessage({type:'PING'});
+    // Register Periodic Background Sync (Android Chrome)
+    if('periodicSync' in _swReg){
+      try{
+        const status=await navigator.permissions.query({name:'periodic-background-sync'});
+        if(status.state==='granted'){
+          await _swReg.periodicSync.register('cal-mgc-alerts',{minInterval:15*60*1000});
+          console.log('[PWA] Periodic Background Sync registrado (15 min)');
+        }
+      }catch(e){console.log('[PWA] Periodic sync não disponível:',e.message);}
+    }
+  }catch(err){console.warn('[PWA] SW não registrado:',err);}
+}
+
+// Send scheduled alerts to SW so it can fire them even when app is closed
+function syncAlertsToSW(){
+  if(!_swReg?.active||!events.length)return;
+  const now=Date.now(),td=todayDs();
+  const tom=new Date();tom.setDate(tom.getDate()+1);
+  const tomStr=ds(tom.getFullYear(),tom.getMonth(),tom.getDate());
+  const swAlerts=[];
+  [td,tomStr].forEach(dStr=>{
+    events.forEach(ev=>{
+      if(ev.alert===''||ev.alert==null||!ev.start)return;
+      if(!getOccurrences(ev,dStr,dStr).includes(dStr))return;
+      const alertMin=parseInt(ev.alert)||0;
+      const[hh,mm]=ev.start.split(':').map(Number);
+      const fireAt=new Date(dStr+'T'+pad(hh)+':'+pad(mm)+':00').getTime()-alertMin*60000;
+      const key=ev.id+'|'+dStr+'|'+alertMin;
+      if(firedAlerts.has(key))return;
+      if(fireAt<now-60000)return;
+      swAlerts.push({key,title:ev.title,category:ev.category||'',time:ev.start,
+        location:ev.location||'',fireAt,evId:ev.id,date:dStr,alertMin});
+    });
+  });
+  if(swAlerts.length){
+    _swReg.active.postMessage({type:'STORE_ALERTS',data:{alerts:swAlerts}});
+  }
+}
+
+// Register SW on load, then sync alerts
+registerSW().then(()=>setTimeout(syncAlertsToSW,2000));
+
+// Re-sync alerts to SW whenever events change
+const _origSave=save;
+// Patch: after save(), sync alerts to SW
+const _patchedSyncAlerts=()=>{setTimeout(syncAlertsToSW,500);};
+document.getElementById('saveBtn').addEventListener('click',_patchedSyncAlerts);
+document.getElementById('deleteBtn').addEventListener('click',_patchedSyncAlerts);
+
+// Handle query params (from PWA shortcuts)
+(()=>{
+  const params=new URLSearchParams(location.search);
+  if(params.get('action')==='new')setTimeout(()=>openNew(null),500);
+  if(params.get('view')==='today'){viewMode='today';render();}
+})();
 </script>
 </body>
 </html>
