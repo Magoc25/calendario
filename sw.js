@@ -22,8 +22,11 @@ self.addEventListener('activate', event => {
   event.waitUntil(clients.claim());
 });
 
-// ── Fetch: serve from cache when offline ───────────────
+// ── Fetch: serve from cache when offline + check alerts ──
 self.addEventListener('fetch', event => {
+  // Every fetch wakes the SW — use it to check pending alerts
+  checkAndFireAlerts('fetch').catch(()=>{});
+
   // Only cache same-origin GET requests
   if (event.request.method !== 'GET') return;
   if (!event.request.url.startsWith(self.location.origin)) return;
@@ -31,7 +34,6 @@ self.addEventListener('fetch', event => {
   event.respondWith(
     caches.match(event.request).then(cached => {
       return cached || fetch(event.request).then(response => {
-        // Cache the HTML file for offline use
         if (event.request.url.includes('calendario_marlon.html') ||
             event.request.url.includes('manifest.json') ||
             event.request.url.includes('icon-')) {
