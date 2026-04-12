@@ -814,6 +814,7 @@ body.comfortable .ev-pill{font-size:11px;padding:3px 5px 3px 7px}
           </div>
         </div>
         <button class="hbtn hbtn-accent" id="notifBtn" title="Alertas">🔔<span class="notif-badge nb-default" id="notifBadge"></span></button>
+        <button class="hbtn" id="fcmBtn" title="Push Notifications Firebase" style="font-size:10px">📲 Push<span class="sync-dot sync-warn" id="fcmDot" style="margin-left:3px"></span></button>
         <button class="hbtn hbtn-accent" id="syncBtn" title="Sincronizar com nuvem">☁️<span class="sync-dot sync-warn" id="syncDot"></span></button>
         <button class="hbtn" id="gcalBtn" title="Google Agenda">
           <span id="gcalBtnIcon">📆</span><span id="gcalBtnLabel" style="font-size:10px;margin-left:3px">Google</span><span class="sync-dot sync-warn" id="gcalDot" style="margin-left:3px"></span>
@@ -4086,10 +4087,11 @@ function fcmIsConfigured(){return !!localStorage.getItem(FCM_CONFIG_KEY);}
 function fcmGetConfig(){try{return JSON.parse(localStorage.getItem(FCM_CONFIG_KEY)||'null');}catch(e){return null;}}
 
 function updateFcmNotifBadge(){
-  // Update the existing notifBtn badge to reflect FCM status if active
   if(fcmIsConfigured()&&fcmToken){
     document.getElementById('notifBadge').className='notif-badge nb-granted';
     document.getElementById('notifBtn').title='Alertas ativos ✓ (FCM + local)';
+    const dot=document.getElementById('fcmDot');
+    if(dot)dot.className='sync-dot sync-ok';
   }
 }
 
@@ -4190,7 +4192,15 @@ async function scheduleFcmAlerts(){
 }
 
 // FCM Config modal wiring
-document.getElementById('fcmClose').addEventListener('click',()=>document.getElementById('fcmOverlay').classList.remove('open'));
+document.getElementById('fcmBtn').addEventListener('click',()=>openFcmModal());
+
+function updateFcmDot(){
+  const dot=document.getElementById('fcmDot');
+  if(!dot)return;
+  if(fcmIsConfigured()&&fcmToken){dot.className='sync-dot sync-ok';}
+  else{dot.className='sync-dot sync-warn';}
+}
+updateFcmDot();
 document.getElementById('fcmCancelBtn').addEventListener('click',()=>document.getElementById('fcmOverlay').classList.remove('open'));
 document.getElementById('fcmOverlay').addEventListener('click',e=>{if(e.target===document.getElementById('fcmOverlay'))document.getElementById('fcmOverlay').classList.remove('open');});
 
