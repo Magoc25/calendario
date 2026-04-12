@@ -19,6 +19,9 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging-compat.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -1167,6 +1170,48 @@ body.comfortable .ev-pill{font-size:11px;padding:3px 5px 3px 7px}
     <div class="modal-title">⭐ Avaliações do Calendário MGC</div>
     <div id="revSummary" class="rev-summary"></div>
     <div class="rev-list" id="revList"></div>
+  </div>
+</div>
+
+<!-- FCM PUSH CONFIG MODAL -->
+<div class="overlay" id="fcmOverlay">
+  <div class="modal" style="width:500px">
+    <button class="modal-close" id="fcmClose">✕</button>
+    <div class="modal-title">🔔 Push Notifications (Firebase)</div>
+    <div id="fcmPanelConfig">
+      <p style="font-size:11.5px;color:var(--muted);margin-bottom:14px;line-height:1.7">
+        Cole abaixo as configurações do seu projeto Firebase para ativar alertas push
+        confiáveis no celular — mesmo com o app fechado.
+      </p>
+      <div class="field"><label>API Key</label><input type="text" id="fcmApiKey" placeholder="AIzaSy..."></div>
+      <div class="field"><label>Project ID</label><input type="text" id="fcmProjectId" placeholder="calendario-mgc-xxxxx"></div>
+      <div class="field"><label>Messaging Sender ID</label><input type="text" id="fcmSenderId" placeholder="123456789012"></div>
+      <div class="field"><label>App ID</label><input type="text" id="fcmAppId" placeholder="1:123456789012:web:abc123..."></div>
+      <div class="field"><label>VAPID Key (Web Push Certificate)</label><input type="text" id="fcmVapidKey" placeholder="BGxxxxxx..."></div>
+      <div id="fcmConfigResult" style="font-size:11px;padding:7px 10px;border-radius:var(--radius-sm);margin-bottom:10px;display:none"></div>
+      <div class="modal-actions">
+        <button class="btn-cancel" id="fcmClearBtn" style="margin-right:auto;color:#e03131;border-color:#fca5a5;display:none">🗑 Remover</button>
+        <button class="btn-cancel" id="fcmCancelBtn">Cancelar</button>
+        <button class="btn-save" id="fcmSaveBtn">💾 Salvar e ativar</button>
+      </div>
+    </div>
+    <div id="fcmPanelActive" style="display:none">
+      <div style="display:flex;align-items:center;gap:10px;padding:10px;background:var(--accent-light);border-radius:var(--radius-sm);border:1px solid var(--accent);margin-bottom:14px">
+        <span style="font-size:20px">✓</span>
+        <div>
+          <div style="font-size:12px;font-weight:700;color:var(--accent)">Push Notifications ativas</div>
+          <div style="font-size:11px;color:var(--muted)">Alertas chegam mesmo com o app fechado</div>
+        </div>
+      </div>
+      <p style="font-size:11px;color:var(--muted);margin-bottom:12px;line-height:1.6">
+        Os alertas do calendário são enviados pelo servidor do Google diretamente para este dispositivo,
+        igual ao WhatsApp e Gmail.
+      </p>
+      <div class="modal-actions">
+        <button class="btn-cancel" id="fcmDeactivateBtn" style="margin-right:auto;color:#e03131;border-color:#fca5a5">🔌 Desativar</button>
+        <button class="btn-save" id="fcmTestBtn">🔔 Enviar notificação de teste</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -4031,6 +4076,209 @@ document.getElementById('reviewsBtn').addEventListener('click',renderReviewsModa
 document.getElementById('reviewsClose').addEventListener('click',()=>document.getElementById('reviewsOverlay').classList.remove('open'));
 document.getElementById('reviewsOverlay').addEventListener('click',e=>{if(e.target===document.getElementById('reviewsOverlay'))document.getElementById('reviewsOverlay').classList.remove('open');});
 
+/* ═══════ FIREBASE CLOUD MESSAGING (FCM) ═══════ */
+const FCM_CONFIG_KEY='cal_fcm_config';
+const FCM_TOKEN_KEY='cal_fcm_token';
+
+let fcmApp=null,fcmMessaging=null,fcmToken=null;
+
+function fcmIsConfigured(){return !!localStorage.getItem(FCM_CONFIG_KEY);}
+function fcmGetConfig(){try{return JSON.parse(localStorage.getItem(FCM_CONFIG_KEY)||'null');}catch(e){return null;}}
+
+function updateFcmNotifBadge(){
+  // Update the existing notifBtn badge to reflect FCM status if active
+  if(fcmIsConfigured()&&fcmToken){
+    document.getElementById('notifBadge').className='notif-badge nb-granted';
+    document.getElementById('notifBtn').title='Alertas ativos ✓ (FCM + local)';
+  }
+}
+
+async function initFCM(){
+  const cfg=fcmGetConfig();
+  if(!cfg)return;
+  if(!window.firebase?.initializeApp)return;
+  try{
+    // Avoid duplicate app
+    try{fcmApp=firebase.app();}catch(e){fcmApp=firebase.initializeApp(cfg);}
+    fcmMessaging=firebase.messaging(fcmApp);
+
+    // Register the firebase-messaging-sw.js
+    if('serviceWorker' in navigator){
+      const swReg=await navigator.serviceWorker.register('./firebase-messaging-sw.js',{scope:'./'});
+      // Send config to the SW
+      swReg.active?.postMessage({type:'FIREBASE_CONFIG',config:cfg});
+      swReg.installing?.addEventListener('statechange',function(){
+        if(this.state==='activated')swReg.active?.postMessage({type:'FIREBASE_CONFIG',config:cfg});
+      });
+    }
+
+    // Get push token
+    const perm=await Notification.requestPermission();
+    if(perm!=='granted')return;
+
+    fcmToken=await fcmMessaging.getToken({vapidKey:cfg.vapidKey}).catch(()=>null);
+    if(!fcmToken){console.warn('[FCM] Não foi possível obter token');return;}
+
+    // Save token to Supabase
+    await saveFcmTokenToSupabase(fcmToken);
+    updateFcmNotifBadge();
+    console.log('[FCM] Push notifications ativas. Token guardado.');
+
+    // Handle foreground messages
+    fcmMessaging.onMessage(payload=>{
+      const {title,body}=payload.notification||{};
+      showNotifCard({
+        title:title||'Calendário MGC',
+        category:'',start:'',location:'',color:'',id:payload.data?.eventId||'_fcm'
+      },payload.data?.date||todayDs(),0);
+    });
+
+    // Handle snooze from SW
+    navigator.serviceWorker.addEventListener('message',e=>{
+      if(e.data?.type==='FCM_SNOOZE'){
+        snoozedAlerts.push({
+          key:e.data.key,showAt:Date.now()+e.data.mins*60000,
+          ev:{title:'Evento',category:'',start:'',location:'',color:'',id:'_snooze'},
+          dateStr:todayDs(),alertMin:0
+        });
+        rescheduleAlerts();
+        toast(`Adiado ${e.data.mins} min`);
+      }
+    });
+
+  }catch(err){console.warn('[FCM] Erro ao inicializar:',err);}
+}
+
+async function saveFcmTokenToSupabase(token){
+  if(!sbClient)return;
+  try{
+    await sbClient.from('push_tokens').upsert(
+      {token,device_info:navigator.userAgent.substring(0,120),last_seen:new Date().toISOString()},
+      {onConflict:'token'}
+    );
+  }catch(e){console.warn('[FCM] Erro ao salvar token:',e);}
+}
+
+async function scheduleFcmAlerts(){
+  if(!sbClient||!fcmIsConfigured())return;
+  const now=Date.now(),td=todayDs();
+  const tom=new Date();tom.setDate(tom.getDate()+1);
+  const tomStr=ds(tom.getFullYear(),tom.getMonth(),tom.getDate());
+  const rows=[];
+  [td,tomStr].forEach(dStr=>{
+    events.forEach(ev=>{
+      if(ev.alert===''||ev.alert==null||!ev.start)return;
+      if(!getOccurrences(ev,dStr,dStr).includes(dStr))return;
+      const alertMin=parseInt(ev.alert)||0;
+      const[hh,mm]=ev.start.split(':').map(Number);
+      const fireAt=new Date(dStr+'T'+pad(hh)+':'+pad(mm)+':00').getTime()-alertMin*60000;
+      const key=ev.id+'|'+dStr+'|'+alertMin;
+      if(fireAt<now-60000)return;
+      rows.push({
+        id:key,event_id:ev.id,title:ev.title,
+        category:ev.category||'',event_time:ev.start,
+        location:ev.location||'',event_date:dStr,
+        fire_at:new Date(fireAt).toISOString(),fired:false
+      });
+    });
+  });
+  if(!rows.length)return;
+  try{
+    await sbClient.from('push_alerts').upsert(rows,{onConflict:'id',ignoreDuplicates:true});
+    console.log(`[FCM] ${rows.length} alerta(s) agendado(s) no Supabase`);
+  }catch(e){console.warn('[FCM] Erro ao agendar alertas:',e);}
+}
+
+// FCM Config modal wiring
+document.getElementById('fcmClose').addEventListener('click',()=>document.getElementById('fcmOverlay').classList.remove('open'));
+document.getElementById('fcmCancelBtn').addEventListener('click',()=>document.getElementById('fcmOverlay').classList.remove('open'));
+document.getElementById('fcmOverlay').addEventListener('click',e=>{if(e.target===document.getElementById('fcmOverlay'))document.getElementById('fcmOverlay').classList.remove('open');});
+
+function openFcmModal(){
+  const cfg=fcmGetConfig();
+  if(cfg&&fcmToken){
+    document.getElementById('fcmPanelConfig').style.display='none';
+    document.getElementById('fcmPanelActive').style.display='';
+  } else {
+    document.getElementById('fcmPanelConfig').style.display='';
+    document.getElementById('fcmPanelActive').style.display='none';
+    if(cfg){
+      document.getElementById('fcmApiKey').value=cfg.apiKey||'';
+      document.getElementById('fcmProjectId').value=cfg.projectId||'';
+      document.getElementById('fcmSenderId').value=cfg.messagingSenderId||'';
+      document.getElementById('fcmAppId').value=cfg.appId||'';
+      document.getElementById('fcmVapidKey').value=cfg.vapidKey||'';
+      document.getElementById('fcmClearBtn').style.display='';
+    }
+  }
+  document.getElementById('fcmOverlay').classList.add('open');
+}
+
+document.getElementById('fcmSaveBtn').addEventListener('click',async()=>{
+  const apiKey=document.getElementById('fcmApiKey').value.trim();
+  const projectId=document.getElementById('fcmProjectId').value.trim();
+  const messagingSenderId=document.getElementById('fcmSenderId').value.trim();
+  const appId=document.getElementById('fcmAppId').value.trim();
+  const vapidKey=document.getElementById('fcmVapidKey').value.trim();
+  const r=document.getElementById('fcmConfigResult');
+  if(!apiKey||!projectId||!messagingSenderId||!appId||!vapidKey){
+    r.style.display='block';r.style.background='#fff1f1';r.style.color='#e03131';
+    r.textContent='⚠️ Preencha todos os campos.';return;
+  }
+  r.style.display='block';r.style.background='#fff8e1';r.style.color='#92400e';
+  r.textContent='🔄 Inicializando Firebase...';
+  const cfg={apiKey,projectId,authDomain:`${projectId}.firebaseapp.com`,
+    messagingSenderId,appId,vapidKey};
+  localStorage.setItem(FCM_CONFIG_KEY,JSON.stringify(cfg));
+  await initFCM();
+  if(fcmToken){
+    r.style.background='#dcfce7';r.style.color='#166534';
+    r.textContent='✓ Push Notifications ativadas com sucesso!';
+    setTimeout(()=>{document.getElementById('fcmOverlay').classList.remove('open');
+      toast('🔔 Push Notifications ativas!');},1500);
+    scheduleFcmAlerts();
+  } else {
+    r.style.background='#fff1f1';r.style.color='#e03131';
+    r.textContent='❌ Não foi possível obter token. Verifique as configurações e as origens autorizadas no Firebase.';
+  }
+});
+
+document.getElementById('fcmClearBtn').addEventListener('click',()=>{
+  if(!confirm('Remover configuração Firebase?'))return;
+  localStorage.removeItem(FCM_CONFIG_KEY);localStorage.removeItem(FCM_TOKEN_KEY);
+  fcmToken=null;fcmApp=null;fcmMessaging=null;
+  document.getElementById('fcmOverlay').classList.remove('open');
+  toast('Firebase removido.');
+});
+
+document.getElementById('fcmDeactivateBtn').addEventListener('click',()=>{
+  if(!confirm('Desativar Push Notifications?'))return;
+  localStorage.removeItem(FCM_CONFIG_KEY);localStorage.removeItem(FCM_TOKEN_KEY);
+  if(sbClient&&fcmToken)sbClient.from('push_tokens').delete().eq('token',fcmToken).then(()=>{});
+  fcmToken=null;fcmApp=null;fcmMessaging=null;
+  document.getElementById('fcmOverlay').classList.remove('open');
+  toast('Push Notifications desativadas.');
+});
+
+document.getElementById('fcmTestBtn').addEventListener('click',async()=>{
+  if(!fcmToken||!sbClient){toast('Configure o Firebase primeiro.');return;}
+  try{
+    await sbClient.from('push_alerts').insert({
+      id:'test_'+Date.now(),event_id:'_test',
+      title:'🔔 Teste de notificação',category:'',
+      event_time:new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}),
+      location:'Calendário MGC',event_date:todayDs(),
+      fire_at:new Date(Date.now()+5000).toISOString(),fired:false
+    });
+    toast('✓ Notificação de teste enviada! Aguarde ~1 min.');
+  }catch(e){toast('Erro: '+e.message);}
+});
+
+// Re-schedule FCM alerts when events change
+const _fcmSync=()=>{if(fcmIsConfigured())setTimeout(scheduleFcmAlerts,1000);};
+document.getElementById('saveBtn').addEventListener('click',_fcmSync);
+document.getElementById('deleteBtn').addEventListener('click',_fcmSync);
+
 applyTheme(currentTheme);
 buildThemeUI();
 updateNotifBadge();
@@ -4047,6 +4295,13 @@ const _sbReady=initSupabase();
 if(_sbReady){
   syncFromCloud(true).then(()=>{render();});
 }
+
+// Init Firebase push notifications if configured
+setTimeout(()=>{
+  initFCM().then(()=>{
+    if(fcmIsConfigured())scheduleFcmAlerts();
+  });
+},2500);
 
 /* ═══════ PWA — SERVICE WORKER ═══════ */
 let _swReg=null;
