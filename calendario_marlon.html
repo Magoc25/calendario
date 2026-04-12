@@ -9,6 +9,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -152,8 +153,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);hei
 .day.drag-over{background:var(--accent-light)!important;outline:2px dashed var(--accent);outline-offset:-2px}
 .day.selected-day{outline:2px solid var(--accent);outline-offset:-2px;background:var(--accent-light)}
 /* Heatmap */
-.day.heat1{background:#fff9f5}.day.heat2{background:#fff1e6}.day.heat3{background:#ffe4cc}.day.heat4{background:#ffd6b0}.day.heat5{background:#ffc894}
-.day.today.heat1,.day.today.heat2,.day.today.heat3,.day.today.heat4,.day.today.heat5{background:var(--today-bg)}
+
 .day-num{font-size:11px;font-weight:500;color:var(--text);margin-bottom:2px;display:flex;align-items:center;gap:3px}
 .day-events{display:flex;flex-direction:column;gap:1px;overflow:hidden}
 /* Holiday */
@@ -474,6 +474,217 @@ body.comfortable .ev-pill{font-size:11px;padding:3px 5px 3px 7px}
   .upcoming-body{padding:8px}
   .sidebar-months{padding:4px 4px 16px}
 }
+/* ── Quick Capture sidebar ── */
+.qc-wrap{padding:8px 8px 4px;border-bottom:1px solid var(--border);flex-shrink:0}
+.qc-label{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px}
+.qc-row{display:flex;gap:4px}
+.qc-input{flex:1;border:1px solid var(--border);border-radius:var(--radius-sm);padding:4px 7px;font-size:11px;background:var(--input-bg);color:var(--text);font-family:'DM Sans',sans-serif;outline:none;min-width:0}
+.qc-input:focus{border-color:var(--accent)}
+.qc-btn{background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);width:26px;height:26px;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:600;transition:background .15s}
+.qc-btn:hover{background:var(--accent-dark)}
+
+/* ── Today view ── */
+.today-view{padding:0!important}
+.tv-wrap{padding:18px 20px;display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.tv-header{grid-column:1/-1;display:flex;align-items:flex-start;justify-content:space-between;padding-bottom:14px;border-bottom:2px solid var(--border)}
+.tv-date-big{font-size:24px;font-weight:700;color:var(--text);line-height:1.1}
+.tv-date-sub{font-size:12px;color:var(--muted);margin-top:3px}
+.tv-greeting{font-size:13px;font-weight:600;color:var(--accent)}
+.tv-panel{background:var(--surface2);border-radius:var(--radius-sm);padding:14px;border:1px solid var(--border)}
+.tv-panel-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.tv-panel.full{grid-column:1/-1}
+
+/* Top 3 */
+.top3-item{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:var(--radius-sm);background:var(--surface);border:1.5px solid var(--border);margin-bottom:6px;transition:all .15s;position:relative;min-height:38px}
+.top3-item.drop-zone{border-style:dashed;border-color:var(--accent);background:var(--accent-light);cursor:copy}
+.top3-item.drag-over-top3{border-color:var(--accent);background:var(--accent-light);transform:scale(1.01);box-shadow:0 2px 10px rgba(59,91,219,.18)}
+.top3-item.done{opacity:.55}
+.top3-num{width:22px;height:22px;border-radius:50%;background:var(--accent);color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.top3-item.done .top3-num{background:var(--muted)}
+.top3-text{font-size:11px;font-weight:500;color:var(--text);flex:1}
+.top3-item.done .top3-text{text-decoration:line-through;color:var(--muted)}
+.top3-hint{font-size:10px;color:var(--hint);font-style:italic;flex:1}
+.top3-check{width:16px;height:16px;border-radius:3px;border:1.5px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:9px;flex-shrink:0;cursor:pointer;transition:all .15s}
+.top3-check.checked{background:var(--accent);border-color:var(--accent);color:#fff}
+.top3-edit{background:none;border:none;color:var(--hint);cursor:pointer;font-size:11px;padding:0 2px;line-height:1;transition:color .15s;flex-shrink:0}
+.top3-edit:hover{color:var(--text)}
+.top3-clear{background:none;border:none;color:var(--hint);cursor:pointer;font-size:11px;padding:0 2px;line-height:1;transition:color .15s;flex-shrink:0}
+.top3-clear:hover{color:#e03131}
+.top3-source{font-size:9px;color:var(--muted);margin-left:2px;flex-shrink:0}
+
+/* Draggable items */
+.tv-draggable{cursor:grab;transition:all .15s}
+.tv-draggable:hover{background:var(--accent-light)!important;border-color:var(--accent)!important}
+.tv-draggable.dragging{opacity:.4;cursor:grabbing}
+.tv-drag-handle{font-size:10px;color:var(--hint);margin-right:4px;flex-shrink:0;cursor:grab}
+.drop-hint{font-size:9.5px;color:var(--muted);text-align:center;padding:4px 0 2px;font-style:italic}
+
+/* Today tasks (quick tasks) */
+.qt-item{display:flex;align-items:center;gap:7px;padding:6px 0;border-bottom:1px solid var(--border)}
+.qt-item:last-child{border-bottom:none}
+.qt-check{width:14px;height:14px;border-radius:3px;border:1.5px solid var(--border);cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:8px;transition:all .15s}
+.qt-check.done{background:var(--accent);border-color:var(--accent);color:#fff}
+.qt-text{font-size:11px;color:var(--text);flex:1}
+.qt-text.done{text-decoration:line-through;color:var(--muted)}
+.qt-del{background:none;border:none;color:var(--hint);cursor:pointer;font-size:11px;padding:0;transition:color .15s}
+.qt-del:hover{color:#e03131}
+.qt-add-row{display:flex;gap:5px;margin-top:8px}
+.qt-add-input{flex:1;border:1px solid var(--border);border-radius:var(--radius-sm);padding:4px 7px;font-size:10.5px;background:var(--input-bg);color:var(--text);font-family:'DM Sans',sans-serif;outline:none}
+.qt-add-input:focus{border-color:var(--accent)}
+.qt-add-btn{background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);padding:4px 10px;font-size:11px;cursor:pointer;font-weight:600}
+
+/* Today events list */
+.tv-ev-item{display:flex;align-items:flex-start;gap:8px;padding:7px 0;border-bottom:1px solid var(--border)}
+.tv-ev-item:last-child{border-bottom:none}
+.tv-ev-time{font-size:10px;font-weight:700;color:var(--accent);min-width:36px;margin-top:1px}
+.tv-ev-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:3px}
+.tv-ev-body{flex:1;min-width:0}
+.tv-ev-title{font-size:11px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tv-ev-cat{font-size:10px;color:var(--muted)}
+
+/* Today routines */
+.tr-item{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)}
+.tr-item:last-child{border-bottom:none}
+.tr-check{width:18px;height:18px;border-radius:50%;border:2px solid var(--border);cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:9px;transition:all .2s}
+.tr-check.done{background:var(--accent);border-color:var(--accent);color:#fff}
+.tr-title{font-size:11px;font-weight:500;color:var(--text);flex:1}
+.tr-title.done{text-decoration:line-through;color:var(--muted)}
+.tr-time{font-size:10px;color:var(--muted);flex-shrink:0}
+
+/* Progress ring */
+.tv-progress{display:flex;align-items:center;gap:12px;margin-bottom:10px}
+.tv-ring{position:relative;width:52px;height:52px;flex-shrink:0}
+.tv-ring svg{transform:rotate(-90deg)}
+.tv-ring-label{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--text)}
+.tv-ring-text{flex:1}
+.tv-ring-pct{font-size:18px;font-weight:700;color:var(--accent);line-height:1}
+.tv-ring-sub{font-size:10px;color:var(--muted)}
+
+/* ── Routines view ── */
+.rv-wrap{padding:18px 20px}
+.rv-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.rv-title{font-size:18px;font-weight:700;color:var(--text)}
+.rv-add-btn{background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);padding:6px 14px;font-size:11px;font-weight:700;cursor:pointer;transition:background .15s}
+.rv-add-btn:hover{background:var(--accent-dark)}
+.routine-card{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:8px;display:flex;align-items:center;gap:10px;transition:all .15s}
+.routine-card:hover{border-color:var(--accent);background:var(--accent-light)}
+.routine-card-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0}
+.routine-card-body{flex:1;min-width:0}
+.routine-card-title{font-size:12px;font-weight:600;color:var(--text)}
+.routine-card-meta{font-size:10px;color:var(--muted);margin-top:2px}
+.routine-card-actions{display:flex;gap:8px;flex-shrink:0}
+.rv-btn-sm{background:none;border:none;cursor:pointer;font-size:11px;color:var(--muted);padding:0;transition:color .15s;font-family:'DM Sans',sans-serif}
+.rv-btn-sm:hover{color:var(--text)}
+.rv-btn-sm.danger:hover{color:#e03131}
+.rv-empty{text-align:center;padding:40px 0;color:var(--muted);font-size:12px}
+
+/* Routine form */
+.rv-form{background:var(--accent-light);border:1.5px solid var(--accent);border-radius:var(--radius-sm);padding:14px;margin-bottom:12px}
+.rv-form-title{font-size:11px;font-weight:700;color:var(--accent);margin-bottom:10px;text-transform:uppercase;letter-spacing:.05em}
+.rv-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}
+.rv-form-row{display:flex;gap:8px;justify-content:flex-end;margin-top:4px}
+.rv-days-row{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8px}
+.rv-day-chip{padding:3px 8px;border-radius:12px;border:1.5px solid var(--border);font-size:10px;font-weight:600;cursor:pointer;background:var(--surface);color:var(--muted);transition:all .15s}
+.rv-day-chip.sel{background:var(--accent);border-color:var(--accent);color:#fff}
+.rv-color-row{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px}
+.rv-color-dot{width:20px;height:20px;border-radius:50%;cursor:pointer;border:2.5px solid transparent;transition:all .15s;flex-shrink:0}
+.rv-color-dot:hover{transform:scale(1.15)}
+.rv-color-dot.sel{border-color:var(--text)}
+
+/* ── Review view ── */
+.rew-wrap{padding:18px 20px;display:grid;grid-template-columns:2fr 1fr;gap:16px}
+.rew-main{}
+.rew-side{}
+.rew-date-nav{display:flex;align-items:center;gap:10px;margin-bottom:16px}
+.rew-date-label{font-size:14px;font-weight:700;color:var(--text)}
+.rew-nav-btn{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);width:26px;height:26px;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text)}
+.rew-nav-btn:hover{background:var(--accent-light);border-color:var(--accent)}
+.rew-field{margin-bottom:14px}
+.rew-field label{display:block;font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px}
+.rew-field textarea{width:100%;border:1px solid var(--border);border-radius:var(--radius-sm);padding:9px 11px;font-size:11.5px;font-family:'DM Sans',sans-serif;color:var(--text);background:var(--input-bg);resize:vertical;min-height:80px;outline:none;line-height:1.6}
+.rew-field textarea:focus{border-color:var(--accent)}
+.rew-rating{display:flex;gap:6px;margin-bottom:14px}
+.rew-star{font-size:22px;cursor:pointer;transition:transform .1s;filter:grayscale(1);opacity:.4}
+.rew-star.active{filter:none;opacity:1;transform:scale(1.1)}
+.rew-save-btn{background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);padding:8px 20px;font-size:11px;font-weight:700;cursor:pointer;transition:background .15s}
+.rew-save-btn:hover{background:var(--accent-dark)}
+.rew-metric-card{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px;margin-bottom:8px;text-align:center}
+.rew-metric-num{font-size:26px;font-weight:700;color:var(--accent);line-height:1}
+.rew-metric-label{font-size:10px;color:var(--muted);margin-top:3px}
+.rew-progress-bar{height:6px;background:var(--border);border-radius:3px;overflow:hidden;margin-top:6px}
+.rew-progress-fill{height:100%;background:var(--accent);border-radius:3px;transition:width .4s ease}
+.rew-history{margin-top:16px}
+.rew-history-title{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px}
+.rew-hist-item{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border);font-size:10.5px;color:var(--muted)}
+.rew-hist-date{font-weight:600;color:var(--text);min-width:80px}
+.rew-hist-stars{flex-shrink:0}
+
+@media(max-width:768px){
+  .tv-wrap{grid-template-columns:1fr;padding:12px}
+  .rew-wrap{grid-template-columns:1fr}
+  .rv-form-grid{grid-template-columns:1fr}
+}
+
+/* ── Footer buttons ── */
+.footer-link-btn{background:none;border:1px solid var(--border);border-radius:20px;color:var(--muted);font-size:9.5px;font-weight:600;cursor:pointer;padding:2px 9px;font-family:'DM Sans',sans-serif;transition:all .15s}
+.footer-link-btn:hover{background:var(--surface2);color:var(--text);border-color:var(--accent)}
+.pix-btn{border-color:#00c244;color:#00863a}
+.pix-btn:hover{background:#e6fff0;color:#00863a;border-color:#00c244}
+
+/* ── PIX Modal ── */
+.pix-modal{width:420px;max-width:calc(100vw - 24px)}
+.pix-amounts{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
+.pix-amount-btn{flex:1;min-width:70px;padding:10px 8px;border:2px solid var(--border);border-radius:var(--radius-sm);background:var(--surface2);color:var(--text);font-size:13px;font-weight:700;cursor:pointer;text-align:center;transition:all .2s;font-family:'DM Sans',sans-serif}
+.pix-amount-btn:hover{border-color:#00c244;background:#e6fff0;color:#00863a}
+.pix-amount-btn.selected{border-color:#00c244;background:#00c244;color:#fff}
+.pix-custom-row{display:flex;gap:6px;align-items:center;margin-bottom:12px}
+.pix-custom-row input{flex:1;border:1px solid var(--border);border-radius:var(--radius-sm);padding:7px 10px;font-size:13px;font-weight:600;background:var(--input-bg);color:var(--text);font-family:'DM Sans',sans-serif;outline:none}
+.pix-custom-row input:focus{border-color:#00c244}
+.pix-qr-wrap{text-align:center;padding:14px;background:var(--surface2);border-radius:var(--radius-sm);border:1px solid var(--border);margin-bottom:10px}
+.pix-qr-wrap canvas,.pix-qr-wrap img{margin:0 auto;display:block}
+.pix-amount-label{font-size:13px;font-weight:700;color:#00863a;margin-bottom:8px}
+.pix-copy-row{display:flex;gap:6px;margin-bottom:10px}
+.pix-code{flex:1;font-size:9px;font-family:'Courier New',monospace;border:1px solid var(--border);border-radius:var(--radius-sm);padding:6px 8px;background:var(--input-bg);color:var(--text);resize:none;height:42px;overflow:hidden}
+.pix-copy-btn{background:#00c244;color:#fff;border:none;border-radius:var(--radius-sm);padding:6px 12px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;font-family:'DM Sans',sans-serif;transition:background .15s;flex-shrink:0}
+.pix-copy-btn:hover{background:#00a83a}
+.pix-paid-btn{width:100%;padding:10px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);font-size:12px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;transition:background .15s;margin-bottom:6px}
+.pix-paid-btn:hover{background:var(--accent-dark)}
+.pix-thankyou{text-align:center;padding:16px 8px}
+.pix-ty-emoji{font-size:40px;margin-bottom:8px}
+.pix-ty-title{font-size:16px;font-weight:700;color:var(--text);margin-bottom:6px}
+.pix-ty-msg{font-size:11.5px;color:var(--muted);line-height:1.6;margin-bottom:14px}
+.pix-rating-stars{display:flex;justify-content:center;gap:8px;margin-bottom:10px}
+.pix-star{font-size:28px;cursor:pointer;transition:transform .12s;filter:grayscale(1);opacity:.4}
+.pix-star.active{filter:none;opacity:1;transform:scale(1.15)}
+.pix-review-form{display:flex;flex-direction:column;gap:7px}
+.pix-review-form input,.pix-review-form textarea{border:1px solid var(--border);border-radius:var(--radius-sm);padding:7px 10px;font-size:11px;font-family:'DM Sans',sans-serif;background:var(--input-bg);color:var(--text);outline:none}
+.pix-review-form textarea{resize:vertical;min-height:64px}
+.pix-review-form input:focus,.pix-review-form textarea:focus{border-color:var(--accent)}
+.pix-submit-btn{background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);padding:8px;font-size:11px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif}
+.pix-submit-btn:hover{background:var(--accent-dark)}
+
+/* ── Reviews Modal ── */
+.rev-modal{width:560px;max-width:calc(100vw - 24px);max-height:85vh;display:flex;flex-direction:column}
+.rev-summary{display:flex;align-items:center;gap:16px;padding:12px 14px;background:var(--surface2);border-radius:var(--radius-sm);border:1px solid var(--border);margin-bottom:14px;flex-shrink:0}
+.rev-big-stars{font-size:28px;font-weight:700;color:#f59f00;line-height:1}
+.rev-big-label{font-size:11px;color:var(--muted);margin-top:2px}
+.rev-star-bars{flex:1}
+.rev-bar-row{display:flex;align-items:center;gap:6px;margin-bottom:3px}
+.rev-bar-label{font-size:9.5px;color:var(--muted);min-width:14px}
+.rev-bar-track{flex:1;height:6px;background:var(--border);border-radius:3px;overflow:hidden}
+.rev-bar-fill{height:100%;background:#f59f00;border-radius:3px}
+.rev-bar-count{font-size:9px;color:var(--muted);min-width:14px}
+.rev-list{overflow-y:auto;flex:1}
+.rev-item{padding:12px 0;border-bottom:1px solid var(--border)}
+.rev-item:last-child{border-bottom:none}
+.rev-item-header{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+.rev-name{font-size:12px;font-weight:700;color:var(--text)}
+.rev-date{font-size:10px;color:var(--muted);margin-left:auto}
+.rev-stars-row{color:#f59f00;font-size:13px}
+.rev-comment{font-size:11px;color:var(--muted);line-height:1.5;margin-top:4px}
+.rev-donated{font-size:9px;background:#e6fff0;color:#00863a;border-radius:10px;padding:1px 7px;font-weight:600}
+.rev-empty{text-align:center;padding:40px 0;color:var(--muted);font-size:12px}
+
 /* ── Notes editor ── */
 .notes-modal{width:700px;max-width:calc(100vw - 24px);max-height:90vh;display:flex;flex-direction:column}
 .notes-header{display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-shrink:0}
@@ -514,6 +725,14 @@ body.comfortable .ev-pill{font-size:11px;padding:3px 5px 3px 7px}
         <button class="snav" id="sYearNext">›</button>
       </div>
     </div>
+    <!-- Quick capture -->
+    <div class="qc-wrap">
+      <div class="qc-label">⚡ Captura rápida</div>
+      <div class="qc-row">
+        <input type="text" id="qcInput" class="qc-input" placeholder="Nova tarefa ou evento…">
+        <button id="qcBtn" class="qc-btn">+</button>
+      </div>
+    </div>
     <!-- Multi-calendar list -->
     <div class="cal-list" id="calendarList">
       <div class="cal-list-head">
@@ -537,9 +756,12 @@ body.comfortable .ev-pill{font-size:11px;padding:3px 5px 3px 7px}
       </div>
       <div class="header-right">
         <div class="view-toggle">
-          <button class="view-btn active" id="btnMonth">Mês</button>
+          <button class="view-btn active" id="btnToday">⚡ Hoje</button>
+          <button class="view-btn" id="btnMonth">Mês</button>
           <button class="view-btn" id="btnWeek">Semana</button>
           <button class="view-btn" id="btnUpcoming">Próximos</button>
+          <button class="view-btn" id="btnRoutines">🔄 Rotinas</button>
+          <button class="view-btn" id="btnReview">📋 Revisão</button>
         </div>
         <div class="search-wrap">
           <span class="search-icon">🔍</span>
@@ -581,6 +803,9 @@ body.comfortable .ev-pill{font-size:11px;padding:3px 5px 3px 7px}
         </div>
         <button class="hbtn hbtn-accent" id="notifBtn" title="Alertas">🔔<span class="notif-badge nb-default" id="notifBadge"></span></button>
         <button class="hbtn hbtn-accent" id="syncBtn" title="Sincronizar com nuvem">☁️<span class="sync-dot sync-warn" id="syncDot"></span></button>
+        <button class="hbtn" id="gcalBtn" title="Google Agenda">
+          <span id="gcalBtnIcon">📆</span><span id="gcalBtnLabel" style="font-size:10px;margin-left:3px">Google</span><span class="sync-dot sync-warn" id="gcalDot" style="margin-left:3px"></span>
+        </button>
         <button class="hbtn hbtn-primary" id="addBtn">+ Novo</button>
       </div>
     </div>
@@ -599,6 +824,10 @@ body.comfortable .ev-pill{font-size:11px;padding:3px 5px 3px 7px}
 
     <div class="cal-wrap">
       <div class="cal-main" id="calMain">
+        <!-- Today view -->
+        <div class="cal-card today-view" id="todayCard" style="display:none;overflow-y:auto">
+          <div id="todayContent"></div>
+        </div>
         <!-- Month view -->
         <div class="cal-card" id="monthCard">
           <div class="cal-grid" id="calGrid"></div>
@@ -611,6 +840,14 @@ body.comfortable .ev-pill{font-size:11px;padding:3px 5px 3px 7px}
         <!-- Upcoming view -->
         <div class="cal-card upcoming-view" id="upcomingCard">
           <div class="upcoming-body" id="upcomingBody"></div>
+        </div>
+        <!-- Routines view -->
+        <div class="cal-card routines-view" id="routinesCard" style="display:none;overflow-y:auto">
+          <div id="routinesContent"></div>
+        </div>
+        <!-- Review view -->
+        <div class="cal-card review-view" id="reviewCard" style="display:none;overflow-y:auto">
+          <div id="reviewContent"></div>
         </div>
         <!-- Footer -->
         <div class="cal-footer">
@@ -627,7 +864,11 @@ body.comfortable .ev-pill{font-size:11px;padding:3px 5px 3px 7px}
             <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
           </div>
           <span class="ev-count" id="evCount"></span>
-          <span style="font-size:9px;color:var(--hint);margin-left:8px;opacity:.5;user-select:none">© MGC</span>
+          <span style="margin-left:auto;display:flex;align-items:center;gap:6px">
+            <button class="footer-link-btn" id="reviewsBtn" title="Ver avaliações">⭐ Avaliações</button>
+            <button class="footer-link-btn pix-btn" id="pixBtn" title="Apoiar o projeto">☕ Apoiar</button>
+            <span style="font-size:9px;color:var(--hint);opacity:.5;user-select:none">© MGC · v2.0.0</span>
+          </span>
         </div>
       </div>
 
@@ -773,6 +1014,153 @@ body.comfortable .ev-pill{font-size:11px;padding:3px 5px 3px 7px}
   </div>
 </div>
 
+<!-- GOOGLE CALENDAR MODAL -->
+<div class="overlay" id="gcalOverlay">
+  <div class="modal" style="width:520px">
+    <button class="modal-close" id="gcalClose">✕</button>
+    <div class="modal-title">📆 Google Agenda</div>
+    <div id="gcalPanelConfig">
+      <p style="font-size:12px;color:var(--muted);margin-bottom:14px;line-height:1.6">
+        Cole abaixo o <b>Client ID</b> do seu projeto no Google Cloud Console.<br>
+        Consulte o guia de configuração para obter esse valor.
+      </p>
+      <div class="field">
+        <label>Client ID do Google Cloud</label>
+        <input type="text" id="gcalClientId" placeholder="123456789-abc.apps.googleusercontent.com" style="font-size:11px">
+      </div>
+      <div class="field">
+        <label>Fuso horário dos eventos</label>
+        <select id="gcalTimezone">
+          <option value="America/Fortaleza">America/Fortaleza (UTC-3, padrão Maranhão)</option>
+          <option value="America/Sao_Paulo">America/Sao_Paulo (UTC-3)</option>
+          <option value="America/Manaus">America/Manaus (UTC-4)</option>
+          <option value="America/Belem">America/Belem (UTC-3)</option>
+          <option value="America/Recife">America/Recife (UTC-3)</option>
+          <option value="America/Bahia">America/Bahia (UTC-3)</option>
+        </select>
+      </div>
+      <div id="gcalConfigResult" style="font-size:11px;padding:7px 10px;border-radius:var(--radius-sm);margin-bottom:10px;display:none"></div>
+      <div class="modal-actions">
+        <button class="btn-cancel" id="gcalClearBtn" style="margin-right:auto;color:#e03131;border-color:#fca5a5;display:none">🗑 Desconectar</button>
+        <button class="btn-cancel" id="gcalCancelBtn">Cancelar</button>
+        <button class="btn-save" id="gcalLoginBtn">🔑 Conectar com Google</button>
+      </div>
+    </div>
+    <div id="gcalPanelSync" style="display:none">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;padding:10px;background:var(--accent-light);border-radius:var(--radius-sm);border:1px solid var(--accent)">
+        <span style="font-size:20px">✓</span>
+        <div>
+          <div style="font-size:12px;font-weight:700;color:var(--accent)">Conectado ao Google Agenda</div>
+          <div style="font-size:11px;color:var(--muted)" id="gcalUserEmail"></div>
+        </div>
+      </div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:12px;line-height:1.7">
+        A sincronização envia seus eventos para o Google e traz eventos do Google para cá.<br>
+        Eventos novos em qualquer lado são adicionados. O mais recente prevalece em conflitos.
+      </div>
+      <div id="gcalSyncResult" style="font-size:11px;padding:7px 10px;border-radius:var(--radius-sm);margin-bottom:10px;display:none"></div>
+      <div style="margin-bottom:12px">
+        <label style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:5px">Qual agenda do Google usar?</label>
+        <select id="gcalCalendarSelect" style="width:100%;padding:6px 9px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--input-bg);color:var(--text);font-size:11px;font-family:'DM Sans',sans-serif">
+          <option value="primary">Agenda principal (primary)</option>
+        </select>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-cancel" id="gcalDisconnectBtn" style="margin-right:auto;color:#e03131;border-color:#fca5a5">🔌 Desconectar</button>
+        <button class="btn-cancel" id="gcalSyncPullBtn">⬇ Importar do Google</button>
+        <button class="btn-save" id="gcalSyncBtn">🔄 Sincronizar agora</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PIX MODAL -->
+<div class="overlay" id="pixOverlay">
+  <div class="modal pix-modal">
+    <button class="modal-close" id="pixClose">✕</button>
+    <div id="pixPanelMain">
+      <div class="modal-title">☕ Apoiar o projeto</div>
+      <p style="font-size:11.5px;color:var(--muted);margin-bottom:12px;line-height:1.6">
+        O Calendário MGC é gratuito e de código aberto. Se ele foi útil para você,
+        considere fazer uma contribuição via PIX para apoiar o desenvolvimento e melhorias contínuas.
+      </p>
+      <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Escolha um valor</div>
+      <div class="pix-amounts">
+        <button class="pix-amount-btn" data-amount="5">R$ 5</button>
+        <button class="pix-amount-btn" data-amount="10">R$ 10</button>
+        <button class="pix-amount-btn" data-amount="20">R$ 20</button>
+        <button class="pix-amount-btn" data-amount="0">Outro valor</button>
+      </div>
+      <div class="pix-custom-row" id="pixCustomRow" style="display:none">
+        <span style="font-size:13px;font-weight:700;color:var(--text)">R$</span>
+        <input type="number" id="pixCustomAmt" min="1" max="999" placeholder="Ex: 15" step="1">
+      </div>
+      <div id="pixQrSection" style="display:none">
+        <div class="pix-qr-wrap">
+          <div class="pix-amount-label" id="pixAmountLabel"></div>
+          <div id="pixQrCode"></div>
+          <div style="font-size:10px;color:var(--muted);margin-top:8px">Escaneie com o app do seu banco</div>
+        </div>
+        <div class="pix-copy-row">
+          <textarea class="pix-code" id="pixCode" readonly></textarea>
+          <button class="pix-copy-btn" id="pixCopyBtn">📋 Copiar</button>
+        </div>
+        <button class="pix-paid-btn" id="pixPaidBtn">✅ Já fiz o PIX! Quero avaliar →</button>
+        <div style="font-size:9.5px;color:var(--hint);text-align:center">Chave PIX: 4c6086a2-4bb8-474b-a4cf-ced8c8d82189 · MGC Dev</div>
+      </div>
+    </div>
+    <!-- Thank you + rating panel -->
+    <div id="pixPanelThanks" style="display:none">
+      <div class="pix-thankyou">
+        <div class="pix-ty-emoji">🙏</div>
+        <div class="pix-ty-title">Muito obrigado pelo apoio!</div>
+        <div class="pix-ty-msg">
+          Sua contribuição é fundamental para manter o Calendário MGC gratuito,<br>
+          atualizado e com novas funcionalidades. <b>Você faz parte deste projeto!</b><br><br>
+          Se quiser, deixe uma avaliação para ajudar outros usuários:
+        </div>
+        <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Como você avalia o Calendário MGC?</div>
+        <div class="pix-rating-stars" id="pixStars">
+          <span class="pix-star" data-s="1">⭐</span>
+          <span class="pix-star" data-s="2">⭐</span>
+          <span class="pix-star" data-s="3">⭐</span>
+          <span class="pix-star" data-s="4">⭐</span>
+          <span class="pix-star" data-s="5">⭐</span>
+        </div>
+        <div class="pix-review-form" id="pixReviewForm">
+          <input type="text" id="pixRevName" placeholder="Seu nome (opcional)">
+          <textarea id="pixRevComment" placeholder="Comentário (opcional) — o que você mais gostou? O que pode melhorar?"></textarea>
+          <button class="pix-submit-btn" id="pixSubmitReview">Enviar avaliação</button>
+          <button class="btn-cancel" id="pixSkipReview" style="font-size:10.5px">Pular, obrigado!</button>
+        </div>
+      </div>
+    </div>
+    <!-- Final thanks panel -->
+    <div id="pixPanelFinal" style="display:none">
+      <div class="pix-thankyou">
+        <div class="pix-ty-emoji">🌟</div>
+        <div class="pix-ty-title">Avaliação enviada!</div>
+        <div class="pix-ty-msg">
+          Obrigado por avaliar e apoiar o Calendário MGC.<br>
+          Suas palavras motivam o desenvolvimento contínuo.<br><br>
+          <b>Até a próxima atualização!</b> — Marlon / MGC Dev
+        </div>
+        <button class="pix-paid-btn" id="pixFinalClose" style="background:#00c244">Fechar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- REVIEWS MODAL -->
+<div class="overlay" id="reviewsOverlay">
+  <div class="modal rev-modal">
+    <button class="modal-close" id="reviewsClose">✕</button>
+    <div class="modal-title">⭐ Avaliações do Calendário MGC</div>
+    <div id="revSummary" class="rev-summary"></div>
+    <div class="rev-list" id="revList"></div>
+  </div>
+</div>
+
 <!-- CONTEXT MENU -->
 <div class="ctx-menu" id="ctxMenu">
   <div class="ctx-item" id="ctxEdit">✏️ Editar evento</div>
@@ -913,7 +1301,7 @@ const CAT_ICONS={'Aula':'📚','Reunião':'👥','Rotina':'🔄','Pessoal':'👤
 let cur=new Date(),sidebarYear=cur.getFullYear();
 let events=[],editingId=null,editingDate=null,selectedColor='#3b5bdb',isDone=false;
 let selectedCustomDays=new Set(),currentTags=[],activeTagFilter='',selectedDay=null;
-let viewMode='month',navDir=1;
+let viewMode='today',navDir=1;
 let categoryColors={};
 
 /* ═══════ MULTI-CALENDAR ═══════ */
@@ -1014,7 +1402,7 @@ const pad=n=>String(n).padStart(2,'0');
 const ds=(y,m,d)=>`${y}-${pad(m+1)}-${pad(d)}`;
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2);
 const save=()=>{localStorage.setItem('cal_marlon_v8',JSON.stringify(events));localStorage.setItem('cal_local_ts',new Date().toISOString());if(sbClient){clearTimeout(_cloudSaveTimer);_cloudSaveTimer=setTimeout(()=>syncToCloud(true),1500);}};
-const saveCatColors=()=>{localStorage.setItem('cal_catcolors',JSON.stringify(categoryColors));localStorage.setItem('cal_local_ts',new Date().toISOString());if(sbClient){clearTimeout(_cloudSaveTimer2||(window._cloudSaveTimer2=null));_cloudSaveTimer2=setTimeout(()=>syncToCloud(true),1500);}};
+const saveCatColors=()=>{localStorage.setItem('cal_catcolors',JSON.stringify(categoryColors));localStorage.setItem('cal_local_ts',new Date().toISOString());if(sbClient){clearTimeout(_cloudSaveTimer2);_cloudSaveTimer2=setTimeout(()=>syncToCloud(true),1500);}};
 const todayDs=()=>{const t=new Date();return ds(t.getFullYear(),t.getMonth(),t.getDate())};
 const toast=msg=>{const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2400)};
 
@@ -1203,9 +1591,7 @@ function renderMonth(){
   const yearsInView=new Set([y]);if(m===0)yearsInView.add(y-1);if(m===11)yearsInView.add(y+1);
   const allHols={};yearsInView.forEach(yr=>Object.assign(allHols,getHolidaysForYear(yr)));
 
-  // Heatmap: find max events in visible days
-  let maxEvs=0;
-  for(let d=1;d<=days;d++){const evs=evMap[ds(y,m,d)]||[];if(evs.length>maxEvs)maxEvs=evs.length;}
+  // Heatmap removed — days use uniform background
 
   function cell(dateStr,num,other){
     const evs=evMap[dateStr]||[];
@@ -1214,10 +1600,8 @@ function renderMonth(){
     const MAX=8;
     let ehtml=evs.slice(0,MAX).map(e=>makePill(e,dateStr)).join('');
     if(evs.length>MAX)ehtml+=`<div class="ev-more">+${evs.length-MAX}</div>`;
-    let heatClass='';
-    if(!other&&maxEvs>0){const ratio=evs.length/maxEvs;if(ratio>.8)heatClass=' heat5';else if(ratio>.6)heatClass=' heat4';else if(ratio>.4)heatClass=' heat3';else if(ratio>.2)heatClass=' heat2';else if(ratio>0)heatClass=' heat1';}
     const isSel=dateStr===selectedDay?' selected-day':'';
-    const cls=['day',other?'other-month':'',dateStr===today?'today':'',hols.length?'has-holiday':'',heatClass,isSel].filter(Boolean).join(' ').replace(/  +/g,' ');
+    const cls=['day',other?'other-month':'',dateStr===today?'today':'',hols.length?'has-holiday':'',isSel].filter(Boolean).join(' ').replace(/  +/g,' ');
     return `<div class="${cls}" data-date="${dateStr}"><div class="day-num"><span class="dnum-s">${num}</span></div>${holHtml}<div class="day-events">${ehtml}</div></div>`;
   }
 
@@ -1581,12 +1965,22 @@ function updateMonthLabel(){
 function render(){
   if(cur.getFullYear()!==sidebarYear)sidebarYear=cur.getFullYear();
   updateMonthLabel();
+  // Show/hide all cards
+  document.getElementById('todayCard').style.display=viewMode==='today'?'flex':'none';
   document.getElementById('monthCard').style.display=viewMode==='month'?'':'none';
   document.getElementById('weekCard').classList.toggle('show',viewMode==='week');
   document.getElementById('upcomingCard').classList.toggle('show',viewMode==='upcoming');
+  document.getElementById('routinesCard').style.display=viewMode==='routines'?'flex':'none';
+  document.getElementById('reviewCard').style.display=viewMode==='review'?'flex':'none';
+  // Also hide footer on non-calendar views
+  const footer=document.querySelector('.cal-footer');
+  if(footer)footer.style.display=['today','routines','review'].includes(viewMode)?'none':'flex';
   if(viewMode==='month')renderMonth();
   else if(viewMode==='week')renderWeek();
-  else renderUpcoming();
+  else if(viewMode==='upcoming')renderUpcoming();
+  else if(viewMode==='today')renderToday();
+  else if(viewMode==='routines')renderRoutinesView();
+  else if(viewMode==='review')renderReviewView();
   renderSidebar();updateProgress();renderTodayPreview();updateTagBar();
   const n=events.length;document.getElementById('evCount').textContent=`${n} evento${n!==1?'s':''}`;
 }
@@ -1995,6 +2389,7 @@ document.getElementById('closeBtn').addEventListener('click',closeModal);
 document.getElementById('overlay').addEventListener('click',e=>{if(e.target===document.getElementById('overlay'))closeModal();});
 
 document.getElementById('saveBtn').addEventListener('click',()=>{
+  try{
   const title=document.getElementById('evTitle').value.trim();if(!title){document.getElementById('evTitle').focus();return;}
   const rrule=document.getElementById('evRrule').value,until=document.getElementById('evUntil').value,alertVal=document.getElementById('evAlert').value;
   const cat=document.getElementById('evCategory').value.trim();
@@ -2019,6 +2414,7 @@ document.getElementById('saveBtn').addEventListener('click',()=>{
   save();closeModal();render();if(selectedDay)renderDayPanel(selectedDay);
   rescheduleAlerts();
   toast(editingId?'Evento atualizado!':'Evento salvo!');
+  }catch(err){console.error('Erro ao salvar evento:',err);toast('Erro ao salvar: '+err.message);}
 });
 
 document.getElementById('deleteBtn').addEventListener('click',()=>{
@@ -2027,11 +2423,13 @@ document.getElementById('deleteBtn').addEventListener('click',()=>{
 });
 
 /* ═══════ VIEW TOGGLE ═══════ */
-['Month','Week','Upcoming'].forEach(v=>{
-  document.getElementById('btn'+v).addEventListener('click',()=>{
+['Today','Month','Week','Upcoming','Routines','Review'].forEach(v=>{
+  const btn=document.getElementById('btn'+v);
+  if(!btn)return;
+  btn.addEventListener('click',()=>{
     viewMode=v.toLowerCase();
     document.querySelectorAll('.view-btn').forEach(b=>b.classList.remove('active'));
-    document.getElementById('btn'+v).classList.add('active');
+    btn.classList.add('active');
     render();
   });
 });
@@ -2119,7 +2517,9 @@ document.getElementById('importIcsFile').addEventListener('change',function(){
 
 /* ═══════ JSON BACKUP ═══════ */
 document.getElementById('exportJsonBtn').addEventListener('click',()=>{
-  const data={version:4,theme:currentTheme,categoryColors,notes:notesStore,exportedAt:new Date().toISOString(),events};
+  const data={version:5,theme:currentTheme,categoryColors,notes:notesStore,
+    routines,quickTasks,reviews,top3:top3Data,
+    exportedAt:new Date().toISOString(),events};
   const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
   const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`backup-calendario-${new Date().toISOString().slice(0,10)}.json`;a.click();URL.revokeObjectURL(url);
   document.getElementById('backupPopup').classList.remove('open');toast('Backup exportado!');
@@ -2371,13 +2771,566 @@ document.getElementById('sidebarOverlay').addEventListener('click',()=>{
   document.getElementById('sidebarOverlay').classList.remove('open');
 });
 
+/* ═══════ ROUTINES SYSTEM ═══════ */
+let routines=[];
+try{routines=JSON.parse(localStorage.getItem('cal_routines')||'[]');}catch(e){}
+function saveRoutines(){
+  localStorage.setItem('cal_routines',JSON.stringify(routines));
+  localStorage.setItem('cal_local_ts',new Date().toISOString());
+  if(sbClient){clearTimeout(_cloudSaveTimer);_cloudSaveTimer=setTimeout(()=>syncToCloud(true),1500);}
+}
+const ROUTINE_COLORS=['#3b5bdb','#0ca678','#e64980','#f59f00','#7048e8','#f76707','#1098ad','#e03131'];
+const FREQ_LABELS={daily:'Todos os dias',weekly:'Semanal',custom:'Dias personalizados'};
+const DOW_SHORT=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+
+function getRoutinesForToday(){
+  const dow=new Date().getDay();
+  return routines.filter(r=>{
+    if(r.freq==='daily')return true;
+    if(r.freq==='weekly')return r.days&&r.days.includes(dow);
+    if(r.freq==='custom')return r.days&&r.days.includes(dow);
+    return false;
+  });
+}
+
+// Routine check-ins: stored per date
+function getRoutineChecks(dateStr){
+  try{return JSON.parse(localStorage.getItem('cal_rchecks_'+dateStr)||'[]');}catch(e){return [];}
+}
+function setRoutineCheck(dateStr,routineId,done){
+  let checks=getRoutineChecks(dateStr);
+  if(done){if(!checks.includes(routineId))checks.push(routineId);}
+  else checks=checks.filter(x=>x!==routineId);
+  localStorage.setItem('cal_rchecks_'+dateStr,JSON.stringify(checks));
+}
+
+/* ── Routines view ── */
+let rvEditId=null,rvSelectedColor=ROUTINE_COLORS[0],rvSelectedDays=new Set([1,2,3,4,5]);
+let rvFormOpen=false;
+
+function renderRoutinesView(){
+  const el=document.getElementById('routinesContent');
+  const today=todayDs();
+  const checks=getRoutineChecks(today);
+  el.innerHTML=`
+    <div class="rv-wrap">
+      <div class="rv-header">
+        <div class="rv-title">🔄 Rotinas</div>
+        <button class="rv-add-btn" id="rvAddBtn">+ Nova rotina</button>
+      </div>
+      <div id="rvForm" style="display:none">
+        <div class="rv-form">
+          <div class="rv-form-title" id="rvFormTitle">Nova rotina</div>
+          <div class="rv-form-grid">
+            <div class="field" style="margin:0"><label>Nome *</label><input type="text" id="rvName" placeholder="Ex: Exercícios, Reunião semanal…"></div>
+            <div class="field" style="margin:0"><label>Horário</label><input type="time" id="rvTime" value="07:00"></div>
+          </div>
+          <div class="field" style="margin-bottom:8px"><label>Frequência</label>
+            <select id="rvFreq">
+              <option value="daily">Todos os dias</option>
+              <option value="weekly" selected>Dias da semana</option>
+              <option value="custom">Personalizado</option>
+            </select>
+          </div>
+          <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px">Dias</div>
+          <div class="rv-days-row" id="rvDays">
+            ${DOW_SHORT.map((d,i)=>`<span class="rv-day-chip${rvSelectedDays.has(i)?' sel':''}" data-dow="${i}">${d}</span>`).join('')}
+          </div>
+          <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px">Cor</div>
+          <div class="rv-color-row" id="rvColors">
+            ${ROUTINE_COLORS.map(c=>`<span class="rv-color-dot${c===rvSelectedColor?' sel':''}" data-c="${c}" style="background:${c}"></span>`).join('')}
+          </div>
+          <div class="rv-form-row">
+            <button class="btn-cancel" id="rvCancelBtn">Cancelar</button>
+            <button class="btn-save" id="rvSaveBtn">Salvar</button>
+          </div>
+        </div>
+      </div>
+      ${routines.length===0?'<div class="rv-empty">Nenhuma rotina ainda.<br>Crie rotinas para acompanhar hábitos e compromissos recorrentes.</div>':
+        routines.map(r=>{
+          const daysLabel=r.freq==='daily'?'Todos os dias':r.freq==='weekly'?'Dias úteis':(r.days||[]).map(d=>DOW_SHORT[d]).join(', ');
+          const todayDone=checks.includes(r.id);
+          return `<div class="routine-card" data-rid="${r.id}">
+            <span class="routine-card-dot" style="background:${r.color||'#3b5bdb'}"></span>
+            <div class="routine-card-body">
+              <div class="routine-card-title">${r.title}</div>
+              <div class="routine-card-meta">${r.time||''} · ${daysLabel}${todayDone?' · ✓ Feito hoje':''}</div>
+            </div>
+            <div class="routine-card-actions">
+              <button class="rv-btn-sm" data-edit="${r.id}">✏️ Editar</button>
+              <button class="rv-btn-sm danger" data-del="${r.id}">🗑</button>
+            </div>
+          </div>`;
+        }).join('')
+      }
+    </div>`;
+
+  document.getElementById('rvAddBtn').addEventListener('click',()=>openRvForm(null));
+  document.querySelectorAll('[data-edit]').forEach(b=>b.addEventListener('click',()=>openRvForm(b.dataset.edit)));
+  document.querySelectorAll('[data-del]').forEach(b=>b.addEventListener('click',()=>{
+    if(!confirm('Excluir esta rotina?'))return;
+    routines=routines.filter(r=>r.id!==b.dataset.del);saveRoutines();renderRoutinesView();
+  }));
+  if(rvFormOpen)openRvForm(rvEditId,true);
+}
+
+function openRvForm(id,keepOpen=false){
+  rvEditId=id;rvFormOpen=true;
+  const form=document.getElementById('rvForm');if(!form)return;
+  form.style.display='';
+  document.getElementById('rvFormTitle').textContent=id?'Editar rotina':'Nova rotina';
+  if(id){
+    const r=routines.find(x=>x.id===id);if(!r)return;
+    document.getElementById('rvName').value=r.title;
+    document.getElementById('rvTime').value=r.time||'07:00';
+    document.getElementById('rvFreq').value=r.freq||'weekly';
+    rvSelectedColor=r.color||ROUTINE_COLORS[0];
+    rvSelectedDays=new Set(r.days||[1,2,3,4,5]);
+  } else {
+    document.getElementById('rvName').value='';
+    document.getElementById('rvTime').value='07:00';
+    document.getElementById('rvFreq').value='weekly';
+    rvSelectedColor=ROUTINE_COLORS[0];
+    rvSelectedDays=new Set([1,2,3,4,5]);
+  }
+  // Wire days
+  document.querySelectorAll('.rv-day-chip').forEach(c=>{
+    c.classList.toggle('sel',rvSelectedDays.has(parseInt(c.dataset.dow)));
+    c.onclick=()=>{const d=parseInt(c.dataset.dow);if(rvSelectedDays.has(d)){rvSelectedDays.delete(d);}else rvSelectedDays.add(d);c.classList.toggle('sel',rvSelectedDays.has(d));};
+  });
+  // Wire colors
+  document.querySelectorAll('.rv-color-dot').forEach(c=>{
+    c.classList.toggle('sel',c.dataset.c===rvSelectedColor);
+    c.onclick=()=>{rvSelectedColor=c.dataset.c;document.querySelectorAll('.rv-color-dot').forEach(x=>x.classList.toggle('sel',x.dataset.c===rvSelectedColor));};
+  });
+  document.getElementById('rvCancelBtn').onclick=()=>{form.style.display='none';rvFormOpen=false;rvEditId=null;};
+  document.getElementById('rvSaveBtn').onclick=()=>{
+    const title=document.getElementById('rvName').value.trim();if(!title)return;
+    const r={
+      id:rvEditId||uid(),title,
+      time:document.getElementById('rvTime').value,
+      freq:document.getElementById('rvFreq').value,
+      days:[...rvSelectedDays].sort(),
+      color:rvSelectedColor
+    };
+    if(rvEditId){const i=routines.findIndex(x=>x.id===rvEditId);if(i>-1)routines[i]=r;}
+    else routines.push(r);
+    saveRoutines();rvFormOpen=false;rvEditId=null;renderRoutinesView();toast(rvEditId?'Rotina atualizada!':'Rotina criada!');
+  };
+}
+
+/* ═══════ QUICK TASKS (today's tasks - lightweight) ═══════ */
+let quickTasks=[];
+try{quickTasks=JSON.parse(localStorage.getItem('cal_qtasks')||'[]');}catch(e){}
+function saveQuickTasks(){
+  localStorage.setItem('cal_qtasks',JSON.stringify(quickTasks));
+  localStorage.setItem('cal_local_ts',new Date().toISOString());
+  if(sbClient){clearTimeout(_cloudSaveTimer);_cloudSaveTimer=setTimeout(()=>syncToCloud(true),1500);}
+}
+
+function getTodayTasks(){
+  const td=todayDs();
+  return quickTasks.filter(t=>t.date===td);
+}
+
+function addQuickTask(title){
+  if(!title.trim())return;
+  quickTasks.push({id:uid(),title:title.trim(),date:todayDs(),done:false});
+  saveQuickTasks();
+}
+
+/* ═══════ TOP 3 FOCUS ═══════ */
+let top3Data={};
+try{top3Data=JSON.parse(localStorage.getItem('cal_top3')||'{}');}catch(e){}
+function saveTop3(){localStorage.setItem('cal_top3',JSON.stringify(top3Data));}
+function getTop3(){return top3Data[todayDs()]||[{text:'',done:false},{text:'',done:false},{text:'',done:false}];}
+
+/* ═══════ TODAY VIEW ═══════ */
+function renderToday(){
+  const td=todayDs();
+  const today=new Date();
+  const dow=['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'][today.getDay()];
+  const dateLabel=`${dow}, ${today.getDate()} de ${MONTHS[today.getMonth()]} de ${today.getFullYear()}`;
+  const hour=today.getHours();
+  const greeting=hour<12?'Bom dia':hour<18?'Boa tarde':'Boa noite';
+
+  // Today's events
+  const evMap=buildEvMap(td,td);
+  const todayEvs=(evMap[td]||[]).sort((a,b)=>(a.start||'').localeCompare(b.start||''));
+
+  // Today's routines + checks
+  const todayRouts=getRoutinesForToday();
+  const checks=getRoutineChecks(td);
+
+  // Top 3
+  const top3=getTop3();
+
+  // Quick tasks
+  const qtasks=getTodayTasks();
+
+  // Progress
+  const totalItems=top3.filter(x=>x.text).length+todayRouts.length+qtasks.length;
+  const doneItems=top3.filter(x=>x.done&&x.text).length+checks.length+qtasks.filter(x=>x.done).length;
+  const pct=totalItems>0?Math.round(doneItems/totalItems*100):0;
+  const r=22,circ=2*Math.PI*r,offset=circ-(pct/100*circ);
+
+  // Helper: icon for source type
+  const srcIcon={event:'📅',routine:'🔄',task:'✅'};
+
+  const el=document.getElementById('todayContent');
+  el.innerHTML=`
+  <div class="tv-wrap">
+    <div class="tv-header">
+      <div>
+        <div class="tv-date-big">${dateLabel}</div>
+        <div class="tv-date-sub">${todayEvs.length} evento${todayEvs.length!==1?'s':''} · ${todayRouts.length} rotina${todayRouts.length!==1?'s':''} · ${qtasks.length} tarefa${qtasks.length!==1?'s':''}</div>
+      </div>
+      <div class="tv-greeting">${greeting}! 👋</div>
+    </div>
+
+    <!-- Top 3 DROP ZONES -->
+    <div class="tv-panel">
+      <div class="tv-panel-title">🎯 Top 3 prioridades do dia
+        <span style="font-weight:400;font-style:italic;text-transform:none;letter-spacing:0;font-size:9.5px;margin-left:6px;color:var(--hint)">Arraste itens abaixo para cá</span>
+      </div>
+      <div class="tv-progress">
+        <div class="tv-ring">
+          <svg width="52" height="52" viewBox="0 0 52 52">
+            <circle cx="26" cy="26" r="${r}" fill="none" stroke="var(--border)" stroke-width="4"/>
+            <circle cx="26" cy="26" r="${r}" fill="none" stroke="var(--accent)" stroke-width="4"
+              stroke-dasharray="${circ.toFixed(1)}" stroke-dashoffset="${offset.toFixed(1)}"
+              stroke-linecap="round" style="transition:stroke-dashoffset .4s"/>
+          </svg>
+          <div class="tv-ring-label">${pct}%</div>
+        </div>
+        <div class="tv-ring-text">
+          <div class="tv-ring-pct">${doneItems}/${totalItems}</div>
+          <div class="tv-ring-sub">itens concluídos hoje</div>
+        </div>
+      </div>
+      ${top3.map((item,i)=>`
+        <div class="top3-item${item.done?' done':''} drop-zone" data-top3slot="${i}">
+          <div class="top3-num">${i+1}</div>
+          ${item.text
+            ?`<span class="top3-text">${srcIcon[item.srcType]||''} ${item.text}</span>
+               <span class="top3-source">${item.srcType==='event'?'evento':item.srcType==='routine'?'rotina':item.srcType==='task'?'tarefa':''}</span>
+               <div class="top3-check${item.done?' checked':''}" data-top3check="${i}">${item.done?'✓':''}</div>
+               <button class="top3-clear" data-top3clear="${i}" title="Remover">✕</button>`
+            :`<span class="top3-hint">Arraste um compromisso, rotina ou tarefa para cá</span>`
+          }
+        </div>`).join('')}
+    </div>
+
+    <!-- Today events — DRAGGABLE -->
+    <div class="tv-panel">
+      <div class="tv-panel-title">📅 Compromissos de hoje</div>
+      <div class="drop-hint">Arraste um evento para o Top 3 ↑</div>
+      ${todayEvs.length===0?'<div style="font-size:11px;color:var(--muted);padding:4px 0 6px">Nenhum evento agendado.</div>':
+        todayEvs.map(ev=>`
+          <div class="tv-ev-item tv-draggable" draggable="true"
+               data-drag-type="event" data-drag-text="${ev.title.replace(/"/g,'&quot;')}"
+               data-drag-id="${ev.id}" data-drag-color="${getCalColor(ev)}">
+            <span class="tv-drag-handle">⠿</span>
+            <div class="tv-ev-time">${ev.start||'—'}</div>
+            <div class="tv-ev-dot" style="background:${getCalColor(ev)}"></div>
+            <div class="tv-ev-body">
+              <div class="tv-ev-title">${ev.title}</div>
+              <div class="tv-ev-cat">${ev.category||''}${ev.location?' · 📍'+ev.location:''}</div>
+            </div>
+          </div>`).join('')}
+      <button class="qt-add-btn" style="margin-top:8px;font-size:10px" onclick="openNew('${td}')">+ Novo evento hoje</button>
+    </div>
+
+    <!-- Routines today — DRAGGABLE -->
+    <div class="tv-panel">
+      <div class="tv-panel-title">🔄 Rotinas de hoje</div>
+      <div class="drop-hint">Arraste uma rotina para o Top 3 ↑</div>
+      ${todayRouts.length===0?`<div style="font-size:11px;color:var(--muted);padding:4px 0 6px">Nenhuma rotina para hoje. <a style="color:var(--accent);cursor:pointer" onclick="document.getElementById('btnRoutines').click()">Criar rotinas →</a></div>`:
+        todayRouts.map(r=>`
+          <div class="tr-item tv-draggable" draggable="true"
+               data-drag-type="routine" data-drag-text="${r.title.replace(/"/g,'&quot;')}"
+               data-drag-id="${r.id}" data-drag-color="${r.color||'var(--accent)'}">
+            <span class="tv-drag-handle">⠿</span>
+            <div class="tr-check${checks.includes(r.id)?' done':''}" data-rcheck="${r.id}"
+                 style="border-color:${r.color||'var(--border)'}${checks.includes(r.id)?';background:'+r.color+';border-color:'+r.color:''}">
+              ${checks.includes(r.id)?'✓':''}
+            </div>
+            <span class="tr-title${checks.includes(r.id)?' done':''}"
+                  style="color:${checks.includes(r.id)?'var(--muted)':r.color||'var(--text)'}">
+              ${r.title}
+            </span>
+            <span class="tr-time">${r.time||''}</span>
+          </div>`).join('')}
+    </div>
+
+    <!-- Quick tasks — DRAGGABLE -->
+    <div class="tv-panel">
+      <div class="tv-panel-title">✅ Tarefas de hoje</div>
+      <div class="drop-hint">Arraste uma tarefa para o Top 3 ↑</div>
+      <div id="tvQtasks">
+        ${qtasks.length===0?'<div style="font-size:11px;color:var(--muted);margin-bottom:6px">Nenhuma tarefa ainda.</div>':
+          qtasks.map(t=>`
+            <div class="qt-item tv-draggable" draggable="true"
+                 data-drag-type="task" data-drag-text="${t.title.replace(/"/g,'&quot;')}"
+                 data-drag-id="${t.id}" data-drag-color="var(--accent)">
+              <span class="tv-drag-handle">⠿</span>
+              <div class="qt-check${t.done?' done':''}" data-qtcheck="${t.id}">${t.done?'✓':''}</div>
+              <span class="qt-text${t.done?' done':''}">${t.title}</span>
+              <button class="qt-del" data-qtdel="${t.id}">✕</button>
+            </div>`).join('')}
+      </div>
+      <div class="qt-add-row">
+        <input type="text" class="qt-add-input" id="tvQtInput" placeholder="Nova tarefa…">
+        <button class="qt-add-btn" id="tvQtBtn">Adicionar</button>
+      </div>
+    </div>
+
+  </div>`;
+
+  // ── DRAG & DROP — draggable items ──
+  let _dragPayload=null;
+  document.querySelectorAll('.tv-draggable').forEach(item=>{
+    item.addEventListener('dragstart',e=>{
+      _dragPayload={
+        type:item.dataset.dragType,
+        text:item.dataset.dragText,
+        id:item.dataset.dragId,
+        color:item.dataset.dragColor
+      };
+      e.dataTransfer.effectAllowed='copy';
+      setTimeout(()=>item.classList.add('dragging'),0);
+    });
+    item.addEventListener('dragend',()=>item.classList.remove('dragging'));
+  });
+
+  // ── DRAG & DROP — Top 3 drop zones ──
+  document.querySelectorAll('[data-top3slot]').forEach(zone=>{
+    zone.addEventListener('dragover',e=>{
+      e.preventDefault();e.dataTransfer.dropEffect='copy';
+      zone.classList.add('drag-over-top3');
+    });
+    zone.addEventListener('dragleave',e=>{
+      if(!zone.contains(e.relatedTarget))zone.classList.remove('drag-over-top3');
+    });
+    zone.addEventListener('drop',e=>{
+      e.preventDefault();zone.classList.remove('drag-over-top3');
+      if(!_dragPayload)return;
+      const slot=parseInt(zone.dataset.top3slot);
+      const cur3=getTop3();
+      cur3[slot]={text:_dragPayload.text,done:false,srcType:_dragPayload.type,srcId:_dragPayload.id,srcColor:_dragPayload.color};
+      top3Data[todayDs()]=cur3;saveTop3();renderToday();
+      toast(`Prioridade ${slot+1} definida: ${_dragPayload.text}`);
+      _dragPayload=null;
+    });
+  });
+
+  // ── Wire Top 3 check & clear ──
+  document.querySelectorAll('[data-top3check]').forEach(el=>{
+    el.addEventListener('click',e=>{e.stopPropagation();
+      const i=parseInt(el.dataset.top3check);
+      const cur3=getTop3();cur3[i].done=!cur3[i].done;
+      top3Data[todayDs()]=cur3;saveTop3();renderToday();
+    });
+  });
+  document.querySelectorAll('[data-top3clear]').forEach(el=>{
+    el.addEventListener('click',e=>{e.stopPropagation();
+      const i=parseInt(el.dataset.top3clear);
+      const cur3=getTop3();cur3[i]={text:'',done:false};
+      top3Data[todayDs()]=cur3;saveTop3();renderToday();
+    });
+  });
+
+  // ── Wire routine checks ──
+  document.querySelectorAll('[data-rcheck]').forEach(el=>{
+    el.addEventListener('click',e=>{
+      if(e.target.closest('.tv-draggable')&&e.target.tagName!=='DIV')return;
+      const rid=el.dataset.rcheck,checks2=getRoutineChecks(td);
+      const done=!checks2.includes(rid);
+      setRoutineCheck(td,rid,done);renderToday();toast(done?'Rotina concluída ✓':'Rotina desmarcada');
+    });
+  });
+
+  // ── Wire quick task checks & delete ──
+  document.querySelectorAll('[data-qtcheck]').forEach(el=>{
+    el.addEventListener('click',e=>{e.stopPropagation();
+      const t=quickTasks.find(x=>x.id===el.dataset.qtcheck);
+      if(t){t.done=!t.done;saveQuickTasks();renderToday();}
+    });
+  });
+  document.querySelectorAll('[data-qtdel]').forEach(el=>{
+    el.addEventListener('click',e=>{e.stopPropagation();
+      quickTasks=quickTasks.filter(x=>x.id!==el.dataset.qtdel);saveQuickTasks();renderToday();
+    });
+  });
+  document.getElementById('tvQtBtn')?.addEventListener('click',()=>{
+    const input=document.getElementById('tvQtInput');
+    addQuickTask(input.value);input.value='';renderToday();
+  });
+  document.getElementById('tvQtInput')?.addEventListener('keydown',e=>{
+    if(e.key==='Enter'){const input=e.target;addQuickTask(input.value);input.value='';renderToday();}
+  });
+}
+
+/* ═══════ REVIEW VIEW ═══════ */
+let reviews={};
+try{reviews=JSON.parse(localStorage.getItem('cal_reviews')||'{}');}catch(e){}
+function saveReviews(){
+  localStorage.setItem('cal_reviews',JSON.stringify(reviews));
+  localStorage.setItem('cal_local_ts',new Date().toISOString());
+  if(sbClient){clearTimeout(_cloudSaveTimer);_cloudSaveTimer=setTimeout(()=>syncToCloud(true),1500);}
+}
+let reviewDate=todayDs();
+
+function renderReviewView(){
+  const el=document.getElementById('reviewContent');
+  const rev=reviews[reviewDate]||{wentWell:'',toImprove:'',rating:0};
+  const td=todayDs();
+
+  // Metrics for selected date
+  const evMap=buildEvMap(reviewDate,reviewDate);
+  const dayEvs=evMap[reviewDate]||[];
+  const doneEvs=dayEvs.filter(ev=>isDoneOn(ev,reviewDate)).length;
+  const pct=dayEvs.length?Math.round(doneEvs/dayEvs.length*100):0;
+  const routs=routines.filter(r=>getRoutinesForToday().find(x=>x.id===r.id));
+  const checks=getRoutineChecks(reviewDate);
+  const routDone=routs.filter(r=>checks.includes(r.id)).length;
+  const qtasks=quickTasks.filter(t=>t.date===reviewDate);
+  const qtDone=qtasks.filter(t=>t.done).length;
+
+  // Recent reviews history
+  const histKeys=Object.keys(reviews).sort().reverse().slice(0,7);
+
+  el.innerHTML=`
+  <div class="rew-wrap">
+    <div class="rew-main">
+      <div class="rew-date-nav">
+        <button class="rew-nav-btn" id="rewPrev">‹</button>
+        <div class="rew-date-label">${reviewDate===td?'Hoje — ':''} ${(() => {const d=new Date(reviewDate+'T12:00:00');return `${['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'][d.getDay()]}, ${d.getDate()} de ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;})()}</div>
+        <button class="rew-nav-btn" id="rewNext" ${reviewDate>=td?'disabled style="opacity:.3"':''}>›</button>
+        ${reviewDate!==td?`<button class="rew-nav-btn" id="rewToday" title="Ir para hoje" style="font-size:10px;width:auto;padding:0 8px">Hoje</button>`:''}
+      </div>
+
+      <!-- Rating -->
+      <div class="rew-field">
+        <label>Como foi o dia?</label>
+        <div class="rew-rating" id="rewRating">
+          ${['😞','😐','🙂','😊','🤩'].map((e,i)=>`<span class="rew-star${rev.rating===i+1?' active':''}" data-r="${i+1}">${e}</span>`).join('')}
+        </div>
+      </div>
+
+      <div class="rew-field">
+        <label>✅ O que foi bem hoje?</label>
+        <textarea id="rewWell" placeholder="Liste conquistas, decisões certas, momentos positivos…">${rev.wentWell||''}</textarea>
+      </div>
+      <div class="rew-field">
+        <label>🔧 O que pode melhorar?</label>
+        <textarea id="rewImprove" placeholder="O que faria diferente? O que ficou pendente?">${rev.toImprove||''}</textarea>
+      </div>
+      <div class="rew-field">
+        <label>💡 Intenção para amanhã</label>
+        <textarea id="rewTomorrow" placeholder="A coisa mais importante para fazer amanhã…">${rev.tomorrow||''}</textarea>
+      </div>
+      <button class="rew-save-btn" id="rewSaveBtn">💾 Salvar revisão</button>
+    </div>
+
+    <div class="rew-side">
+      <div class="rew-metric-card">
+        <div class="rew-metric-num">${pct}%</div>
+        <div class="rew-metric-label">Taxa de conclusão de eventos</div>
+        <div class="rew-progress-bar"><div class="rew-progress-fill" style="width:${pct}%"></div></div>
+      </div>
+      <div class="rew-metric-card">
+        <div class="rew-metric-num" style="color:${routDone===routs.length&&routs.length>0?'#0ca678':'var(--accent)'}">
+          ${routDone}/${routs.length}
+        </div>
+        <div class="rew-metric-label">Rotinas concluídas</div>
+      </div>
+      <div class="rew-metric-card">
+        <div class="rew-metric-num">${qtDone}/${qtasks.length}</div>
+        <div class="rew-metric-label">Tarefas do dia</div>
+      </div>
+      <div class="rew-metric-card">
+        <div class="rew-metric-num">${dayEvs.length}</div>
+        <div class="rew-metric-label">Eventos agendados</div>
+      </div>
+
+      <div class="rew-history">
+        <div class="rew-history-title">Histórico recente</div>
+        ${histKeys.length===0?'<div style="font-size:10px;color:var(--muted)">Nenhuma revisão ainda.</div>':
+          histKeys.map(k=>{
+            const r2=reviews[k];
+            const d=new Date(k+'T12:00:00');
+            const stars=['😞','😐','🙂','😊','🤩'][r2.rating-1]||'—';
+            return `<div class="rew-hist-item">
+              <span class="rew-hist-date">${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()}</span>
+              <span class="rew-hist-stars">${stars}</span>
+              <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r2.wentWell?.split('\n')[0]?.slice(0,30)||'—'}</span>
+            </div>`;
+          }).join('')}
+      </div>
+    </div>
+  </div>`;
+
+  // Wire navigation
+  document.getElementById('rewPrev')?.addEventListener('click',()=>{
+    const d=new Date(reviewDate+'T12:00:00');d.setDate(d.getDate()-1);
+    reviewDate=ds(d.getFullYear(),d.getMonth(),d.getDate());renderReviewView();
+  });
+  document.getElementById('rewNext')?.addEventListener('click',()=>{
+    const d=new Date(reviewDate+'T12:00:00');d.setDate(d.getDate()+1);
+    reviewDate=ds(d.getFullYear(),d.getMonth(),d.getDate());renderReviewView();
+  });
+  document.getElementById('rewToday')?.addEventListener('click',()=>{reviewDate=todayDs();renderReviewView();});
+
+  // Wire rating stars
+  document.querySelectorAll('.rew-star').forEach(s=>{
+    s.addEventListener('click',()=>{
+      const r2=parseInt(s.dataset.r);
+      if(!reviews[reviewDate])reviews[reviewDate]={};
+      reviews[reviewDate].rating=r2;saveReviews();
+      document.querySelectorAll('.rew-star').forEach(x=>x.classList.toggle('active',parseInt(x.dataset.r)===r2));
+    });
+  });
+
+  // Auto-save on blur
+  ['rewWell','rewImprove','rewTomorrow'].forEach(id=>{
+    document.getElementById(id)?.addEventListener('blur',()=>{
+      if(!reviews[reviewDate])reviews[reviewDate]={};
+      reviews[reviewDate].wentWell=document.getElementById('rewWell')?.value||'';
+      reviews[reviewDate].toImprove=document.getElementById('rewImprove')?.value||'';
+      reviews[reviewDate].tomorrow=document.getElementById('rewTomorrow')?.value||'';
+      saveReviews();
+    });
+  });
+
+  document.getElementById('rewSaveBtn')?.addEventListener('click',()=>{
+    if(!reviews[reviewDate])reviews[reviewDate]={};
+    reviews[reviewDate].wentWell=document.getElementById('rewWell')?.value||'';
+    reviews[reviewDate].toImprove=document.getElementById('rewImprove')?.value||'';
+    reviews[reviewDate].tomorrow=document.getElementById('rewTomorrow')?.value||'';
+    saveReviews();toast('Revisão salva!');renderReviewView();
+  });
+}
+
+/* ═══════ QUICK CAPTURE ═══════ */
+document.getElementById('qcBtn').addEventListener('click',()=>{
+  const input=document.getElementById('qcInput');
+  const val=input.value.trim();if(!val)return;
+  // Smart detection: starts with time (08:00) or @ → event, otherwise → task
+  const isEvent=/^(\d{1,2}[:h]\d{0,2})|@/.test(val);
+  if(isEvent){openNew(todayDs());setTimeout(()=>{document.getElementById('evTitle').value=val;},80);}
+  else{addQuickTask(val);if(viewMode==='today')renderToday();}
+  input.value='';toast(isEvent?'Abrindo novo evento…':'Tarefa adicionada!');
+});
+document.getElementById('qcInput').addEventListener('keydown',e=>{
+  if(e.key==='Enter'){document.getElementById('qcBtn').click();}
+});
+
 /* ═══════ KEYBOARD SHORTCUTS ═══════ */
 document.addEventListener('keydown',e=>{
-  // Block if typing in any input, textarea, select, or contenteditable (notes editor)
   const tag=e.target.tagName;
   if(tag==='INPUT'||tag==='TEXTAREA'||tag==='SELECT')return;
   if(e.target.contentEditable==='true')return;
-  // Block if any modal/overlay is open
   if(document.getElementById('overlay').classList.contains('open'))return;
   if(document.getElementById('notesOverlay').classList.contains('open'))return;
   if(document.getElementById('statsOverlay').classList.contains('open'))return;
@@ -2388,9 +3341,12 @@ document.addEventListener('keydown',e=>{
   else if(e.key==='n'||e.key==='N'){openNew(null);}
   else if(e.key==='s'||e.key==='S'){openStats();}
   else if(e.key==='f'||e.key==='F'){document.getElementById('searchInput').focus();}
+  else if(e.key==='0'){document.getElementById('btnToday').click();}
   else if(e.key==='1'){document.getElementById('btnMonth').click();}
   else if(e.key==='2'){document.getElementById('btnWeek').click();}
   else if(e.key==='3'){document.getElementById('btnUpcoming').click();}
+  else if(e.key==='4'){document.getElementById('btnRoutines').click();}
+  else if(e.key==='5'){document.getElementById('btnReview').click();}
 });
 
 /* ═══════ SUPABASE SYNC ═══════ */
@@ -2442,6 +3398,10 @@ function getLocalPayload(){
     category_colors: JSON.stringify(categoryColors),
     calendars: JSON.stringify(calendars),
     theme: currentTheme,
+    routines: JSON.stringify(routines),
+    quick_tasks: JSON.stringify(quickTasks),
+    reviews: JSON.stringify(reviews),
+    top3: JSON.stringify(top3Data),
     updated_at: new Date().toISOString()
   };
 }
@@ -2458,11 +3418,19 @@ function applyRemotePayload(row){
     categoryColors=remoteCatColors;
     if(remoteCalendars&&remoteCalendars.length)calendars=remoteCalendars;
     if(row.theme)applyTheme(row.theme);
-    // Persist locally too
+    if(row.routines)try{const r=JSON.parse(row.routines);if(Array.isArray(r))routines=r;}catch(e){}
+    if(row.quick_tasks)try{const q=JSON.parse(row.quick_tasks);if(Array.isArray(q))quickTasks=q;}catch(e){}
+    if(row.reviews)try{const rv=JSON.parse(row.reviews);if(rv&&typeof rv==='object')reviews=rv;}catch(e){}
+    if(row.top3)try{const t3=JSON.parse(row.top3);if(t3&&typeof t3==='object')top3Data=t3;}catch(e){}
+    // Persist locally
     localStorage.setItem('cal_marlon_v8',row.events||'[]');
     localStorage.setItem('cal_notes',row.notes||'{}');
     localStorage.setItem('cal_catcolors',row.category_colors||'{}');
     if(remoteCalendars)localStorage.setItem('cal_calendars',row.calendars);
+    if(row.routines)localStorage.setItem('cal_routines',row.routines);
+    if(row.quick_tasks)localStorage.setItem('cal_qtasks',row.quick_tasks);
+    if(row.reviews)localStorage.setItem('cal_reviews',row.reviews);
+    if(row.top3)localStorage.setItem('cal_top3',row.top3);
   }catch(e){console.warn('Error applying remote payload',e);}
 }
 
@@ -2516,6 +3484,7 @@ async function syncFromCloud(silent=false){
 
 // Patch save() to also push to cloud (debounced)
 let _cloudSaveTimer=null;
+let _cloudSaveTimer2=null;
 const _localSave=()=>localStorage.setItem('cal_marlon_v8',JSON.stringify(events));
 function _scheduleSbSync(){
   if(sbClient){clearTimeout(_cloudSaveTimer);_cloudSaveTimer=setTimeout(()=>syncToCloud(true),1500);}
@@ -2610,7 +3579,449 @@ document.getElementById('sbClearBtn').addEventListener('click',()=>{
   toast('Configuração removida. Usando modo local.');
 });
 
-/* ═══════ INIT ═══════ */
+/* ═══════ GOOGLE CALENDAR SYNC ═══════ */
+const GCAL_CLIENT_ID_KEY='cal_gcal_client_id';
+const GCAL_TOKEN_KEY='cal_gcal_token';
+const GCAL_TZ_KEY='cal_gcal_tz';
+const GCAL_CAL_KEY='cal_gcal_calendar';
+const GCAL_SCOPE='https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/calendar.readonly';
+const GCAL_API='https://www.googleapis.com/calendar/v3';
+
+let gcalToken=null,gcalTokenExpiry=0,gcalTokenClient=null;
+
+// Restore token from localStorage if still valid
+try{
+  const stored=JSON.parse(localStorage.getItem(GCAL_TOKEN_KEY)||'null');
+  if(stored&&stored.expiry>Date.now()){gcalToken=stored.access_token;gcalTokenExpiry=stored.expiry;}
+}catch(e){}
+
+function gcalIsConnected(){return !!(gcalToken&&gcalTokenExpiry>Date.now());}
+
+function updateGcalBtn(){
+  const dot=document.getElementById('gcalDot');
+  const lbl=document.getElementById('gcalBtnLabel');
+  if(gcalIsConnected()){
+    dot.className='sync-dot sync-ok';
+    if(lbl)lbl.textContent='Google ✓';
+  } else if(localStorage.getItem(GCAL_CLIENT_ID_KEY)){
+    dot.className='sync-dot sync-warn';
+    if(lbl)lbl.textContent='Google';
+  } else {
+    dot.className='sync-dot sync-warn';
+    if(lbl)lbl.textContent='Google';
+  }
+}
+
+function gcalShowPanel(){
+  const clientId=localStorage.getItem(GCAL_CLIENT_ID_KEY)||'';
+  document.getElementById('gcalClientId').value=clientId;
+  document.getElementById('gcalTimezone').value=localStorage.getItem(GCAL_TZ_KEY)||'America/Fortaleza';
+  if(gcalIsConnected()){
+    document.getElementById('gcalPanelConfig').style.display='none';
+    document.getElementById('gcalPanelSync').style.display='';
+    document.getElementById('gcalClearBtn').style.display='';
+    // Load calendar list
+    gcalLoadCalendars();
+  } else {
+    document.getElementById('gcalPanelConfig').style.display='';
+    document.getElementById('gcalPanelSync').style.display='none';
+    document.getElementById('gcalClearBtn').style.display=clientId?'':'none';
+  }
+  document.getElementById('gcalOverlay').classList.add('open');
+}
+
+async function gcalLoadCalendars(){
+  if(!gcalIsConnected())return;
+  try{
+    const res=await fetch(`${GCAL_API}/users/me/calendarList`,{
+      headers:{Authorization:`Bearer ${gcalToken}`}
+    });
+    const data=await res.json();
+    if(data.error){gcalHandleError(data.error);return;}
+    const sel=document.getElementById('gcalCalendarSelect');
+    const saved=localStorage.getItem(GCAL_CAL_KEY)||'primary';
+    sel.innerHTML=(data.items||[]).map(c=>
+      `<option value="${c.id}"${c.id===saved?' selected':''}>${c.summary}${c.primary?' (principal)':''}</option>`
+    ).join('');
+    const emailEl=document.getElementById('gcalUserEmail');
+    const me=(data.items||[]).find(c=>c.primary);
+    if(emailEl&&me)emailEl.textContent=me.id;
+  }catch(e){console.warn('gcalLoadCalendars:',e);}
+}
+
+function gcalHandleError(err){
+  if(err&&(err.code===401||err.status==='UNAUTHENTICATED')){
+    gcalToken=null;gcalTokenExpiry=0;
+    localStorage.removeItem(GCAL_TOKEN_KEY);
+    updateGcalBtn();
+    toast('Sessão Google expirada. Clique em 📆 Google para reconectar.');
+  }
+}
+
+function gcalInitClient(clientId){
+  if(!window.google?.accounts?.oauth2){
+    toast('Biblioteca Google ainda carregando, tente novamente em 2s.');return;
+  }
+  gcalTokenClient=window.google.accounts.oauth2.initTokenClient({
+    client_id:clientId,
+    scope:GCAL_SCOPE,
+    callback:(resp)=>{
+      if(resp.error){
+        const r=document.getElementById('gcalConfigResult');
+        r.style.display='block';r.style.background='#fff1f1';r.style.color='#e03131';
+        r.textContent='❌ Erro: '+resp.error+'. Verifique o Client ID e as origens autorizadas.';
+        return;
+      }
+      gcalToken=resp.access_token;
+      gcalTokenExpiry=Date.now()+(resp.expires_in-60)*1000;
+      localStorage.setItem(GCAL_TOKEN_KEY,JSON.stringify({access_token:gcalToken,expiry:gcalTokenExpiry}));
+      updateGcalBtn();
+      toast('✓ Conectado ao Google Agenda!');
+      gcalShowPanel();
+    }
+  });
+}
+
+// Map MGC event → Google Calendar event
+function mgcToGcal(ev){
+  const tz=localStorage.getItem(GCAL_TZ_KEY)||'America/Fortaleza';
+  const startDate=ev.date,endDate=ev.dateEnd||ev.date;
+  const startTime=ev.start||'08:00',endTime=ev.end||'09:00';
+  const obj={
+    summary:ev.title,
+    description:[ev.desc||'',ev.category?`Categoria: ${ev.category}`:'',
+      (ev.tags||[]).length?`Tags: ${ev.tags.join(', ')}`:''].filter(Boolean).join('\n'),
+    location:ev.location||'',
+  };
+  if(ev.start){
+    obj.start={dateTime:`${startDate}T${startTime}:00`,timeZone:tz};
+    obj.end={dateTime:`${endDate}T${endTime}:00`,timeZone:tz};
+  } else {
+    obj.start={date:startDate};
+    obj.end={date:endDate};
+  }
+  // Recurrence
+  if(ev.rrule&&ev.rrule!=='CUSTOM'){
+    const f={DAILY:'DAILY',WEEKLY:'WEEKLY',BIWEEKLY:'WEEKLY',MONTHLY:'MONTHLY',YEARLY:'YEARLY'};
+    let rule=`RRULE:FREQ=${f[ev.rrule]}${ev.rrule==='BIWEEKLY'?';INTERVAL=2':''}`;
+    if(ev.until)rule+=`;UNTIL=${ev.until.replace(/-/g,'')}T235959Z`;
+    obj.recurrence=[rule];
+  }
+  return obj;
+}
+
+// Map Google Calendar event → MGC event
+function gcalToMgc(gcEv){
+  const startRaw=gcEv.start?.dateTime||gcEv.start?.date||'';
+  const endRaw=gcEv.end?.dateTime||gcEv.end?.date||'';
+  const isAllDay=!gcEv.start?.dateTime;
+  const startDate=startRaw.split('T')[0];
+  const endDate=endRaw.split('T')[0];
+  const startTime=isAllDay?'':startRaw.split('T')[1]?.slice(0,5)||'';
+  const endTime=isAllDay?'':endRaw.split('T')[1]?.slice(0,5)||'';
+  const ev={
+    id:uid(),
+    gcalId:gcEv.id,
+    gcalUpdated:gcEv.updated||new Date().toISOString(),
+    title:gcEv.summary||'(sem título)',
+    desc:gcEv.description||'',
+    location:gcEv.location||'',
+    date:startDate,
+    dateEnd:endDate!==startDate?endDate:startDate,
+    start:startTime,
+    end:endTime,
+    color:'#4285f4',
+    calendarId:'default',
+    category:''
+  };
+  return ev;
+}
+
+// Main sync function
+async function gcalSync(pullOnly=false){
+  if(!gcalIsConnected()){toast('Conecte ao Google primeiro.');return;}
+  const calId=document.getElementById('gcalCalendarSelect')?.value||localStorage.getItem(GCAL_CAL_KEY)||'primary';
+  localStorage.setItem(GCAL_CAL_KEY,calId);
+  const tz=localStorage.getItem(GCAL_TZ_KEY)||'America/Fortaleza';
+  const r=document.getElementById('gcalSyncResult');
+  if(r){r.style.display='block';r.style.background='#fff8e1';r.style.color='#92400e';r.textContent='🔄 Sincronizando...';}
+
+  try{
+    // ── PULL: fetch events from Google (last 6 months + next 12 months) ──
+    const tMin=new Date();tMin.setMonth(tMin.getMonth()-6);
+    const tMax=new Date();tMax.setMonth(tMax.getMonth()+12);
+    const params=new URLSearchParams({
+      timeMin:tMin.toISOString(),
+      timeMax:tMax.toISOString(),
+      singleEvents:'true',
+      maxResults:'500',
+      orderBy:'startTime'
+    });
+    const resp=await fetch(`${GCAL_API}/calendars/${encodeURIComponent(calId)}/events?${params}`,{
+      headers:{Authorization:`Bearer ${gcalToken}`}
+    });
+    const data=await resp.json();
+    if(data.error){gcalHandleError(data.error);if(r)r.textContent='❌ Erro: '+data.error.message;return;}
+
+    const gcalEvents=data.items||[];
+    let added=0,updated=0,pushed=0,errors=0;
+
+    // Map existing events by gcalId for quick lookup
+    const localByGcalId={};
+    events.forEach(ev=>{if(ev.gcalId)localByGcalId[ev.gcalId]=ev;});
+
+    // Process Google events → local
+    for(const gcEv of gcalEvents){
+      if(gcEv.status==='cancelled')continue;
+      const local=localByGcalId[gcEv.id];
+      if(!local){
+        // New event from Google → add locally
+        const newEv=gcalToMgc(gcEv);
+        events.push(newEv);
+        localByGcalId[gcEv.id]=newEv;
+        added++;
+      } else {
+        // Exists — check if Google version is newer
+        const gcUpdated=new Date(gcEv.updated||0).getTime();
+        const localUpdated=new Date(local.gcalUpdated||0).getTime();
+        if(gcUpdated>localUpdated){
+          // Google is newer → update local
+          const updated_ev=gcalToMgc(gcEv);
+          updated_ev.id=local.id; // keep local ID
+          const idx=events.findIndex(e=>e.id===local.id);
+          if(idx>-1)events[idx]={...local,...updated_ev};
+          updated++;
+        }
+      }
+    }
+
+    // ── PUSH: send local events (without gcalId) to Google ──
+    if(!pullOnly){
+      const toPush=events.filter(ev=>!ev.gcalId&&ev.title&&ev.date);
+      for(const ev of toPush){
+        try{
+          const body=mgcToGcal(ev);
+          const res=await fetch(`${GCAL_API}/calendars/${encodeURIComponent(calId)}/events`,{
+            method:'POST',
+            headers:{Authorization:`Bearer ${gcalToken}`,'Content-Type':'application/json'},
+            body:JSON.stringify(body)
+          });
+          const created=await res.json();
+          if(created.id){
+            ev.gcalId=created.id;
+            ev.gcalUpdated=created.updated||new Date().toISOString();
+            pushed++;
+          } else {errors++;}
+        }catch(e){errors++;console.warn('push error:',e);}
+      }
+    }
+
+    save();render();updateGcalBtn();
+    const msg=pullOnly
+      ?`✓ Importado do Google: ${added} novo${added!==1?'s':''}, ${updated} atualizado${updated!==1?'s':''}`
+      :`✓ Sync concluído: ${added} importado${added!==1?'s':''} · ${updated} atualizado${updated!==1?'s':''} · ${pushed} enviado${pushed!==1?'s':''}${errors?` · ${errors} erro(s)`:''}`;
+    if(r){r.style.background='#dcfce7';r.style.color='#166534';r.textContent=msg;}
+    toast(msg);
+
+  }catch(e){
+    if(r){r.style.background='#fff1f1';r.style.color='#e03131';r.textContent='❌ Erro: '+e.message;}
+    console.error('gcalSync error:',e);
+  }
+}
+
+// Wire Google button
+document.getElementById('gcalBtn').addEventListener('click',()=>gcalShowPanel());
+document.getElementById('gcalClose').addEventListener('click',()=>document.getElementById('gcalOverlay').classList.remove('open'));
+document.getElementById('gcalOverlay').addEventListener('click',e=>{if(e.target===document.getElementById('gcalOverlay'))document.getElementById('gcalOverlay').classList.remove('open');});
+document.getElementById('gcalCancelBtn').addEventListener('click',()=>document.getElementById('gcalOverlay').classList.remove('open'));
+
+document.getElementById('gcalLoginBtn').addEventListener('click',()=>{
+  const clientId=document.getElementById('gcalClientId').value.trim();
+  const tz=document.getElementById('gcalTimezone').value;
+  if(!clientId){
+    const r=document.getElementById('gcalConfigResult');
+    r.style.display='block';r.style.background='#fff1f1';r.style.color='#e03131';
+    r.textContent='⚠️ Cole o Client ID antes de continuar.';
+    return;
+  }
+  localStorage.setItem(GCAL_CLIENT_ID_KEY,clientId);
+  localStorage.setItem(GCAL_TZ_KEY,tz);
+  const r=document.getElementById('gcalConfigResult');
+  r.style.display='block';r.style.background='#fff8e1';r.style.color='#92400e';
+  r.textContent='🔄 Inicializando cliente Google...';
+  gcalInitClient(clientId);
+  setTimeout(()=>{
+    if(gcalTokenClient){
+      r.textContent='🔑 Abrindo login do Google...';
+      gcalTokenClient.requestAccessToken();
+    } else {
+      r.textContent='⚠️ Biblioteca Google ainda carregando. Aguarde 3 segundos e tente novamente.';
+    }
+  },800);
+});
+
+document.getElementById('gcalClearBtn').addEventListener('click',()=>{
+  localStorage.removeItem(GCAL_CLIENT_ID_KEY);
+  localStorage.removeItem(GCAL_TOKEN_KEY);
+  localStorage.removeItem(GCAL_TZ_KEY);
+  gcalToken=null;gcalTokenExpiry=0;gcalTokenClient=null;
+  updateGcalBtn();
+  document.getElementById('gcalOverlay').classList.remove('open');
+  toast('Configuração Google removida.');
+});
+
+document.getElementById('gcalDisconnectBtn').addEventListener('click',()=>{
+  if(!confirm('Desconectar do Google Agenda? Os eventos já sincronizados ficam salvos localmente.'))return;
+  gcalToken=null;gcalTokenExpiry=0;
+  localStorage.removeItem(GCAL_TOKEN_KEY);
+  updateGcalBtn();
+  document.getElementById('gcalOverlay').classList.remove('open');
+  toast('Desconectado do Google Agenda.');
+});
+
+document.getElementById('gcalSyncBtn').addEventListener('click',()=>gcalSync(false));
+document.getElementById('gcalSyncPullBtn').addEventListener('click',()=>gcalSync(true));
+
+// Auto-init client if Client ID already saved
+window.addEventListener('load',()=>{
+  const clientId=localStorage.getItem(GCAL_CLIENT_ID_KEY);
+  if(clientId&&window.google?.accounts?.oauth2){
+    gcalInitClient(clientId);
+  }
+  // Try again after 2s if library not yet loaded
+  setTimeout(()=>{
+    const cid=localStorage.getItem(GCAL_CLIENT_ID_KEY);
+    if(cid&&!gcalTokenClient&&window.google?.accounts?.oauth2){gcalInitClient(cid);}
+    updateGcalBtn();
+  },2000);
+});
+updateGcalBtn();
+
+/* ═══════ PIX & REVIEWS SYSTEM ═══════ */
+const PIX_KEY='4c6086a2-4bb8-474b-a4cf-ced8c8d82189';
+const PIX_NAME='MGC Dev';
+const PIX_CITY='Sao Raimundo';
+
+function pixEmv(key,name,city,amount){
+  const f=(id,val)=>{const v=String(val);return id+String(v.length).padStart(2,'0')+v;};
+  const mai=f('26',f('00','BR.GOV.BCB.PIX')+f('01',key));
+  const adf=f('62',f('05','***'));
+  let s='';
+  s+=f('00','01');s+=mai;s+=f('52','0000');s+=f('53','986');
+  if(amount&&parseFloat(amount)>0)s+=f('54',parseFloat(amount).toFixed(2));
+  s+=f('58','BR');s+=f('59',name.substring(0,25));s+=f('60',city.substring(0,15));
+  s+=adf;s+='6304';
+  let crc=0xFFFF;
+  for(let i=0;i<s.length;i++){crc^=s.charCodeAt(i)<<8;for(let j=0;j<8;j++){crc=crc&0x8000?(crc<<1)^0x1021:crc<<1;crc&=0xFFFF;}}
+  return s+crc.toString(16).toUpperCase().padStart(4,'0');
+}
+
+let appReviews=[];
+try{appReviews=JSON.parse(localStorage.getItem('cal_app_reviews')||'[]');}catch(e){}
+function saveAppReviews(){
+  localStorage.setItem('cal_app_reviews',JSON.stringify(appReviews));
+  if(sbClient){clearTimeout(_cloudSaveTimer);_cloudSaveTimer=setTimeout(()=>syncToCloud(true),1500);}
+}
+
+let pixSelectedAmount=0,pixSelectedRating=0;
+
+function renderPixQr(amount){
+  pixSelectedAmount=amount;
+  const code=pixEmv(PIX_KEY,PIX_NAME,PIX_CITY,amount);
+  document.getElementById('pixCode').value=code;
+  document.getElementById('pixAmountLabel').textContent=amount>0?`R$ ${amount.toFixed(2).replace('.',',')}`:' Valor livre';
+  const qrDiv=document.getElementById('pixQrCode');qrDiv.innerHTML='';
+  try{new QRCode(qrDiv,{text:code,width:180,height:180,colorDark:'#1a1f36',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.M});}
+  catch(e){qrDiv.innerHTML='<p style="font-size:11px;color:var(--muted)">Use o código abaixo para pagar.</p>';}
+  document.getElementById('pixQrSection').style.display='';
+}
+
+function openPixModal(){
+  pixSelectedAmount=0;pixSelectedRating=0;
+  document.getElementById('pixPanelMain').style.display='';
+  document.getElementById('pixPanelThanks').style.display='none';
+  document.getElementById('pixPanelFinal').style.display='none';
+  document.getElementById('pixQrSection').style.display='none';
+  document.getElementById('pixCustomRow').style.display='none';
+  document.querySelectorAll('.pix-amount-btn').forEach(b=>b.classList.remove('selected'));
+  document.querySelectorAll('.pix-star').forEach(s=>s.classList.remove('active'));
+  document.getElementById('pixRevName').value='';
+  document.getElementById('pixRevComment').value='';
+  document.getElementById('pixOverlay').classList.add('open');
+}
+
+document.getElementById('pixBtn').addEventListener('click',openPixModal);
+document.getElementById('pixClose').addEventListener('click',()=>document.getElementById('pixOverlay').classList.remove('open'));
+document.getElementById('pixOverlay').addEventListener('click',e=>{if(e.target===document.getElementById('pixOverlay'))document.getElementById('pixOverlay').classList.remove('open');});
+
+document.querySelectorAll('.pix-amount-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('.pix-amount-btn').forEach(b=>b.classList.remove('selected'));
+    btn.classList.add('selected');
+    const amt=parseFloat(btn.dataset.amount);
+    if(amt===0){document.getElementById('pixCustomRow').style.display='flex';document.getElementById('pixQrSection').style.display='none';document.getElementById('pixCustomAmt').focus();}
+    else{document.getElementById('pixCustomRow').style.display='none';renderPixQr(amt);}
+  });
+});
+document.getElementById('pixCustomAmt').addEventListener('input',function(){const val=parseFloat(this.value);if(val>0)renderPixQr(val);});
+document.getElementById('pixCustomAmt').addEventListener('keydown',e=>{if(e.key==='Enter'){const val=parseFloat(document.getElementById('pixCustomAmt').value);if(val>0)renderPixQr(val);}});
+document.getElementById('pixCopyBtn').addEventListener('click',()=>{
+  const code=document.getElementById('pixCode').value;
+  navigator.clipboard.writeText(code).then(()=>toast('Código PIX copiado!')).catch(()=>{document.getElementById('pixCode').select();document.execCommand('copy');toast('Código PIX copiado!');});
+});
+document.getElementById('pixPaidBtn').addEventListener('click',()=>{
+  document.getElementById('pixPanelMain').style.display='none';
+  document.getElementById('pixPanelThanks').style.display='';
+});
+
+document.querySelectorAll('.pix-star').forEach(s=>{
+  s.addEventListener('click',()=>{
+    pixSelectedRating=parseInt(s.dataset.s);
+    document.querySelectorAll('.pix-star').forEach(x=>x.classList.toggle('active',parseInt(x.dataset.s)<=pixSelectedRating));
+  });
+  s.addEventListener('mouseover',()=>{const n=parseInt(s.dataset.s);document.querySelectorAll('.pix-star').forEach(x=>{x.style.opacity=parseInt(x.dataset.s)<=n?'1':'.3';});});
+  s.addEventListener('mouseout',()=>{document.querySelectorAll('.pix-star').forEach(x=>{x.style.opacity='';});});
+});
+
+function submitReview(donated=true){
+  const name=document.getElementById('pixRevName').value.trim()||'Anônimo';
+  const comment=document.getElementById('pixRevComment').value.trim();
+  const stars=pixSelectedRating;
+  if(stars===0&&!comment){document.getElementById('pixOverlay').classList.remove('open');return;}
+  appReviews.unshift({id:uid(),name,comment,stars,donated,date:todayDs(),ts:new Date().toISOString()});
+  saveAppReviews();
+  document.getElementById('pixPanelThanks').style.display='none';
+  document.getElementById('pixPanelFinal').style.display='';
+}
+
+document.getElementById('pixSubmitReview').addEventListener('click',()=>submitReview(true));
+document.getElementById('pixSkipReview').addEventListener('click',()=>document.getElementById('pixOverlay').classList.remove('open'));
+document.getElementById('pixFinalClose').addEventListener('click',()=>document.getElementById('pixOverlay').classList.remove('open'));
+
+function renderReviewsModal(){
+  const ratedReviews=appReviews.filter(r=>r.stars>0);
+  const avg=ratedReviews.length?ratedReviews.reduce((s,r)=>s+r.stars,0)/ratedReviews.length:0;
+  const bars=[5,4,3,2,1].map(n=>({n,cnt:ratedReviews.filter(r=>r.stars===n).length,pct:ratedReviews.length?Math.round(ratedReviews.filter(r=>r.stars===n).length/ratedReviews.length*100):0}));
+  const summaryEl=document.getElementById('revSummary');
+  summaryEl.innerHTML=appReviews.length===0?'<div style="font-size:11px;color:var(--muted)">Nenhuma avaliação ainda. Seja o primeiro!</div>':`
+    <div><div class="rev-big-stars">${avg>0?avg.toFixed(1):'—'}</div>
+    <div style="color:#f59f00;font-size:16px">${'⭐'.repeat(Math.round(avg))}</div>
+    <div class="rev-big-label">${ratedReviews.length} avaliação${ratedReviews.length!==1?'ões':''}</div></div>
+    <div class="rev-star-bars">${bars.map(b=>`<div class="rev-bar-row"><span class="rev-bar-label">${b.n}⭐</span><div class="rev-bar-track"><div class="rev-bar-fill" style="width:${b.pct}%"></div></div><span class="rev-bar-count">${b.cnt}</span></div>`).join('')}</div>
+    <div style="text-align:center;font-size:10px;color:var(--muted)">${appReviews.length} usuário${appReviews.length!==1?'s':''}<br>apoiaram</div>`;
+  const listEl=document.getElementById('revList');
+  listEl.innerHTML=appReviews.length===0?'<div class="rev-empty">Nenhuma avaliação ainda.<br><span style="font-size:10px">Clique em ☕ Apoiar para deixar a sua!</span></div>':
+    appReviews.map(r=>`<div class="rev-item">
+      <div class="rev-item-header"><div class="rev-name">${r.name}</div>${r.donated?'<span class="rev-donated">✓ Apoiou</span>':''}
+      <div class="rev-date">${r.date?r.date.split('-').reverse().join('/'):'—'}</div></div>
+      ${r.stars>0?`<div class="rev-stars-row">${'⭐'.repeat(r.stars)}${'☆'.repeat(5-r.stars)}</div>`:''}
+      ${r.comment?`<div class="rev-comment">"${r.comment}"</div>`:''}</div>`).join('');
+  document.getElementById('reviewsOverlay').classList.add('open');
+}
+document.getElementById('reviewsBtn').addEventListener('click',renderReviewsModal);
+document.getElementById('reviewsClose').addEventListener('click',()=>document.getElementById('reviewsOverlay').classList.remove('open'));
+document.getElementById('reviewsOverlay').addEventListener('click',e=>{if(e.target===document.getElementById('reviewsOverlay'))document.getElementById('reviewsOverlay').classList.remove('open');});
+
 applyTheme(currentTheme);
 buildThemeUI();
 updateNotifBadge();
