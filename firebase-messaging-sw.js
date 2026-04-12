@@ -35,8 +35,8 @@ function initFirebase() {
 
       self.registration.showNotification(title || '🔔 Calendário MGC', {
         body: body || 'Você tem um compromisso agora.',
-        icon: '/calendario/icon-192.png',
-        badge: '/calendario/icon-192.png',
+        icon: './icon-192.png',
+        badge: './icon-192.png',
         tag: tag || notifData.key || 'cal-mgc-alert',
         requireInteraction: true,
         vibrate: [200, 100, 200, 100, 200],
