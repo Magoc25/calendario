@@ -1,0 +1,43 @@
+{
+  "name": "Calendário MGC",
+  "short_name": "Cal MGC",
+  "description": "Calendário pessoal com agenda, rotinas, notas e sincronização em nuvem",
+  "start_url": "./calendario_marlon.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#eef1f8",
+  "theme_color": "#3b5bdb",
+  "lang": "pt-BR",
+  "categories": ["productivity", "utilities"],
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Novo Evento",
+      "short_name": "Novo",
+      "description": "Criar novo evento",
+      "url": "./calendario_marlon.html?action=new",
+      "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Vista Hoje",
+      "short_name": "Hoje",
+      "description": "Ver agenda de hoje",
+      "url": "./calendario_marlon.html?view=today",
+      "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}
