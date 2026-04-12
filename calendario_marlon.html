@@ -4051,35 +4051,66 @@ if(_sbReady){
 /* ═══════ PWA — SERVICE WORKER ═══════ */
 let _swReg=null;
 
+// Helper: get active SW controller (handles installing/waiting states)
+function getActiveSW(){
+  if(_swReg?.active)return _swReg.active;
+  if(navigator.serviceWorker?.controller)return navigator.serviceWorker.controller;
+  return null;
+}
+
 async function registerSW(){
   if(!('serviceWorker' in navigator))return;
   try{
     _swReg=await navigator.serviceWorker.register('./sw.js',{scope:'./'});
-    console.log('[PWA] Service Worker registrado');
-    // Listen for alert-fired messages from SW
+    console.log('[PWA] Service Worker registrado, state:',_swReg.active?.state||'installing');
+
+    // If SW is installing, wait for it to activate
+    if(!_swReg.active){
+      await new Promise(resolve=>{
+        const sw=_swReg.installing||_swReg.waiting;
+        if(!sw){resolve();return;}
+        sw.addEventListener('statechange',function(){
+          if(this.state==='activated'){resolve();}
+        });
+      });
+    }
+
+    // Listen for messages from SW
     navigator.serviceWorker.addEventListener('message',e=>{
       if(e.data?.type==='ALERT_FIRED'){
         firedAlerts.add(e.data.key);saveFired();
       }
+      if(e.data?.type==='PONG'){
+        console.log('[PWA] SW respondeu ao ping');
+      }
     });
+
     // Ping SW to check for missed alerts
-    _swReg.active?.postMessage({type:'PING'});
-    // Register Periodic Background Sync (Android Chrome)
+    setTimeout(()=>getActiveSW()?.postMessage({type:'PING'}),500);
+
+    // Register Periodic Background Sync (Android Chrome PWA)
     if('periodicSync' in _swReg){
       try{
         const status=await navigator.permissions.query({name:'periodic-background-sync'});
         if(status.state==='granted'){
           await _swReg.periodicSync.register('cal-mgc-alerts',{minInterval:15*60*1000});
           console.log('[PWA] Periodic Background Sync registrado (15 min)');
+        }else{
+          console.log('[PWA] Periodic sync sem permissão, state:',status.state);
         }
       }catch(e){console.log('[PWA] Periodic sync não disponível:',e.message);}
     }
+
+    // Sync alerts right after registration
+    setTimeout(syncAlertsToSW,1000);
+
   }catch(err){console.warn('[PWA] SW não registrado:',err);}
 }
 
-// Send scheduled alerts to SW so it can fire them even when app is closed
+// Send scheduled alerts to SW so it fires them even when app is minimized/closed
 function syncAlertsToSW(){
-  if(!_swReg?.active||!events.length)return;
+  const sw=getActiveSW();
+  if(!sw||!events.length)return;
   const now=Date.now(),td=todayDs();
   const tom=new Date();tom.setDate(tom.getDate()+1);
   const tomStr=ds(tom.getFullYear(),tom.getMonth(),tom.getDate());
@@ -4093,22 +4124,30 @@ function syncAlertsToSW(){
       const fireAt=new Date(dStr+'T'+pad(hh)+':'+pad(mm)+':00').getTime()-alertMin*60000;
       const key=ev.id+'|'+dStr+'|'+alertMin;
       if(firedAlerts.has(key))return;
-      if(fireAt<now-60000)return;
+      if(fireAt<now-60000)return; // skip if more than 1 min past
       swAlerts.push({key,title:ev.title,category:ev.category||'',time:ev.start,
         location:ev.location||'',fireAt,evId:ev.id,date:dStr,alertMin});
     });
   });
   if(swAlerts.length){
-    _swReg.active.postMessage({type:'STORE_ALERTS',data:{alerts:swAlerts}});
+    sw.postMessage({type:'STORE_ALERTS',data:{alerts:swAlerts}});
+    console.log('[PWA] '+swAlerts.length+' alerta(s) enviado(s) para o SW');
   }
 }
 
-// Register SW on load, then sync alerts
-registerSW().then(()=>setTimeout(syncAlertsToSW,2000));
+// Register SW on load
+registerSW();
+
+// Re-sync when app becomes visible (user returns to app after minimizing)
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState==='visible'){
+    scheduleAlerts();             // restart JS timers
+    setTimeout(syncAlertsToSW,300); // re-send to SW
+    getActiveSW()?.postMessage({type:'PING'}); // check missed alerts
+  }
+});
 
 // Re-sync alerts to SW whenever events change
-const _origSave=save;
-// Patch: after save(), sync alerts to SW
 const _patchedSyncAlerts=()=>{setTimeout(syncAlertsToSW,500);};
 document.getElementById('saveBtn').addEventListener('click',_patchedSyncAlerts);
 document.getElementById('deleteBtn').addEventListener('click',_patchedSyncAlerts);
