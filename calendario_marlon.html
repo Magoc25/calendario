@@ -4105,20 +4105,47 @@ async function initFCM(){
     fcmMessaging=firebase.messaging(fcmApp);
 
     // Register the firebase-messaging-sw.js
+    // Register firebase-messaging-sw.js with absolute URL
+    let swReg = null;
     if('serviceWorker' in navigator){
-      const swReg=await navigator.serviceWorker.register('./firebase-messaging-sw.js',{scope:'./'});
-      // Send config to the SW
-      swReg.active?.postMessage({type:'FIREBASE_CONFIG',config:cfg});
-      swReg.installing?.addEventListener('statechange',function(){
-        if(this.state==='activated')swReg.active?.postMessage({type:'FIREBASE_CONFIG',config:cfg});
-      });
+      try{
+        // Use absolute URL — required when app is in a subdirectory
+        const swUrl = new URL('./firebase-messaging-sw.js', location.href).href;
+        const regs = await navigator.serviceWorker.getRegistrations();
+        swReg = regs.find(r=>r.active?.scriptURL===swUrl)||null;
+        if(!swReg){
+          swReg = await navigator.serviceWorker.register(swUrl, {scope: new URL('./', location.href).href});
+          console.log('[FCM] firebase-messaging-sw.js registrado em:', swUrl);
+        }
+        // Wait for activation
+        if(swReg.installing||swReg.waiting){
+          await new Promise(res=>{
+            const sw=swReg.installing||swReg.waiting;
+            sw.addEventListener('statechange',function(){if(this.state==='activated')res(null);});
+            setTimeout(res,4000);
+          });
+        }
+        // Send Firebase config to SW
+        const activeSw=swReg.active||navigator.serviceWorker.controller;
+        if(activeSw)activeSw.postMessage({type:'FIREBASE_CONFIG',config:cfg});
+        console.log('[FCM] Config enviada para SW');
+      }catch(swErr){
+        console.error('[FCM] SW registration error:',swErr);
+      }
     }
 
-    // Get push token
+    // Get push token — pass SW registration explicitly
     const perm=await Notification.requestPermission();
-    if(perm!=='granted')return;
+    if(perm!=='granted'){console.warn('[FCM] Permissão negada');return;}
 
-    fcmToken=await fcmMessaging.getToken({vapidKey:cfg.vapidKey}).catch(()=>null);
+    try{
+      const tokenOptions = {vapidKey: cfg.vapidKey};
+      if(swReg) tokenOptions.serviceWorkerRegistration = swReg;
+      fcmToken = await fcmMessaging.getToken(tokenOptions);
+    }catch(tokenErr){
+      console.error('[FCM] getToken error:', tokenErr);
+      fcmToken = null;
+    }
     if(!fcmToken){console.warn('[FCM] Não foi possível obter token');return;}
 
     // Save token to Supabase
@@ -4248,8 +4275,12 @@ document.getElementById('fcmSaveBtn').addEventListener('click',async()=>{
       toast('🔔 Push Notifications ativas!');},1500);
     scheduleFcmAlerts();
   } else {
+    // Try to get more specific error info
     r.style.background='#fff1f1';r.style.color='#e03131';
-    r.textContent='❌ Não foi possível obter token. Verifique as configurações e as origens autorizadas no Firebase.';
+    r.innerHTML='❌ Não foi possível obter token.<br>'
+      +'<small>Verifique: 1) domínio <b>magoc25.github.io</b> está em Authentication → Settings → Authorized domains no Firebase. '
+      +'2) VAPID Key correta (começa com BG...). '
+      +'3) Abra o console do navegador (F12) e veja o erro detalhado em [FCM].</small>';
   }
 });
 
