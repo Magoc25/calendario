@@ -1190,8 +1190,15 @@ body.comfortable .ev-pill{font-size:11px;padding:3px 5px 3px 7px}
       <div class="field"><label>App ID</label><input type="text" id="fcmAppId" placeholder="1:123456789012:web:abc123..."></div>
       <div class="field"><label>VAPID Key (Web Push Certificate)</label><input type="text" id="fcmVapidKey" placeholder="BGxxxxxx..."></div>
       <div id="fcmConfigResult" style="font-size:11px;padding:7px 10px;border-radius:var(--radius-sm);margin-bottom:10px;display:none"></div>
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;margin-bottom:10px;font-size:10.5px;color:var(--muted);line-height:1.6">
+        <b style="color:var(--text)">⚠️ Passo extra necessário:</b> Após salvar, clique em 
+        <b>"📥 Gerar firebase-messaging-sw.js"</b> para baixar um arquivo SW personalizado 
+        com seu config. Substitua o arquivo no GitHub por esse novo. Isso é necessário para 
+        alertas chegarem com o app fechado.
+      </div>
       <div class="modal-actions">
         <button class="btn-cancel" id="fcmClearBtn" style="margin-right:auto;color:#e03131;border-color:#fca5a5;display:none">🗑 Remover</button>
+        <button class="btn-cancel" id="fcmGenSwBtn" style="display:none">📥 Gerar SW</button>
         <button class="btn-cancel" id="fcmCancelBtn">Cancelar</button>
         <button class="btn-save" id="fcmSaveBtn">💾 Salvar e ativar</button>
       </div>
@@ -4241,7 +4248,63 @@ function saveFcmConfigToIDB(cfg){
     }catch(e){resolve(false);}
   });
 }
+
+// Generate personalized firebase-messaging-sw.js with hardcoded config
+function generateFcmSW(cfg){
+  const content=`/* Calendário MGC — firebase-messaging-sw.js (gerado automaticamente) */
+importScripts('https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging-compat.js');
+
+firebase.initializeApp({
+  apiKey: "${cfg.apiKey}",
+  authDomain: "${cfg.projectId}.firebaseapp.com",
+  projectId: "${cfg.projectId}",
+  messagingSenderId: "${cfg.messagingSenderId}",
+  appId: "${cfg.appId}"
+});
+
+const messaging = firebase.messaging();
+
+messaging.onBackgroundMessage(payload => {
+  const notif = payload.notification || {};
+  const data  = payload.data || {};
+  const title = notif.title || data.title || '\uD83D\uDD14 Calendário MGC';
+  const body  = notif.body  || data.body  || 'Você tem um compromisso.';
+  self.registration.showNotification(title, {
+    body, icon: './icon-192.png', badge: './icon-192.png',
+    tag: data.key || 'cal-mgc', requireInteraction: true,
+    vibrate: [200,100,200], data,
+    actions:[{action:'open',title:'\uD83D\uDCC5 Abrir'},{action:'snooze30',title:'\u23F0 +30 min'}]
+  });
+});
+
+self.addEventListener('notificationclick', event => {
+  event.notification.close();
+  const data = event.notification.data || {};
+  if(event.action==='snooze30'){
+    self.clients.matchAll({type:'window'}).then(cs=>cs.forEach(c=>c.postMessage({type:'FCM_SNOOZE',key:data.key,mins:30})));
+    return;
+  }
+  event.waitUntil(self.clients.matchAll({type:'window',includeUncontrolled:true}).then(cs=>{
+    for(const c of cs){if(c.url.includes('calendario_marlon')&&'focus' in c)return c.focus();}
+    return self.clients.openWindow('./calendario_marlon.html');
+  }));
+});
+`;
+  const blob=new Blob([content],{type:'application/javascript'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='firebase-messaging-sw.js';
+  a.click();URL.revokeObjectURL(a.href);
+  toast('📥 Arquivo gerado! Substitua no GitHub e reinstale o PWA.');
+}
+
 document.getElementById('fcmBtn').addEventListener('click',()=>openFcmModal());
+
+document.getElementById('fcmGenSwBtn')?.addEventListener('click',()=>{
+  const cfg=fcmGetConfig();if(!cfg){toast('Configure o Firebase primeiro.');return;}
+  generateFcmSW(cfg);
+});
 
 function updateFcmDot(){
   const dot=document.getElementById('fcmDot');
@@ -4294,9 +4357,8 @@ document.getElementById('fcmSaveBtn').addEventListener('click',async()=>{
   await initFCM();
   if(fcmToken){
     r.style.background='#dcfce7';r.style.color='#166534';
-    r.textContent='✓ Push Notifications ativadas com sucesso!';
-    setTimeout(()=>{document.getElementById('fcmOverlay').classList.remove('open');
-      toast('🔔 Push Notifications ativas!');},1500);
+    r.innerHTML='✓ Token obtido! Agora clique em <b>📥 Gerar SW</b> para baixar o arquivo personalizado e substituir no GitHub.';
+    document.getElementById('fcmGenSwBtn').style.display='';
     scheduleFcmAlerts();
   } else {
     // Try to get more specific error info
