@@ -4148,6 +4148,12 @@ async function initFCM(){
     }
     if(!fcmToken){console.warn('[FCM] Não foi possível obter token');return;}
 
+    // Ensure SW has the config saved in IndexedDB
+    await saveFcmConfigToIDB(cfg);
+    // Also send via postMessage for immediate use
+    const activeSw2=swReg?.active||navigator.serviceWorker.controller;
+    if(activeSw2)activeSw2.postMessage({type:'FIREBASE_CONFIG',data:cfg});
+
     // Save token to Supabase
     await saveFcmTokenToSupabase(fcmToken);
     updateFcmNotifBadge();
@@ -4218,7 +4224,23 @@ async function scheduleFcmAlerts(){
   }catch(e){console.warn('[FCM] Erro ao agendar alertas:',e);}
 }
 
-// FCM Config modal wiring
+// Save Firebase config to IndexedDB so SW reads it even when app is closed
+function saveFcmConfigToIDB(cfg){
+  return new Promise(resolve=>{
+    try{
+      const req=indexedDB.open('cal-mgc-fcm',1);
+      req.onupgradeneeded=e=>e.target.result.createObjectStore('config',{keyPath:'k'});
+      req.onsuccess=e=>{
+        const db=e.target.result;
+        const tx=db.transaction('config','readwrite');
+        tx.objectStore('config').put({k:'firebase_config',v:cfg});
+        tx.oncomplete=()=>resolve(true);
+        tx.onerror=()=>resolve(false);
+      };
+      req.onerror=()=>resolve(false);
+    }catch(e){resolve(false);}
+  });
+}
 document.getElementById('fcmBtn').addEventListener('click',()=>openFcmModal());
 
 function updateFcmDot(){
@@ -4267,6 +4289,8 @@ document.getElementById('fcmSaveBtn').addEventListener('click',async()=>{
   const cfg={apiKey,projectId,authDomain:`${projectId}.firebaseapp.com`,
     messagingSenderId,appId,vapidKey};
   localStorage.setItem(FCM_CONFIG_KEY,JSON.stringify(cfg));
+  // Save to IndexedDB so SW can read when app is closed
+  await saveFcmConfigToIDB(cfg);
   await initFCM();
   if(fcmToken){
     r.style.background='#dcfce7';r.style.color='#166534';
