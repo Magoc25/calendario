@@ -4203,11 +4203,15 @@ async function saveFcmTokenToSupabase(token){
 
 async function scheduleFcmAlerts(){
   if(!sbClient||!fcmIsConfigured())return;
-  const now=Date.now(),td=todayDs();
-  const tom=new Date();tom.setDate(tom.getDate()+1);
-  const tomStr=ds(tom.getFullYear(),tom.getMonth(),tom.getDate());
+  const now=Date.now();
+  // Schedule next 7 days so alerts work even without opening app daily
+  const dates=[];
+  for(let i=0;i<7;i++){
+    const d=new Date();d.setDate(d.getDate()+i);
+    dates.push(ds(d.getFullYear(),d.getMonth(),d.getDate()));
+  }
   const rows=[];
-  [td,tomStr].forEach(dStr=>{
+  dates.forEach(dStr=>{
     events.forEach(ev=>{
       if(ev.alert===''||ev.alert==null||!ev.start)return;
       if(!getOccurrences(ev,dStr,dStr).includes(dStr))return;
@@ -4227,7 +4231,7 @@ async function scheduleFcmAlerts(){
   if(!rows.length)return;
   try{
     await sbClient.from('push_alerts').upsert(rows,{onConflict:'id',ignoreDuplicates:true});
-    console.log(`[FCM] ${rows.length} alerta(s) agendado(s) no Supabase`);
+    console.log(`[FCM] ${rows.length} alerta(s) agendado(s) (próximos 7 dias)`);
   }catch(e){console.warn('[FCM] Erro ao agendar alertas:',e);}
 }
 
