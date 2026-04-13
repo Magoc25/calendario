@@ -83,6 +83,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);hei
 @keyframes syncPulse{0%,100%{opacity:1}50%{opacity:.3}}
 .sync-config-banner{background:#fff8e1;border:1.5px solid #f59f00;border-radius:var(--radius-sm);padding:8px 14px;font-size:11px;color:#92400e;display:flex;align-items:center;gap:8px;margin:6px 12px 0;flex-shrink:0}
 .sync-config-banner a{color:#3b5bdb;font-weight:700;cursor:pointer}
+@media(max-width:768px){.sync-config-banner{font-size:10px;padding:6px 10px;margin:4px 6px 0;flex-wrap:wrap}}
 .view-toggle{display:flex;border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden}
 .view-btn{background:var(--surface2);border:none;color:var(--muted);padding:5px 9px;font-size:11px;font-family:'DM Sans',sans-serif;cursor:pointer;font-weight:600;transition:all .15s}
 .view-btn.active{background:var(--accent);color:#fff}
@@ -3122,7 +3123,12 @@ function addQuickTask(title){
 let top3Data={};
 try{top3Data=JSON.parse(localStorage.getItem('cal_top3')||'{}');}catch(e){}
 function saveTop3(){localStorage.setItem('cal_top3',JSON.stringify(top3Data));}
-function getTop3(){return top3Data[todayDs()]||[{text:'',done:false},{text:'',done:false},{text:'',done:false}];}
+function getTop3(){
+  const saved=top3Data[todayDs()]||[];
+  const base=[{text:'',done:false},{text:'',done:false},{text:'',done:false}];
+  // Always return exactly 3 items, merging saved data
+  return [0,1,2].map(i=>saved[i]||base[i]);
+}
 
 /* ═══════ TODAY VIEW ═══════ */
 function renderToday(){
@@ -3597,8 +3603,17 @@ function applyRemotePayload(row){
     categoryColors=remoteCatColors;
     if(remoteCalendars&&remoteCalendars.length)calendars=remoteCalendars;
     if(row.theme)applyTheme(row.theme);
-    if(row.routines)try{const r=JSON.parse(row.routines);if(Array.isArray(r))routines=r;}catch(e){}
-    if(row.quick_tasks)try{const q=JSON.parse(row.quick_tasks);if(Array.isArray(q))quickTasks=q;}catch(e){}
+    if(row.routines)try{
+      const r=JSON.parse(row.routines);
+      // Only overwrite local routines if remote has actual data (not empty array)
+      if(Array.isArray(r)&&r.length>0)routines=r;
+      else if(Array.isArray(r)&&r.length===0&&routines.length===0)routines=r;
+    }catch(e){}
+    if(row.quick_tasks)try{
+      const q=JSON.parse(row.quick_tasks);
+      if(Array.isArray(q)&&q.length>0)quickTasks=q;
+      else if(Array.isArray(q)&&q.length===0&&quickTasks.length===0)quickTasks=q;
+    }catch(e){}
     if(row.reviews)try{const rv=JSON.parse(row.reviews);if(rv&&typeof rv==='object')reviews=rv;}catch(e){}
     if(row.top3)try{const t3=JSON.parse(row.top3);if(t3&&typeof t3==='object')top3Data=t3;}catch(e){}
     // Persist locally
