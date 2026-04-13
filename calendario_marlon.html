@@ -448,23 +448,60 @@ body.comfortable .ev-pill{font-size:11px;padding:3px 5px 3px 7px}
 
 /* ── Mobile responsive ── */
 @media(max-width:768px){
-  body{overflow:auto}
-  .app{flex-direction:column;height:auto;min-height:100vh}
+  /* ── CORREÇÃO FUNDAMENTAL DE SCROLL ──
+     Desktop usa layout fixo (tudo overflow:hidden, altura 100vh).
+     Mobile precisa que o DOCUMENTO role — não containers internos. */
+  body{
+    height:auto!important;        /* remove height:100vh do desktop */
+    min-height:100vh;
+    overflow-x:hidden;
+    overflow-y:auto;              /* o body é o scroller principal */
+  }
+  .app{
+    flex-direction:column;
+    height:auto!important;
+    min-height:100vh;
+    overflow:visible!important;   /* remove overflow:hidden do desktop */
+  }
+  .main{
+    flex:none;
+    width:100%;
+    height:auto!important;
+    overflow:visible!important;   /* remove overflow:hidden do desktop */
+  }
+  .cal-wrap{
+    padding:6px 6px 0;
+    height:auto!important;
+    overflow:visible!important;
+    flex-direction:column;
+  }
+  .cal-main{
+    padding:0;
+    height:auto!important;
+    overflow:visible!important;
+    flex:none!important;
+  }
+  /* Cada card vira bloco com altura natural */
+  .cal-card{
+    border-radius:var(--radius-sm);
+    flex:none!important;
+    height:auto!important;
+    overflow:visible!important;
+  }
+  /* Vista Hoje: remove overflow-y:auto interno, deixa página rolar */
+  #todayCard{overflow:visible!important;}
+
   .sidebar{position:fixed;top:0;left:-220px;height:100vh;z-index:100;transition:left .25s ease;width:220px!important;min-width:220px!important}
   .sidebar.mobile-open{left:0}
   .hamburger-btn{display:flex}
-  .main{flex:none;width:100%;height:auto}
   .main-header{flex-wrap:wrap;gap:6px;padding:8px 10px}
   .month-label{font-size:17px;min-width:130px}
   .header-right{gap:4px;flex-wrap:wrap}
   .hbtn{padding:4px 8px;font-size:10px}
   .hbtn-primary{padding:5px 10px}
   .view-toggle .view-btn{padding:4px 7px;font-size:10px}
-  .cal-wrap{padding:6px 6px 0;height:auto}
-  .cal-main{padding:0}
-  .cal-card{border-radius:var(--radius-sm)}
   .cal-footer{margin:0 6px 6px;flex-wrap:wrap;gap:5px}
-  .cal-grid{grid-template-rows:auto}
+  .cal-grid{grid-template-rows:auto;overflow:visible!important;}
   .dow{font-size:8px;padding:6px 0}
   .day{min-height:54px;padding:3px}
   .day-num{font-size:10px}
@@ -473,6 +510,7 @@ body.comfortable .ev-pill{font-size:11px;padding:3px 5px 3px 7px}
   .day-panel{position:fixed;bottom:0;left:0;right:0;width:100%!important;min-width:0!important;max-height:55vh;border-top:1px solid var(--border);border-left:none;z-index:80;transition:transform .25s ease}
   .day-panel:not(.open){transform:translateY(100%)}
   .day-panel.open{transform:translateY(0)}
+  /* Vista semana: scroll horizontal interno, mas vertical via página */
   .week-view .week-header-row,.week-body{overflow-x:auto}
   .search-input{width:110px}
   .search-input:focus{width:140px}
@@ -2152,9 +2190,10 @@ function render(){
   if(cur.getFullYear()!==sidebarYear)sidebarYear=cur.getFullYear();
   updateMonthLabel();
   // Show/hide all cards
-  // On mobile use 'block' so the page can scroll naturally (flex fixes height and clips content)
+  // Mobile: 'block' → page scrolls naturally. Desktop: 'flex' → internal scroll (fixed layout).
   const _isMobile=window.innerWidth<=768;
   document.getElementById('todayCard').style.display=viewMode==='today'?(_isMobile?'block':'flex'):'none';
+  document.getElementById('todayCard').style.overflowY=_isMobile?'visible':'auto';
   document.getElementById('monthCard').style.display=viewMode==='month'?'':'none';
   document.getElementById('weekCard').classList.toggle('show',viewMode==='week');
   document.getElementById('upcomingCard').classList.toggle('show',viewMode==='upcoming');
