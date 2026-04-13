@@ -764,6 +764,81 @@ body.comfortable .ev-pill{font-size:11px;padding:3px 5px 3px 7px}
    MOBILE IMPROVEMENTS v2.1
    ══════════════════════════════════════════ */
 
+/* ── Mobile More Sheet (⋯) ── */
+.mms-overlay{
+  display:none;
+  position:fixed;inset:0;
+  background:rgba(0,0,0,.45);
+  z-index:300;
+  align-items:flex-end;
+}
+.mms-overlay.open{display:flex;}
+.mms-panel{
+  width:100%;
+  background:var(--surface);
+  border-radius:20px 20px 0 0;
+  padding-bottom:env(safe-area-inset-bottom);
+  transform:translateY(100%);
+  transition:transform .28s cubic-bezier(.4,0,.2,1);
+  box-shadow:0 -8px 40px rgba(0,0,0,.18);
+}
+.mms-overlay.open .mms-panel{transform:translateY(0);}
+.mms-handle{
+  width:44px;height:4px;
+  background:var(--border);
+  border-radius:2px;
+  margin:12px auto 0;
+}
+.mms-title{
+  font-size:11px;font-weight:700;
+  color:var(--muted);text-transform:uppercase;letter-spacing:.07em;
+  text-align:center;
+  padding:10px 16px 16px;
+}
+.mms-grid{
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  gap:12px;
+  padding:0 20px 8px;
+}
+.mms-item{
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  gap:5px;
+  background:var(--surface2);
+  border:1px solid var(--border);
+  border-radius:14px;
+  padding:14px 6px 12px;
+  cursor:pointer;
+  font-family:'DM Sans',sans-serif;
+  font-size:10px;font-weight:600;
+  color:var(--text);
+  transition:background .15s,border-color .15s;
+  -webkit-tap-highlight-color:transparent;
+  min-height:70px;
+}
+.mms-item:active{
+  background:var(--accent-light);
+  border-color:var(--accent);
+  color:var(--accent);
+}
+.mms-icon{font-size:22px;line-height:1;display:block;}
+.mms-close{
+  display:block;
+  width:calc(100% - 32px);
+  margin:12px 16px 16px;
+  padding:13px;
+  background:var(--surface2);
+  border:1px solid var(--border);
+  border-radius:12px;
+  font-family:'DM Sans',sans-serif;
+  font-size:13px;font-weight:600;
+  color:var(--muted);
+  cursor:pointer;
+  -webkit-tap-highlight-color:transparent;
+}
+.mms-close:active{background:var(--border);}
+
 /* ── Touch-friendly: prevent iOS callout & text selection on event pills ── */
 .ev-pill,.dp-ev,.week-ev{
   -webkit-user-select:none;user-select:none;
@@ -839,12 +914,27 @@ body.comfortable .ev-pill{font-size:11px;padding:3px 5px 3px 7px}
 
 /* ══ MOBILE @media BLOCK ══ */
 @media(max-width:768px){
-  /* Show bottom nav + FAB */
+  /* Show bottom nav + FAB + more button */
   .bottom-nav{display:block;}
   .mobile-fab{display:flex;}
+  #mobileMoreBtn{display:flex!important;}
 
   /* Hide view-toggle (replaced by bottom nav) */
   .view-toggle{display:none!important;}
+
+  /* ── Esconder botões secundários do header no mobile ──
+     Mantidos visíveis: Stats, Tema, Alertas (notif), Nuvem (sync)
+     Ficam no menu ⋯: Backup, Imprimir, PDF, Google */
+  #printBtn,#pdfBtn,
+  #backupWrap,
+  #gcalBtn,
+  #addBtn,        /* substituído pelo FAB */
+  .today-wrap     /* substituído pela bottom nav */
+  {display:none!important;}
+
+  /* Simplificar a busca no mobile */
+  .search-input{width:90px;}
+  .search-input:focus{width:130px;}
 
   /* Extra bottom padding so content isn't hidden by bottom nav */
   body{padding-bottom:58px;}
@@ -969,7 +1059,7 @@ body.comfortable .ev-pill{font-size:11px;padding:3px 5px 3px 7px}
         <button class="hbtn" id="statsBtn">📊 Stats</button>
         <button class="hbtn" id="printBtn" title="Imprimir">🖨️</button>
         <button class="hbtn" id="pdfBtn" title="Exportar PDF visual">📄 PDF</button>
-        <div style="position:relative">
+        <div id="backupWrap" style="position:relative">
           <button class="hbtn" id="backupBtn">💾 Backup</button>
           <div class="popup" id="backupPopup">
             <h4>Backup local</h4>
@@ -982,7 +1072,7 @@ body.comfortable .ev-pill{font-size:11px;padding:3px 5px 3px 7px}
             <input type="file" id="importIcsFile" accept=".ics" style="display:none">
           </div>
         </div>
-        <div style="position:relative">
+        <div id="themeWrap" style="position:relative">
           <button class="hbtn" id="themeBtn">🎨 Tema</button>
           <div class="popup" id="themePopup" style="width:225px">
             <h4>Tema</h4>
@@ -1000,6 +1090,8 @@ body.comfortable .ev-pill{font-size:11px;padding:3px 5px 3px 7px}
         <button class="hbtn" id="gcalBtn" title="Google Agenda">
           <span id="gcalBtnIcon">📆</span><span id="gcalBtnLabel" style="font-size:10px;margin-left:3px">Google</span><span class="sync-dot sync-warn" id="gcalDot" style="margin-left:3px"></span>
         </button>
+        <!-- Botão ⋯ visível apenas no mobile — abre o more-sheet -->
+        <button class="hbtn" id="mobileMoreBtn" style="display:none;font-size:18px;padding:4px 10px;letter-spacing:1px" title="Mais opções">⋯</button>
         <button class="hbtn hbtn-primary" id="addBtn">+ Novo</button>
       </div>
     </div>
@@ -1352,6 +1444,29 @@ body.comfortable .ev-pill{font-size:11px;padding:3px 5px 3px 7px}
     <div class="modal-title">⭐ Avaliações do Calendário MGC</div>
     <div id="revSummary" class="rev-summary"></div>
     <div class="rev-list" id="revList"></div>
+  </div>
+</div>
+
+<!-- MOBILE MORE SHEET (⋯ menu) -->
+<div class="mms-overlay" id="mmsOverlay">
+  <div class="mms-panel" id="mmsPanel">
+    <div class="mms-handle"></div>
+    <div class="mms-title">Mais opções</div>
+    <div class="mms-grid">
+      <button class="mms-item" id="mmsGcal">
+        <span class="mms-icon">📆</span><span>Google</span>
+      </button>
+      <button class="mms-item" id="mmsBackup">
+        <span class="mms-icon">💾</span><span>Backup</span>
+      </button>
+      <button class="mms-item" id="mmsPrint">
+        <span class="mms-icon">🖨️</span><span>Imprimir</span>
+      </button>
+      <button class="mms-item" id="mmsPdf">
+        <span class="mms-icon">📄</span><span>PDF</span>
+      </button>
+    </div>
+    <button class="mms-close" id="mmsClose">Fechar</button>
   </div>
 </div>
 
@@ -3072,6 +3187,46 @@ document.querySelectorAll('.bn-item').forEach(btn=>{
 
 /* ── FAB: botão flutuante de novo evento ── */
 document.getElementById('mobileFab').addEventListener('click',()=>openNew(null));
+
+/* ── Mobile More Sheet (⋯) ── */
+(function initMoreSheet(){
+  const overlay=document.getElementById('mmsOverlay');
+  const panel=document.getElementById('mmsPanel');
+
+  function openSheet(){
+    overlay.classList.add('open');
+    // Bloqueia scroll da página enquanto o sheet está aberto
+    document.body.style.overflow='hidden';
+  }
+  function closeSheet(){
+    panel.style.transform='';
+    overlay.classList.remove('open');
+    document.body.style.overflow='';
+  }
+
+  document.getElementById('mobileMoreBtn').addEventListener('click',openSheet);
+  document.getElementById('mmsClose').addEventListener('click',closeSheet);
+  // Toque no backdrop fecha
+  overlay.addEventListener('click',e=>{if(e.target===overlay)closeSheet();});
+
+  // Cada item do sheet aciona o botão correspondente no header e fecha
+  const wire=(mmsId,targetId)=>{
+    const el=document.getElementById(mmsId);
+    if(!el)return;
+    el.addEventListener('click',()=>{
+      closeSheet();
+      setTimeout(()=>{
+        const btn=document.getElementById(targetId);
+        if(btn)btn.click();
+      },280); // espera o sheet fechar antes de abrir popup/modal
+    });
+  };
+
+  wire('mmsGcal',   'gcalBtn');
+  wire('mmsBackup', 'backupBtn');
+  wire('mmsPrint',  'printBtn');
+  wire('mmsPdf',    'pdfBtn');
+})();
 
 // Ocultar FAB quando o teclado virtual aparecer (campo com foco)
 window.addEventListener('resize',()=>{
