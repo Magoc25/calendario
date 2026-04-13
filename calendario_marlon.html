@@ -4345,6 +4345,185 @@ document.querySelectorAll('.mbn-btn[data-view]').forEach(btn=>{
   btn.addEventListener('click',()=>{
     viewMode=btn.dataset.view;
     updateBottomNav(viewMode);
+    // Sync desktop view buttons too
+    document.querySelectorAll('.view-btn').forEach(b=>b.classList.remove('active'));
+    const desktopBtn=document.getElementById('btn'+viewMode.charAt(0).toUpperCase()+viewMode.slice(1));
+    if(desktopBtn)desktopBtn.classList.add('active');
+    closeMoreSheet();render();
+  });
+});
+document.getElementById('mbnAdd').addEventListener('click',()=>openNew(null));
+
+/* ── More Sheet ── */
+function openMoreSheet(){
+  document.getElementById('mobileMoreSheet').classList.add('open');
+  document.getElementById('mobileMoreOverlay').classList.add('open');
+}
+function closeMoreSheet(){
+  document.getElementById('mobileMoreSheet').classList.remove('open');
+  document.getElementById('mobileMoreOverlay').classList.remove('open');
+}
+document.getElementById('mbnMore').addEventListener('click',openMoreSheet);
+document.getElementById('mobileMoreOverlay').addEventListener('click',closeMoreSheet);
+
+document.querySelectorAll('.mmm-btn[data-view]').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    viewMode=btn.dataset.view;
+    updateBottomNav(viewMode);
+    closeMoreSheet();render();
+  });
+});
+document.getElementById('mmmStats')?.addEventListener('click',()=>{closeMoreSheet();openStats();});
+document.getElementById('mmmSearch')?.addEventListener('click',()=>{closeMoreSheet();openMobileSearch();});
+document.getElementById('mmmSync')?.addEventListener('click',()=>{closeMoreSheet();document.getElementById('syncBtn').click();});
+document.getElementById('mmmTheme')?.addEventListener('click',()=>{closeMoreSheet();document.getElementById('themePopup').classList.toggle('open');});
+document.getElementById('mmmBackup')?.addEventListener('click',()=>{closeMoreSheet();document.getElementById('backupPopup').classList.toggle('open');});
+document.getElementById('mmmNotif')?.addEventListener('click',()=>{closeMoreSheet();document.getElementById('notifBtn').click();});
+document.getElementById('mmmPush')?.addEventListener('click',()=>{closeMoreSheet();openFcmModal();});
+document.getElementById('mmmGcal')?.addEventListener('click',()=>{closeMoreSheet();gcalShowPanel();});
+document.getElementById('mmmPix')?.addEventListener('click',()=>{closeMoreSheet();openPixModal();});
+document.getElementById('mmmReviews')?.addEventListener('click',()=>{closeMoreSheet();renderReviewsModal();});
+
+/* ── Mobile Search ── */
+function openMobileSearch(){
+  document.getElementById('mobileSearchOverlay').classList.add('open');
+  setTimeout(()=>document.getElementById('msoInput').focus(),200);
+}
+document.getElementById('msoBack').addEventListener('click',()=>{
+  document.getElementById('mobileSearchOverlay').classList.remove('open');
+  document.getElementById('msoInput').value='';
+  document.getElementById('msoResults').innerHTML='';
+});
+document.getElementById('msoInput').addEventListener('input',function(){
+  const q=this.value.trim().toLowerCase();
+  const res=document.getElementById('msoResults');
+  if(!q){res.innerHTML='';return;}
+  const matches=events.filter(ev=>
+    ev.title.toLowerCase().includes(q)||
+    (ev.category||'').toLowerCase().includes(q)||
+    (ev.location||'').toLowerCase().includes(q)||
+    (ev.tags||[]).some(t=>t.toLowerCase().includes(q))
+  ).slice(0,20);
+  if(!matches.length){res.innerHTML='<div class="mso-item"><div class="mso-title" style="color:var(--muted)">Nenhum resultado</div></div>';return;}
+  res.innerHTML=matches.map(e=>`
+    <div class="mso-item" data-id="${e.id}" data-date="${e.date}">
+      <div class="mso-title">${CAT_ICONS[e.category]||''} ${e.title}</div>
+      <div class="mso-meta">${e.date}${e.start?' · '+e.start:''}${e.category?' · '+e.category:''}</div>
+    </div>`).join('');
+  res.querySelectorAll('.mso-item[data-id]').forEach(item=>{
+    item.addEventListener('click',()=>{
+      const ev=events.find(e=>e.id===item.dataset.id);
+      if(ev){cur=new Date(ev.date+'T12:00:00');render();openEdit(ev.id,ev.date);}
+      document.getElementById('mobileSearchOverlay').classList.remove('open');
+      document.getElementById('msoInput').value='';
+    });
+  });
+});
+
+/* ── Mobile Context Menu (Long Press) ── */
+let _lpEvId=null,_lpEvDate=null;
+
+function openMobileCtx(evId,evDate,evTitle){
+  _lpEvId=evId;_lpEvDate=evDate;
+  const ev=events.find(e=>e.id===evId);
+  document.getElementById('mcsHeader').textContent=evTitle||(ev?.title||'Evento');
+  document.getElementById('mcsSkip').style.display=ev?.rrule?'block':'none';
+  document.getElementById('mobilCtxSheet').classList.add('open');
+  document.getElementById('mobilCtxOverlay').classList.add('open');
+  if(navigator.vibrate)navigator.vibrate([30]);
+}
+function closeMobileCtx(){
+  document.getElementById('mobilCtxSheet').classList.remove('open');
+  document.getElementById('mobilCtxOverlay').classList.remove('open');
+  _lpEvId=null;_lpEvDate=null;
+}
+document.getElementById('mobilCtxOverlay').addEventListener('click',closeMobileCtx);
+document.getElementById('mcsCancel').addEventListener('click',closeMobileCtx);
+document.getElementById('mcsEdit').addEventListener('click',()=>{
+  const id=_lpEvId,date=_lpEvDate;closeMobileCtx();
+  if(id&&date)openEdit(id,date);
+});
+document.getElementById('mcsNotes').addEventListener('click',()=>{
+  const id=_lpEvId;closeMobileCtx();
+  if(id)openNotes(id);
+});
+document.getElementById('mcsSkip').addEventListener('click',()=>{
+  const id=_lpEvId,date=_lpEvDate;closeMobileCtx();
+  if(id&&date){const ev=events.find(e=>e.id===id);if(ev){if(!ev.skippedDates)ev.skippedDates=[];if(!ev.skippedDates.includes(date))ev.skippedDates.push(date);save();render();toast('Ocorrência pulada.');}}
+});
+document.getElementById('mcsDelete').addEventListener('click',()=>{
+  const id=_lpEvId;closeMobileCtx();
+  if(id&&confirm('Excluir este evento?')){events=events.filter(e=>e.id!==id);save();render();toast('Evento excluído.');}
+});
+
+// Attach long-press to a single element — safe version without passive:false on start
+function attachLongPress(el){
+  if(!isMobile()||el._lpAttached)return;
+  el._lpAttached=true;
+  let t=null,moved=false,startX=0,startY=0;
+  el.addEventListener('touchstart',ev=>{
+    moved=false;startX=ev.touches[0].clientX;startY=ev.touches[0].clientY;
+    const id=el.dataset.id,date=el.dataset.date;if(!id)return;
+    t=setTimeout(()=>{
+      if(moved)return;
+      const evt=events.find(x=>x.id===id);
+      openMobileCtx(id,date,evt?.title||'');
+    },600);
+  },{passive:true});
+  el.addEventListener('touchmove',ev=>{
+    const dx=Math.abs(ev.touches[0].clientX-startX);
+    const dy=Math.abs(ev.touches[0].clientY-startY);
+    if(dx>8||dy>8){moved=true;clearTimeout(t);}
+  },{passive:true});
+  el.addEventListener('touchend',()=>clearTimeout(t),{passive:true});
+  el.addEventListener('touchcancel',()=>clearTimeout(t),{passive:true});
+}
+
+// After each render, attach long-press to all pills
+function attachAllLongPress(){
+  if(!isMobile())return;
+  document.querySelectorAll('.ev-pill[data-id],.upcoming-ev[data-id]').forEach(attachLongPress);
+}
+
+/* ── Swipe to navigate — safe version (no preventDefault) ── */
+(()=>{
+  let tx0=0,ty0=0;
+  const calWrap=document.getElementById('calMain');
+  calWrap.addEventListener('touchstart',e=>{
+    if(e.touches.length!==1)return;
+    tx0=e.touches[0].clientX;ty0=e.touches[0].clientY;
+  },{passive:true});
+  calWrap.addEventListener('touchend',e=>{
+    const dx=e.changedTouches[0].clientX-tx0;
+    const dy=e.changedTouches[0].clientY-ty0;
+    if(Math.abs(dx)<60||Math.abs(dy)>Math.abs(dx)*0.7)return;
+    if(['today','routines','review'].includes(viewMode))return;
+    if(dx<0)document.getElementById('nextBtn').click();
+    else document.getElementById('prevBtn').click();
+  },{passive:true});
+})();
+
+/* ── Intercept render() to attach long-press and sync nav ── */
+// We use MutationObserver instead of patching render() to avoid breaking anything
+const _mobileObserver=new MutationObserver(()=>{
+  if(isMobile()){attachAllLongPress();updateBottomNav(viewMode);}
+});
+_mobileObserver.observe(document.getElementById('calMain'),{childList:true,subtree:false});
+
+updateBottomNav(viewMode);
+
+/* ═══════ END MOBILE OVERHAUL ═══════ */
+
+/* ── Bottom Nav ── */
+function updateBottomNav(v){
+  document.querySelectorAll('.mbn-btn[data-view]').forEach(b=>{
+    b.classList.toggle('active',b.dataset.view===v);
+  });
+}
+document.querySelectorAll('.mbn-btn[data-view]').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    viewMode=btn.dataset.view;
+    updateBottomNav(viewMode);
     document.querySelectorAll('.view-btn').forEach(b=>b.classList.toggle('active',b.id==='btn'+viewMode.charAt(0).toUpperCase()+viewMode.slice(1)));
     closeMoreSheet();render();
   });
@@ -4418,125 +4597,6 @@ document.getElementById('msoInput').addEventListener('input',function(){
     });
   });
 });
-
-/* ── Mobile Long-Press Context Menu ── */
-let _lpTimer=null,_lpEvId=null,_lpEvDate=null;
-
-function openMobileCtx(evId,evDate,evTitle){
-  _lpEvId=evId;_lpEvDate=evDate;
-  const ev=events.find(e=>e.id===evId);
-  document.getElementById('mcsHeader').textContent=evTitle||(ev?.title||'Evento');
-  // Show/hide skip based on rrule
-  document.getElementById('mcsSkip').style.display=ev?.rrule?'block':'none';
-  document.getElementById('mobilCtxSheet').classList.add('open');
-  document.getElementById('mobilCtxOverlay').classList.add('open');
-}
-function closeMobileCtx(){
-  document.getElementById('mobilCtxSheet').classList.remove('open');
-  document.getElementById('mobilCtxOverlay').classList.remove('open');
-  _lpEvId=null;_lpEvDate=null;
-}
-document.getElementById('mobilCtxOverlay').addEventListener('click',closeMobileCtx);
-document.getElementById('mcsCancel').addEventListener('click',closeMobileCtx);
-document.getElementById('mcsEdit').addEventListener('click',()=>{if(_lpEvId&&_lpEvDate){openEdit(_lpEvId,_lpEvDate);}closeMobileCtx();});
-document.getElementById('mcsNotes').addEventListener('click',()=>{if(_lpEvId){openNotes(_lpEvId);}closeMobileCtx();});
-document.getElementById('mcsSkip').addEventListener('click',()=>{
-  if(_lpEvId&&_lpEvDate){
-    const ev=events.find(e=>e.id===_lpEvId);
-    if(ev){if(!ev.skippedDates)ev.skippedDates=[];if(!ev.skippedDates.includes(_lpEvDate))ev.skippedDates.push(_lpEvDate);save();render();toast('Ocorrência pulada.');}
-  }
-  closeMobileCtx();
-});
-document.getElementById('mcsDelete').addEventListener('click',()=>{
-  if(_lpEvId){
-    if(confirm('Excluir este evento?')){events=events.filter(e=>e.id!==_lpEvId);save();render();toast('Evento excluído.');}
-  }
-  closeMobileCtx();
-});
-
-// Attach long-press to event pills (runs after render)
-function attachLongPress(pill){
-  if(!isMobile())return;
-  let moved=false;
-
-  pill.addEventListener('touchstart',e=>{
-    moved=false;
-    const id=pill.dataset.id,date=pill.dataset.date;
-    if(!id)return;
-    _lpTimer=setTimeout(()=>{
-      if(moved)return;
-      e.preventDefault();
-      const ev=events.find(x=>x.id===id);
-      openMobileCtx(id,date,ev?.title||'');
-      if(navigator.vibrate)navigator.vibrate(30);
-    },500);
-  },{passive:false});
-
-  pill.addEventListener('touchmove',()=>{moved=true;clearTimeout(_lpTimer);},{passive:true});
-  pill.addEventListener('touchend',()=>clearTimeout(_lpTimer),{passive:true});
-  pill.addEventListener('touchcancel',()=>clearTimeout(_lpTimer),{passive:true});
-
-  // Prevent default click on mobile (long press handles it)
-  pill.addEventListener('click',e=>{
-    if(isMobile()&&window._justLongPressed){e.stopPropagation();window._justLongPressed=false;return;}
-  });
-}
-
-// Patch renderMonth and renderWeek pill creation to add long-press
-const _origRenderMonth=renderMonth;
-renderMonth=function(){
-  _origRenderMonth.apply(this,arguments);
-  if(isMobile())document.querySelectorAll('.ev-pill').forEach(attachLongPress);
-};
-const _origRenderUpcoming=renderUpcoming;
-renderUpcoming=function(){
-  _origRenderUpcoming.apply(this,arguments);
-  if(isMobile())document.querySelectorAll('.upcoming-ev').forEach(pill=>{
-    const id=pill.dataset.id,date=pill.dataset.date;
-    if(!id)return;
-    let moved=false,tm=null;
-    pill.addEventListener('touchstart',e=>{
-      moved=false;
-      tm=setTimeout(()=>{if(moved)return;e.preventDefault();const ev=events.find(x=>x.id===id);openMobileCtx(id,date,ev?.title||'');if(navigator.vibrate)navigator.vibrate(30);},500);
-    },{passive:false});
-    pill.addEventListener('touchmove',()=>{moved=true;clearTimeout(tm);},{passive:true});
-    pill.addEventListener('touchend',()=>clearTimeout(tm),{passive:true});
-  });
-};
-
-/* ── Swipe to navigate months/weeks ── */
-(()=>{
-  let tx0=0,ty0=0,swiping=false;
-  const calWrap=document.getElementById('calMain');
-  calWrap.addEventListener('touchstart',e=>{
-    if(e.touches.length!==1)return;
-    tx0=e.touches[0].clientX;ty0=e.touches[0].clientY;swiping=true;
-  },{passive:true});
-  calWrap.addEventListener('touchend',e=>{
-    if(!swiping)return;swiping=false;
-    const dx=e.changedTouches[0].clientX-tx0;
-    const dy=e.changedTouches[0].clientY-ty0;
-    if(Math.abs(dx)<50||Math.abs(dx)<Math.abs(dy)*1.5)return;
-    if(['today','routines','review'].includes(viewMode))return;
-    if(dx<0)document.getElementById('nextBtn').click();
-    else document.getElementById('prevBtn').click();
-  },{passive:true});
-  calWrap.addEventListener('touchmove',e=>{
-    if(!swiping)return;
-    const dx=e.touches[0].clientX-tx0;
-    const dy=e.touches[0].clientY-ty0;
-    // Only prevent default for horizontal swipe
-    if(Math.abs(dx)>Math.abs(dy)&&Math.abs(dx)>15){e.preventDefault();}
-  },{passive:false});
-})();
-
-/* ── Keep bottom nav in sync with view changes ── */
-const _origRenderFn=render;
-render=function(){
-  _origRenderFn.apply(this,arguments);
-  updateBottomNav(viewMode);
-};
-updateBottomNav(viewMode);
 
 /* ═══════ END MOBILE OVERHAUL ═══════ */
 const FCM_CONFIG_KEY='cal_fcm_config';
