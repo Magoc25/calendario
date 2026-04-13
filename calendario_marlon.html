@@ -698,179 +698,51 @@ body.comfortable .ev-pill{font-size:11px;padding:3px 5px 3px 7px}
 .rev-empty{text-align:center;padding:40px 0;color:var(--muted);font-size:12px}
 
 /* ══════════════════════════════════════
-   MOBILE — melhorias incrementais
+   MOBILE — melhorias seguras
 ══════════════════════════════════════ */
 @media(max-width:768px){
   body{overflow:auto}
-  .app{flex-direction:column;height:auto;min-height:100vh;padding-bottom:68px}
-  .sidebar{position:fixed;top:0;left:-220px;height:100vh;z-index:200;transition:left .25s ease;width:220px!important;min-width:220px!important}
+  .app{flex-direction:column;height:auto;min-height:100vh}
+  .sidebar{position:fixed;top:0;left:-220px;height:100vh;z-index:100;transition:left .25s ease;width:220px!important;min-width:220px!important}
   .sidebar.mobile-open{left:0}
   .hamburger-btn{display:flex}
-  /* Header — compacto mas funcional */
-  .main-header{flex-wrap:wrap;gap:4px;padding:6px 8px}
-  .header-left{flex:none;gap:4px}
-  .month-label{font-size:15px}
-  /* View toggle scrollável */
-  .header-right{width:100%;overflow-x:auto;flex-wrap:nowrap;gap:4px;padding-bottom:2px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
-  .header-right::-webkit-scrollbar{display:none}
-  .view-toggle{flex-shrink:0}
-  .view-btn{padding:4px 8px;font-size:10px;white-space:nowrap}
-  .hbtn{padding:4px 7px;font-size:10px;white-space:nowrap}
-  .search-input{width:90px}
-  .search-input:focus{width:120px}
-  /* Cal */
-  .cal-wrap{padding:4px 4px 0;height:auto}
+  .main-header{flex-wrap:wrap;gap:6px;padding:8px 10px}
+  .month-label{font-size:17px;min-width:130px}
+  .header-right{gap:4px;flex-wrap:wrap;width:100%;overflow-x:auto}
+  .hbtn{padding:4px 8px;font-size:10px}
+  .hbtn-primary{padding:5px 10px}
+  .view-toggle .view-btn{padding:4px 7px;font-size:10px}
+  .cal-wrap{padding:6px 6px 0;height:auto}
   .cal-main{padding:0}
   .cal-card{border-radius:var(--radius-sm)}
   .cal-footer{margin:0 6px 6px;flex-wrap:wrap;gap:5px}
-  /* Month grid */
   .cal-grid{grid-template-rows:auto}
-  .dow{font-size:9px;padding:5px 0}
+  .dow{font-size:8px;padding:6px 0}
   .day{min-height:60px;padding:3px}
-  .day-num{font-size:11px}
-  /* Event pills — mais legíveis */
-  .ev-pill{font-size:9.5px;padding:2px 4px;border-radius:3px;line-height:1.3}
+  .day-num{font-size:10px}
+  .ev-pill{font-size:9px;padding:1px 3px 1px 4px}
   .ev-time{display:none}
-  .ev-cat-icon{display:none}
-  /* Day panel */
-  .day-panel{position:fixed;bottom:68px;left:0;right:0;width:100%!important;min-width:0!important;max-height:60vh;border-top:1px solid var(--border);border-left:none;z-index:80;transition:transform .3s ease;border-radius:16px 16px 0 0;box-shadow:0 -4px 20px rgba(0,0,0,.1)}
+  .day-panel{position:fixed;bottom:0;left:0;right:0;width:100%!important;min-width:0!important;max-height:55vh;border-top:1px solid var(--border);border-left:none;z-index:80;transition:transform .25s ease}
   .day-panel:not(.open){transform:translateY(100%)}
   .day-panel.open{transform:translateY(0)}
-  /* Week view */
   .week-view .week-header-row,.week-body{overflow-x:auto}
-  /* Modals full screen */
-  .overlay{align-items:flex-end;padding:0}
-  .modal{width:100%!important;max-width:100%!important;border-radius:20px 20px 0 0!important;max-height:92vh;overflow-y:auto}
-  /* Stats */
+  .search-input{width:110px}
+  .search-input:focus{width:140px}
   .stats-grid{grid-template-columns:1fr 1fr}
   #statsContent>div:last-child{grid-template-columns:1fr}
+  .overlay{align-items:flex-end;padding:0}
+  .modal{width:100%!important;max-width:calc(100vw - 20px)!important;border-radius:20px 20px 0 0!important;max-height:92vh;overflow-y:auto}
   .row-4{grid-template-columns:1fr 1fr}
   .upcoming-body{padding:8px}
   .sidebar-months{padding:4px 4px 16px}
-  /* Views */
   .tv-wrap{grid-template-columns:1fr;padding:10px}
   .rew-wrap{grid-template-columns:1fr}
   .rv-form-grid{grid-template-columns:1fr}
-  /* Notes */
   .notes-toolbar{gap:2px}
   .ntb{width:26px;height:26px;font-size:12px}
   .notes-editor{min-height:200px}
 }
 
-/* ── Bottom Navigation Bar ── */
-.mobile-bottom-nav{
-  display:none;
-  position:fixed;bottom:0;left:0;right:0;
-  height:62px;
-  background:var(--surface);
-  border-top:1px solid var(--border);
-  flex-direction:row;align-items:stretch;
-  z-index:150;
-  box-shadow:0 -2px 12px rgba(0,0,0,.08);
-  padding-bottom:env(safe-area-inset-bottom);
-}
-@media(max-width:768px){.mobile-bottom-nav{display:flex;}}
-.mbn-btn{
-  flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
-  gap:2px;background:none;border:none;cursor:pointer;
-  color:var(--muted);font-family:'DM Sans',sans-serif;
-  transition:color .15s;padding:6px 2px;
-  -webkit-tap-highlight-color:transparent;
-}
-.mbn-btn.active{color:var(--accent)}
-.mbn-btn:active{background:var(--accent-light)}
-.mbn-icon{font-size:18px;line-height:1}
-.mbn-label{font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
-.mbn-btn.mbn-add{
-  color:#fff;
-  background:var(--accent);
-  border-radius:50%;
-  width:46px;height:46px;
-  margin:0 6px;
-  flex:none;
-  align-self:center;
-  box-shadow:0 2px 10px rgba(59,91,219,.4);
-}
-.mbn-btn.mbn-add .mbn-icon{font-size:22px}
-.mbn-btn.mbn-add .mbn-label{display:none}
-
-/* ── Mobile More Sheet ── */
-.mobile-more-overlay{
-  display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);
-  z-index:299;opacity:0;transition:opacity .25s;pointer-events:none;
-}
-.mobile-more-overlay.open{opacity:1;pointer-events:auto;display:block;}
-.mobile-more-sheet{
-  display:none;
-  position:fixed;bottom:0;left:0;right:0;
-  background:var(--surface);border-radius:20px 20px 0 0;
-  padding:12px 16px 24px;z-index:300;
-  transform:translateY(100%);transition:transform .3s cubic-bezier(.4,0,.2,1);
-  padding-bottom:calc(16px + env(safe-area-inset-bottom));
-  pointer-events:none;
-}
-.mobile-more-sheet.open{transform:translateY(0);pointer-events:auto;display:block;}
-@media(max-width:768px){
-  .mobile-more-sheet{display:block;transform:translateY(100%);}
-}
-.mmm-handle{width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 12px}
-.mmm-title{font-size:13px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px;text-align:center}
-.mmm-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
-.mmm-btn{
-  display:flex;flex-direction:column;align-items:center;gap:5px;
-  padding:12px 4px;border-radius:12px;border:1px solid var(--border);
-  background:var(--surface2);cursor:pointer;font-family:'DM Sans',sans-serif;
-  font-size:20px;color:var(--text);
-  -webkit-tap-highlight-color:transparent;transition:all .15s;
-}
-.mmm-btn:active{background:var(--accent-light);border-color:var(--accent)}
-.mmm-btn span{font-size:10px;font-weight:600;color:var(--muted);text-align:center}
-
-/* ── Mobile Search Overlay ── */
-.mobile-search-overlay{
-  display:none;position:fixed;inset:0;
-  background:var(--surface);z-index:400;
-  flex-direction:column;pointer-events:none;
-}
-.mobile-search-overlay.open{display:flex;pointer-events:auto;}
-.mso-bar{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid var(--border);background:var(--surface)}
-.mso-back{background:none;border:none;font-size:22px;color:var(--accent);cursor:pointer;padding:0 4px;font-family:'DM Sans',sans-serif}
-.mso-input{flex:1;border:none;outline:none;font-size:16px;color:var(--text);background:transparent;font-family:'DM Sans',sans-serif}
-.mso-results{flex:1;overflow-y:auto;padding:8px}
-.mso-item{padding:12px;border-bottom:1px solid var(--border);cursor:pointer}
-.mso-item:active{background:var(--accent-light)}
-.mso-title{font-size:13px;font-weight:600;color:var(--text)}
-.mso-meta{font-size:11px;color:var(--muted);margin-top:2px}
-
-/* ── Mobile Long-Press Context Sheet ── */
-.mobile-ctx-overlay{
-  display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);
-  z-index:499;opacity:0;transition:opacity .2s;pointer-events:none;
-}
-.mobile-ctx-overlay.open{opacity:1;pointer-events:auto;display:block;}
-.mobile-ctx-sheet{
-  position:fixed;bottom:0;left:0;right:0;
-  background:var(--surface);border-radius:20px 20px 0 0;
-  z-index:500;transform:translateY(100%);
-  transition:transform .3s cubic-bezier(.4,0,.2,1);
-  padding-bottom:calc(8px + env(safe-area-inset-bottom));
-  pointer-events:none;
-}
-.mobile-ctx-sheet.open{transform:translateY(0);pointer-events:auto;}
-.mcs-handle{width:36px;height:4px;background:var(--border);border-radius:2px;margin:12px auto 4px}
-.mcs-header{font-size:12px;font-weight:700;color:var(--muted);padding:8px 16px 10px;border-bottom:1px solid var(--border);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.mcs-btn{
-  width:100%;padding:15px 20px;border:none;background:none;
-  text-align:left;font-size:15px;color:var(--text);font-family:'DM Sans',sans-serif;
-  cursor:pointer;display:block;border-bottom:1px solid var(--border);
-  font-weight:500;-webkit-tap-highlight-color:transparent;
-}
-.mcs-btn:active{background:var(--accent-light)}
-.mcs-btn.mcs-danger{color:#e03131}
-.mcs-btn.mcs-cancel{color:var(--muted);font-weight:600;text-align:center;border-bottom:none;margin-top:4px}
-
-/* ── Swipe hint ── */
-.swipe-hint{position:absolute;inset:0;pointer-events:none;z-index:10}
 
 /* ── Notes editor ── */
 .notes-modal{width:700px;max-width:calc(100vw - 24px);max-height:90vh;display:flex;flex-direction:column}
@@ -1494,57 +1366,9 @@ body.comfortable .ev-pill{font-size:11px;padding:3px 5px 3px 7px}
 <div class="notif-container" id="notifContainer"></div>
 <div class="toast" id="toast"></div>
 
-<!-- MOBILE BOTTOM NAV -->
-<nav class="mobile-bottom-nav" id="mobileBottomNav">
-  <button class="mbn-btn active" data-view="today"><span class="mbn-icon">⚡</span><span class="mbn-label">Hoje</span></button>
-  <button class="mbn-btn" data-view="month"><span class="mbn-icon">📅</span><span class="mbn-label">Mês</span></button>
-  <button class="mbn-btn" data-view="week"><span class="mbn-icon">🗓</span><span class="mbn-label">Semana</span></button>
-  <button class="mbn-btn mbn-add" id="mbnAdd"><span class="mbn-icon">＋</span><span class="mbn-label">Novo</span></button>
-  <button class="mbn-btn" data-view="upcoming"><span class="mbn-icon">📋</span><span class="mbn-label">Próximos</span></button>
-  <button class="mbn-btn" id="mbnMore"><span class="mbn-icon">⋯</span><span class="mbn-label">Mais</span></button>
-</nav>
 
-<!-- MOBILE MORE SHEET -->
-<div class="mobile-more-overlay" id="mobileMoreOverlay"></div>
-<div class="mobile-more-sheet" id="mobileMoreSheet">
-  <div class="mmm-handle"></div>
-  <div class="mmm-title">Menu</div>
-  <div class="mmm-grid">
-    <button class="mmm-btn" data-view="routines">🔄<span>Rotinas</span></button>
-    <button class="mmm-btn" data-view="review">📖<span>Revisão</span></button>
-    <button class="mmm-btn" id="mmmStats">📊<span>Stats</span></button>
-    <button class="mmm-btn" id="mmmSearch">🔍<span>Buscar</span></button>
-    <button class="mmm-btn" id="mmmSync">☁️<span>Sync</span></button>
-    <button class="mmm-btn" id="mmmTheme">🎨<span>Tema</span></button>
-    <button class="mmm-btn" id="mmmBackup">💾<span>Backup</span></button>
-    <button class="mmm-btn" id="mmmNotif">🔔<span>Alertas</span></button>
-    <button class="mmm-btn" id="mmmPush">📲<span>Push</span></button>
-    <button class="mmm-btn" id="mmmGcal">📆<span>Google</span></button>
-    <button class="mmm-btn" id="mmmPix">☕<span>Apoiar</span></button>
-    <button class="mmm-btn" id="mmmReviews">⭐<span>Avaliações</span></button>
-  </div>
-</div>
 
-<!-- MOBILE SEARCH OVERLAY -->
-<div class="mobile-search-overlay" id="mobileSearchOverlay">
-  <div class="mso-bar">
-    <button class="mso-back" id="msoBack">‹</button>
-    <input type="text" class="mso-input" id="msoInput" placeholder="Buscar eventos…" autocomplete="off">
-  </div>
-  <div class="mso-results" id="msoResults"></div>
-</div>
 
-<!-- MOBILE LONG PRESS CONTEXT MENU -->
-<div class="mobile-ctx-overlay" id="mobilCtxOverlay"></div>
-<div class="mobile-ctx-sheet" id="mobilCtxSheet">
-  <div class="mcs-handle"></div>
-  <div class="mcs-header" id="mcsHeader"></div>
-  <button class="mcs-btn" id="mcsEdit">✏️ Editar evento</button>
-  <button class="mcs-btn" id="mcsNotes">📝 Notas</button>
-  <button class="mcs-btn" id="mcsSkip">⏭ Pular esta ocorrência</button>
-  <button class="mcs-btn mcs-danger" id="mcsDelete">🗑 Excluir</button>
-  <button class="mcs-btn mcs-cancel" id="mcsCancel">Cancelar</button>
-</div>
 
 <script>
 /* ═══════ THEMES ═══════ */
@@ -4311,92 +4135,6 @@ document.getElementById('reviewsBtn').addEventListener('click',renderReviewsModa
 document.getElementById('reviewsClose').addEventListener('click',()=>document.getElementById('reviewsOverlay').classList.remove('open'));
 document.getElementById('reviewsOverlay').addEventListener('click',e=>{if(e.target===document.getElementById('reviewsOverlay'))document.getElementById('reviewsOverlay').classList.remove('open');});
 
-
-/* ── Bottom Nav ── */
-function updateBottomNav(v){
-  document.querySelectorAll('.mbn-btn[data-view]').forEach(b=>{
-    b.classList.toggle('active',b.dataset.view===v);
-  });
-}
-document.querySelectorAll('.mbn-btn[data-view]').forEach(btn=>{
-  btn.addEventListener('click',()=>{
-    viewMode=btn.dataset.view;
-    updateBottomNav(viewMode);
-    // Sync desktop view buttons too
-    document.querySelectorAll('.view-btn').forEach(b=>b.classList.remove('active'));
-    const desktopBtn=document.getElementById('btn'+viewMode.charAt(0).toUpperCase()+viewMode.slice(1));
-    if(desktopBtn)desktopBtn.classList.add('active');
-    closeMoreSheet();render();
-  });
-});
-document.getElementById('mbnAdd').addEventListener('click',()=>openNew(null));
-
-/* ── More Sheet ── */
-function openMoreSheet(){
-  document.getElementById('mobileMoreSheet').classList.add('open');
-  document.getElementById('mobileMoreOverlay').classList.add('open');
-}
-function closeMoreSheet(){
-  document.getElementById('mobileMoreSheet').classList.remove('open');
-  document.getElementById('mobileMoreOverlay').classList.remove('open');
-}
-document.getElementById('mbnMore').addEventListener('click',openMoreSheet);
-document.getElementById('mobileMoreOverlay').addEventListener('click',closeMoreSheet);
-
-document.querySelectorAll('.mmm-btn[data-view]').forEach(btn=>{
-  btn.addEventListener('click',()=>{
-    viewMode=btn.dataset.view;
-    updateBottomNav(viewMode);
-    closeMoreSheet();render();
-  });
-});
-document.getElementById('mmmStats')?.addEventListener('click',()=>{closeMoreSheet();openStats();});
-document.getElementById('mmmSearch')?.addEventListener('click',()=>{closeMoreSheet();openMobileSearch();});
-document.getElementById('mmmSync')?.addEventListener('click',()=>{closeMoreSheet();document.getElementById('syncBtn').click();});
-document.getElementById('mmmTheme')?.addEventListener('click',()=>{closeMoreSheet();document.getElementById('themePopup').classList.toggle('open');});
-document.getElementById('mmmBackup')?.addEventListener('click',()=>{closeMoreSheet();document.getElementById('backupPopup').classList.toggle('open');});
-document.getElementById('mmmNotif')?.addEventListener('click',()=>{closeMoreSheet();document.getElementById('notifBtn').click();});
-document.getElementById('mmmPush')?.addEventListener('click',()=>{closeMoreSheet();openFcmModal();});
-document.getElementById('mmmGcal')?.addEventListener('click',()=>{closeMoreSheet();gcalShowPanel();});
-document.getElementById('mmmPix')?.addEventListener('click',()=>{closeMoreSheet();openPixModal();});
-document.getElementById('mmmReviews')?.addEventListener('click',()=>{closeMoreSheet();renderReviewsModal();});
-
-/* ── Mobile Search ── */
-function openMobileSearch(){
-  document.getElementById('mobileSearchOverlay').classList.add('open');
-  setTimeout(()=>document.getElementById('msoInput').focus(),200);
-}
-document.getElementById('msoBack').addEventListener('click',()=>{
-  document.getElementById('mobileSearchOverlay').classList.remove('open');
-  document.getElementById('msoInput').value='';
-  document.getElementById('msoResults').innerHTML='';
-});
-document.getElementById('msoInput').addEventListener('input',function(){
-  const q=this.value.trim().toLowerCase();
-  const res=document.getElementById('msoResults');
-  if(!q){res.innerHTML='';return;}
-  const matches=events.filter(ev=>
-    ev.title.toLowerCase().includes(q)||
-    (ev.category||'').toLowerCase().includes(q)||
-    (ev.location||'').toLowerCase().includes(q)||
-    (ev.tags||[]).some(t=>t.toLowerCase().includes(q))
-  ).slice(0,20);
-  if(!matches.length){res.innerHTML='<div class="mso-item"><div class="mso-title" style="color:var(--muted)">Nenhum resultado</div></div>';return;}
-  res.innerHTML=matches.map(e=>`
-    <div class="mso-item" data-id="${e.id}" data-date="${e.date}">
-      <div class="mso-title">${CAT_ICONS[e.category]||''} ${e.title}</div>
-      <div class="mso-meta">${e.date}${e.start?' · '+e.start:''}${e.category?' · '+e.category:''}</div>
-    </div>`).join('');
-  res.querySelectorAll('.mso-item[data-id]').forEach(item=>{
-    item.addEventListener('click',()=>{
-      const ev=events.find(e=>e.id===item.dataset.id);
-      if(ev){cur=new Date(ev.date+'T12:00:00');render();openEdit(ev.id,ev.date);}
-      document.getElementById('mobileSearchOverlay').classList.remove('open');
-      document.getElementById('msoInput').value='';
-    });
-  });
-});
-
 const FCM_CONFIG_KEY='cal_fcm_config';
 const FCM_TOKEN_KEY='cal_fcm_token';
 
@@ -4856,184 +4594,6 @@ document.getElementById('deleteBtn').addEventListener('click',_patchedSyncAlerts
   if(params.get('action')==='new')setTimeout(()=>openNew(null),500);
   if(params.get('view')==='today'){viewMode='today';render();}
 })();
-
-/* ═══════ MOBILE — iniciado após INIT ═══════ */
-try{
-/* ═══════ MOBILE OVERHAUL JS ═══════ */
-const isMobile=()=>window.innerWidth<=768;
-
-/* ── Bottom Nav: sync with existing view buttons ── */
-function updateBottomNav(v){
-  document.querySelectorAll('.mbn-btn[data-view]').forEach(b=>
-    b.classList.toggle('active',b.dataset.view===v));
-}
-
-// Bottom nav taps just click the existing desktop buttons
-document.querySelectorAll('.mbn-btn[data-view]').forEach(btn=>{
-  btn.addEventListener('click',()=>{
-    const v=btn.dataset.view;
-    const desktopBtn=document.getElementById('btn'+v.charAt(0).toUpperCase()+v.slice(1));
-    if(desktopBtn)desktopBtn.click();
-    else{viewMode=v;render();}
-    updateBottomNav(v);
-    closeMoreSheet();
-  });
-});
-document.getElementById('mbnAdd').addEventListener('click',()=>openNew(null));
-document.getElementById('mbnMore').addEventListener('click',openMoreSheet);
-
-/* ── More Sheet ── */
-function openMoreSheet(){
-  document.getElementById('mobileMoreSheet').classList.add('open');
-  document.getElementById('mobileMoreOverlay').classList.add('open');
-}
-function closeMoreSheet(){
-  document.getElementById('mobileMoreSheet').classList.remove('open');
-  document.getElementById('mobileMoreOverlay').classList.remove('open');
-}
-document.getElementById('mobileMoreOverlay').addEventListener('click',closeMoreSheet);
-document.querySelectorAll('.mmm-btn[data-view]').forEach(btn=>{
-  btn.addEventListener('click',()=>{
-    const v=btn.dataset.view;
-    const db=document.getElementById('btn'+v.charAt(0).toUpperCase()+v.slice(1));
-    if(db)db.click(); else{viewMode=v;render();}
-    updateBottomNav(v);closeMoreSheet();
-  });
-});
-document.getElementById('mmmStats')?.addEventListener('click',()=>{closeMoreSheet();openStats();});
-document.getElementById('mmmSearch')?.addEventListener('click',()=>{closeMoreSheet();openMobileSearch();});
-document.getElementById('mmmSync')?.addEventListener('click',()=>{closeMoreSheet();document.getElementById('syncBtn').click();});
-document.getElementById('mmmTheme')?.addEventListener('click',()=>{closeMoreSheet();document.getElementById('themeBtn').click();});
-document.getElementById('mmmBackup')?.addEventListener('click',()=>{closeMoreSheet();document.getElementById('backupBtn').click();});
-document.getElementById('mmmNotif')?.addEventListener('click',()=>{closeMoreSheet();document.getElementById('notifBtn').click();});
-document.getElementById('mmmPush')?.addEventListener('click',()=>{closeMoreSheet();openFcmModal();});
-document.getElementById('mmmGcal')?.addEventListener('click',()=>{closeMoreSheet();gcalShowPanel();});
-document.getElementById('mmmPix')?.addEventListener('click',()=>{closeMoreSheet();openPixModal();});
-document.getElementById('mmmReviews')?.addEventListener('click',()=>{closeMoreSheet();renderReviewsModal();});
-
-/* ── Mobile Search ── */
-function openMobileSearch(){
-  document.getElementById('mobileSearchOverlay').classList.add('open');
-  setTimeout(()=>document.getElementById('msoInput').focus(),300);
-}
-document.getElementById('msoBack').addEventListener('click',()=>{
-  document.getElementById('mobileSearchOverlay').classList.remove('open');
-  document.getElementById('msoInput').value='';
-  document.getElementById('msoResults').innerHTML='';
-});
-document.getElementById('msoInput').addEventListener('input',function(){
-  const q=this.value.trim().toLowerCase();
-  const res=document.getElementById('msoResults');
-  if(!q){res.innerHTML='';return;}
-  const matches=events.filter(ev=>
-    ev.title.toLowerCase().includes(q)||
-    (ev.category||'').toLowerCase().includes(q)||
-    (ev.tags||[]).some(t=>t.toLowerCase().includes(q))
-  ).slice(0,15);
-  res.innerHTML=matches.length
-    ? matches.map(e=>`<div class="mso-item" data-id="${e.id}" data-date="${e.date}">
-        <div class="mso-title">${CAT_ICONS[e.category]||''} ${e.title}</div>
-        <div class="mso-meta">${e.date}${e.start?' · '+e.start:''}${e.category?' · '+e.category:''}</div>
-      </div>`).join('')
-    : '<div class="mso-item"><div class="mso-title" style="color:var(--muted)">Nenhum resultado</div></div>';
-  res.querySelectorAll('.mso-item[data-id]').forEach(item=>{
-    item.addEventListener('click',()=>{
-      const ev=events.find(e=>e.id===item.dataset.id);
-      if(ev){cur=new Date(ev.date+'T12:00:00');render();openEdit(ev.id,ev.date);}
-      document.getElementById('mobileSearchOverlay').classList.remove('open');
-    });
-  });
-});
-
-/* ── Mobile Context Sheet (Long Press) ── */
-let _lpEvId=null,_lpEvDate=null;
-
-function openMobileCtx(evId,evDate){
-  _lpEvId=evId;_lpEvDate=evDate;
-  const ev=events.find(e=>e.id===evId);
-  document.getElementById('mcsHeader').textContent=ev?.title||'Evento';
-  document.getElementById('mcsSkip').style.display=ev?.rrule?'block':'none';
-  document.getElementById('mobilCtxSheet').classList.add('open');
-  document.getElementById('mobilCtxOverlay').classList.add('open');
-  if(navigator.vibrate)navigator.vibrate([30]);
-}
-function closeMobileCtx(){
-  document.getElementById('mobilCtxSheet').classList.remove('open');
-  document.getElementById('mobilCtxOverlay').classList.remove('open');
-  _lpEvId=null;_lpEvDate=null;
-}
-document.getElementById('mobilCtxOverlay').addEventListener('click',closeMobileCtx);
-document.getElementById('mcsCancel').addEventListener('click',closeMobileCtx);
-document.getElementById('mcsEdit').addEventListener('click',()=>{
-  const id=_lpEvId,d=_lpEvDate;closeMobileCtx();if(id&&d)openEdit(id,d);
-});
-document.getElementById('mcsNotes').addEventListener('click',()=>{
-  const id=_lpEvId;closeMobileCtx();if(id)openNotes(id);
-});
-document.getElementById('mcsSkip').addEventListener('click',()=>{
-  const id=_lpEvId,d=_lpEvDate;closeMobileCtx();
-  if(id&&d){const ev=events.find(e=>e.id===id);if(ev){
-    if(!ev.skippedDates)ev.skippedDates=[];
-    if(!ev.skippedDates.includes(d))ev.skippedDates.push(d);
-    save();render();toast('Ocorrência pulada.');
-  }}
-});
-document.getElementById('mcsDelete').addEventListener('click',()=>{
-  const id=_lpEvId;closeMobileCtx();
-  if(id&&confirm('Excluir este evento?')){
-    events=events.filter(e=>e.id!==id);save();render();toast('Excluído.');
-  }
-});
-
-// Long-press handler — added to any pill element
-function addLongPress(el){
-  if(el._lp)return;el._lp=true;
-  let t=null,sx=0,sy=0,moved=false;
-  el.addEventListener('touchstart',ev=>{
-    sx=ev.touches[0].clientX;sy=ev.touches[0].clientY;moved=false;
-    const id=el.dataset.id,date=el.dataset.date;if(!id)return;
-    t=setTimeout(()=>{if(!moved)openMobileCtx(id,date);},600);
-  },{passive:true});
-  el.addEventListener('touchmove',ev=>{
-    if(Math.abs(ev.touches[0].clientX-sx)>10||Math.abs(ev.touches[0].clientY-sy)>10){
-      moved=true;clearTimeout(t);
-    }
-  },{passive:true});
-  el.addEventListener('touchend',()=>clearTimeout(t),{passive:true});
-  el.addEventListener('touchcancel',()=>clearTimeout(t),{passive:true});
-}
-
-// MutationObserver watches for new pills after render
-new MutationObserver(()=>{
-  if(!isMobile())return;
-  document.querySelectorAll('.ev-pill[data-id],.upcoming-ev[data-id],.tr-item[data-id]').forEach(addLongPress);
-  updateBottomNav(viewMode);
-}).observe(document.getElementById('calMain'),{childList:true,subtree:true});
-
-/* ── Swipe navigation (touchend only — safe) ── */
-(()=>{
-  let sx=0,sy=0;
-  document.getElementById('calMain').addEventListener('touchstart',e=>{
-    if(e.touches.length!==1)return;
-    sx=e.touches[0].clientX;sy=e.touches[0].clientY;
-  },{passive:true});
-  document.getElementById('calMain').addEventListener('touchend',e=>{
-    const dx=e.changedTouches[0].clientX-sx;
-    const dy=e.changedTouches[0].clientY-sy;
-    if(Math.abs(dx)<70||Math.abs(dy)>Math.abs(dx)*0.6)return;
-    if(['today','routines','review'].includes(viewMode))return;
-    if(dx<0)document.getElementById('nextBtn').click();
-    else document.getElementById('prevBtn').click();
-  },{passive:true});
-})();
-
-updateBottomNav(viewMode);
-
-/* ═══════ END MOBILE ═══════ */
-} catch(mobileErr){
-  console.warn("[Mobile] Erro no setup mobile:", mobileErr);
-}
-/* ═══════ END MOBILE ═══════ */
 
 </script>
 </body>
