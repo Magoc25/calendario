@@ -147,6 +147,11 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);hei
 .cal-main.panel-open{padding-right:0}
 .cal-card{flex:1;display:flex;flex-direction:column;background:var(--surface);border-radius:var(--radius) var(--radius) 0 0;box-shadow:var(--shadow);border:1px solid var(--border);border-bottom:none;overflow:hidden}
 .today-view.cal-card{overflow-y:auto!important;overflow-x:hidden}
+@media(max-width:768px){
+  .today-view.cal-card{flex:none!important;height:auto!important;min-height:0;overflow:visible!important}
+  #todayContent{height:auto}
+  .tv-wrap{height:auto;padding-bottom:20px}
+}
 .cal-footer{padding:5px 12px;display:flex;gap:7px;align-items:center;flex-wrap:wrap;background:var(--surface2);border:1px solid var(--border);border-top:none;border-radius:0 0 var(--radius) var(--radius);flex-shrink:0;margin-bottom:9px;margin-right:12px}
 .legend{display:flex;align-items:center;gap:3px;font-size:9px;color:var(--muted)}
 .ldot{width:6px;height:6px;border-radius:2px}
