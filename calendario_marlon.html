@@ -145,6 +145,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);hei
 .cal-main{flex:1;display:flex;flex-direction:column;overflow:hidden;padding:9px 0 0 12px;min-width:0;transition:all .3s}
 .cal-main.panel-open{padding-right:0}
 .cal-card{flex:1;display:flex;flex-direction:column;background:var(--surface);border-radius:var(--radius) var(--radius) 0 0;box-shadow:var(--shadow);border:1px solid var(--border);border-bottom:none;overflow:hidden}
+.today-view.cal-card{overflow-y:auto!important;overflow-x:hidden}
 .cal-footer{padding:5px 12px;display:flex;gap:7px;align-items:center;flex-wrap:wrap;background:var(--surface2);border:1px solid var(--border);border-top:none;border-radius:0 0 var(--radius) var(--radius);flex-shrink:0;margin-bottom:9px;margin-right:12px}
 .legend{display:flex;align-items:center;gap:3px;font-size:9px;color:var(--muted)}
 .ldot{width:6px;height:6px;border-radius:2px}
@@ -950,7 +951,7 @@ body.comfortable .ev-pill{font-size:11px;padding:3px 5px 3px 7px}
     <div class="cal-wrap">
       <div class="cal-main" id="calMain">
         <!-- Today view -->
-        <div class="cal-card today-view" id="todayCard" style="display:none;overflow-y:auto;flex-direction:column">
+        <div class="cal-card today-view" id="todayCard" style="display:none;flex-direction:column">
           <div id="todayContent"></div>
         </div>
         <!-- Month view -->
@@ -2144,7 +2145,7 @@ function render(){
   if(cur.getFullYear()!==sidebarYear)sidebarYear=cur.getFullYear();
   updateMonthLabel();
   // Show/hide all cards
-  document.getElementById('todayCard').style.cssText=viewMode==='today'?'display:flex;flex-direction:column;overflow-y:auto':'display:none';
+  document.getElementById('todayCard').style.cssText=viewMode==='today'?'display:flex;flex-direction:column':'display:none';
   document.getElementById('monthCard').style.display=viewMode==='month'?'':'none';
   document.getElementById('weekCard').classList.toggle('show',viewMode==='week');
   document.getElementById('upcomingCard').classList.toggle('show',viewMode==='upcoming');
