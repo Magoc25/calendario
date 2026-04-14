@@ -2336,7 +2336,8 @@ function renderMonth(){
       setTimeout(()=>{_dragJustEnded=false;},50);
     });
     pill.addEventListener('contextmenu',e=>{e.preventDefault();e.stopPropagation();openCtxMenu(e,pill.dataset.id,pill.dataset.date);});
-    addLongPress(pill,pill.dataset.id,pill.dataset.date);
+    // Long press só no desktop — no mobile a grade é imprecisa; usa o painel do dia
+    if(window.innerWidth>768)addLongPress(pill,pill.dataset.id,pill.dataset.date);
   });
 
   grid.querySelectorAll('.day').forEach(el=>{
