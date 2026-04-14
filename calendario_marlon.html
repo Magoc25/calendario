@@ -510,8 +510,13 @@ body.comfortable .ev-pill{font-size:11px;padding:3px 5px 3px 7px}
   .day-panel{position:fixed;bottom:0;left:0;right:0;width:100%!important;min-width:0!important;max-height:55vh;border-top:1px solid var(--border);border-left:none;z-index:80;transition:transform .25s ease}
   .day-panel:not(.open){transform:translateY(100%)}
   .day-panel.open{transform:translateY(0)}
-  /* Vista semana: scroll horizontal interno, mas vertical via página */
-  .week-view .week-header-row,.week-body{overflow-x:auto}
+  /* Vista semana mobile: coluna única, sem scroll horizontal */
+  .week-view .week-header-row{overflow-x:hidden;}
+  .week-body{overflow-x:hidden!important;overflow-y:auto;}
+  /* week-ev na coluna única: fonte maior e mais espaço */
+  .wm-single-col .week-ev{font-size:11px!important;}
+  .wm-single-col .week-ev-title{white-space:normal!important;font-size:11px!important;}
+  .wm-single-col .week-ev-time{font-size:10px!important;}
   .search-input{width:110px}
   .search-input:focus{width:140px}
   .stats-grid{grid-template-columns:1fr 1fr}
@@ -905,6 +910,52 @@ body.comfortable .ev-pill{font-size:11px;padding:3px 5px 3px 7px}
   -webkit-tap-highlight-color:transparent;
 }
 .mobile-fab:active{transform:scale(.90);box-shadow:0 2px 8px rgba(59,91,219,.35);}
+
+/* ── Mobile Week View — single day mode ── */
+.wm-day-tabs{
+  display:flex;flex:1;
+  background:var(--dow-bg);
+  overflow:hidden;
+}
+.wm-day-tab{
+  flex:1;
+  display:flex;flex-direction:column;align-items:center;
+  padding:7px 2px 6px;
+  cursor:pointer;
+  border-bottom:3px solid transparent;
+  transition:border-color .15s;
+  -webkit-tap-highlight-color:transparent;
+}
+.wm-day-tab.active{border-bottom-color:rgba(255,255,255,.85);}
+.wm-dow{
+  font-size:9px;font-weight:700;text-transform:uppercase;
+  color:var(--dow-color);opacity:.75;letter-spacing:.04em;
+}
+.wm-dnum{
+  font-size:15px;font-weight:700;color:var(--dow-color);
+  margin-top:2px;
+  width:26px;height:26px;
+  display:flex;align-items:center;justify-content:center;
+  border-radius:50%;
+}
+.wm-day-tab.active .wm-dnum{background:rgba(255,255,255,.18);}
+.wm-day-tab.is-today .wm-dnum{
+  background:rgba(255,255,255,.92);
+  color:var(--accent);
+  font-weight:700;
+}
+.wm-day-tab.active.is-today .wm-dnum{
+  background:#fff;
+  color:var(--accent);
+  box-shadow:0 1px 6px rgba(0,0,0,.15);
+}
+/* Single-day column fills full width in mobile */
+.wm-single-col{width:100%!important;flex:1!important;}
+/* Swipe hint arrow (optional visual) */
+.wm-swipe-hint{
+  font-size:10px;color:var(--hint);text-align:center;
+  padding:4px 0 0;font-style:italic;
+}
 
 /* ── Context menu: make items bigger on touch devices ── */
 @media(hover:none){
@@ -2102,7 +2153,115 @@ document.getElementById('dpClose').addEventListener('click',()=>{
 /* ═══════ WEEK VIEW ═══════ */
 const WEEK_START_H=6,WEEK_END_H=23,HOUR_H=48;
 function getWeekDates(){const d=new Date(cur);d.setDate(d.getDate()-d.getDay());return Array.from({length:7},(_,i)=>{const x=new Date(d);x.setDate(x.getDate()+i);return x;});}
+
+/* Qual dia da semana está selecionado no mobile (0=Dom … 6=Sáb) */
+let mobileWeekDay=new Date().getDay();
+
+/* ── Mobile Week View — 1 dia por vez ── */
+function renderWeekMobile(){
+  const dates=getWeekDates();
+  const today=todayDs();
+  // Garante índice válido
+  if(mobileWeekDay<0)mobileWeekDay=0;
+  if(mobileWeekDay>6)mobileWeekDay=6;
+  const selDate=dates[mobileWeekDay];
+  const dstr=ds(selDate.getFullYear(),selDate.getMonth(),selDate.getDate());
+  const evMap=buildEvMap(dstr,dstr);
+  const evs=evMap[dstr]||[];
+
+  // ── Cabeçalho: 7 chips de dia ──
+  const hdr=document.getElementById('weekHeader');
+  hdr.innerHTML='<div class="week-time-spacer" style="min-width:42px;max-width:42px"></div>'
+    +'<div class="wm-day-tabs">'
+    +dates.map((d,i)=>{
+      const dsi=ds(d.getFullYear(),d.getMonth(),d.getDate());
+      const isSel=i===mobileWeekDay;
+      const isTod=dsi===today;
+      return `<div class="wm-day-tab${isSel?' active':''}${isTod?' is-today':''}" data-wi="${i}">
+        <div class="wm-dow">${DOWS[d.getDay()].slice(0,3)}</div>
+        <div class="wm-dnum">${d.getDate()}</div>
+      </div>`;
+    }).join('')
+    +'</div>';
+
+  hdr.querySelectorAll('.wm-day-tab').forEach(tab=>{
+    tab.addEventListener('click',()=>{
+      mobileWeekDay=parseInt(tab.dataset.wi);
+      renderWeekMobile();
+    });
+  });
+
+  // ── Corpo: coluna de horários + coluna única do dia ──
+  const body=document.getElementById('weekBody');
+  let timeCol='<div class="week-time-col">';
+  for(let h=WEEK_START_H;h<=WEEK_END_H;h++)
+    timeCol+=`<div class="week-hour-label">${h}:00</div>`;
+  timeCol+='</div>';
+
+  let dayCol=`<div class="week-day-col wm-single-col${dstr===today?' today-col':''}" data-date="${dstr}">`;
+  for(let h=WEEK_START_H;h<=WEEK_END_H;h++)
+    dayCol+=`<div class="week-slot" data-date="${dstr}" data-h="${h}"></div>`;
+  dayCol+='</div>';
+
+  body.innerHTML=timeCol+dayCol;
+
+  // Posicionar eventos
+  const col=body.querySelector('.week-day-col');
+  evs.forEach(ev=>{
+    if(!ev.start)return;
+    const[sh,sm]=ev.start.split(':').map(Number);
+    const[eh,em]=(ev.end||ev.start).split(':').map(Number);
+    const top=(sh+sm/60-WEEK_START_H)*HOUR_H;
+    const height=Math.max(((eh*60+em)-(sh*60+sm))/60*HOUR_H,28);
+    if(top<0)return;
+    const wrapper=document.createElement('div');
+    wrapper.innerHTML=makePill(ev,dstr,true);
+    const pill=wrapper.firstElementChild;
+    pill.style.top=top+'px';
+    pill.style.height=height+'px';
+    pill.addEventListener('click',e=>{
+      const chk=e.target.closest('.ev-check');
+      if(chk){e.stopPropagation();toggleDone(chk.dataset.checkId,chk.dataset.checkDate);return;}
+      openEdit(ev.id,dstr);
+    });
+    addLongPress(pill,ev.id,dstr);
+    col.appendChild(pill);
+  });
+
+  // Linha "agora"
+  const now=new Date();
+  const nowDs=ds(now.getFullYear(),now.getMonth(),now.getDate());
+  if(dstr===nowDs){
+    const top=(now.getHours()+now.getMinutes()/60-WEEK_START_H)*HOUR_H;
+    if(top>=0){
+      const line=document.createElement('div');
+      line.className='now-line';line.style.top=top+'px';
+      col.appendChild(line);
+    }
+  }
+
+  // Toque num slot vazio → novo evento
+  body.querySelectorAll('.week-slot').forEach(slot=>{
+    slot.addEventListener('click',e=>{
+      if(e.target.closest('.week-ev'))return;
+      const h=parseInt(slot.dataset.h);
+      openNew(slot.dataset.date);
+      setTimeout(()=>{
+        document.getElementById('evStart').value=`${pad(h)}:00`;
+        document.getElementById('evEnd').value=`${pad(h+1)}:00`;
+      },60);
+    });
+  });
+
+  // Scroll para hora atual (ou 7h)
+  const scrollH=dstr===nowDs?Math.max(now.getHours()-1,WEEK_START_H):7;
+  setTimeout(()=>{body.scrollTop=(scrollH-WEEK_START_H)*HOUR_H;},60);
+}
+
 function renderWeek(){
+  // Mobile: modo 1 dia por vez
+  if(window.innerWidth<=768){renderWeekMobile();return;}
+  // Desktop: renderização original abaixo
   const dates=getWeekDates();const today=todayDs();
   const rs=ds(dates[0].getFullYear(),dates[0].getMonth(),dates[0].getDate());
   const re=ds(dates[6].getFullYear(),dates[6].getMonth(),dates[6].getDate());
@@ -2770,7 +2929,17 @@ document.getElementById('deleteBtn').addEventListener('click',()=>{
   const btn=document.getElementById('btn'+v);
   if(!btn)return;
   btn.addEventListener('click',()=>{
+    const prev=viewMode;
     viewMode=v.toLowerCase();
+    // Ao entrar na Vista Semana no mobile, posicionar no dia correto
+    if(viewMode==='week'&&window.innerWidth<=768){
+      const dates=getWeekDates();
+      const todayDow=new Date().getDay();
+      const todayStr=todayDs();
+      // Verifica se hoje está na semana atual
+      const todayInWeek=dates.some(d=>ds(d.getFullYear(),d.getMonth(),d.getDate())===todayStr);
+      mobileWeekDay=todayInWeek?todayDow:0;
+    }
     document.querySelectorAll('.view-btn').forEach(b=>b.classList.remove('active'));
     btn.classList.add('active');
     render();
@@ -3155,11 +3324,27 @@ function addLongPress(el,evId,evDate){
   calMain.addEventListener('touchend',e=>{
     if(!swActive)return;
     swActive=false;
-    // Only swipe in month and week views
     if(!['month','week'].includes(viewMode))return;
     const dx=e.changedTouches[0].clientX-swStartX;
     const dy=Math.abs(e.changedTouches[0].clientY-swStartY);
     if(dy>MAX_VERT||Math.abs(dx)<THRESHOLD)return;
+
+    // Mobile week view: navega por DIA (não por semana)
+    if(viewMode==='week'&&window.innerWidth<=768){
+      if(dx<0){
+        // swipe esquerda → próximo dia
+        mobileWeekDay++;
+        if(mobileWeekDay>6){mobileWeekDay=0;document.getElementById('nextBtn').click();return;}
+      } else {
+        // swipe direita → dia anterior
+        mobileWeekDay--;
+        if(mobileWeekDay<0){mobileWeekDay=6;document.getElementById('prevBtn').click();return;}
+      }
+      renderWeekMobile();
+      return;
+    }
+
+    // Mês ou desktop week: navega por mês/semana
     if(dx<0)document.getElementById('nextBtn').click();
     else document.getElementById('prevBtn').click();
   },{passive:true});
