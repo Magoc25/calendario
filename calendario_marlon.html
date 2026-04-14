@@ -1104,11 +1104,16 @@ body.comfortable .ev-pill{font-size:11px;padding:3px 5px 3px 7px}
     margin-bottom:14px!important;
   }
 
-  /* Linhas de 2 e 4 colunas → 1 coluna empilhada */
-  #overlay .modal .row-2,
-  #overlay .modal .row-4{
+  /* row-2 (categoria+cor) → 1 coluna */
+  #overlay .modal .row-2{
     grid-template-columns:1fr!important;
     gap:0!important;
+  }
+  /* row-4 (datas + horas) → 2 colunas (2+2): evita inputs 100% de largura que
+     causam bug de posicionamento do picker nativo do Chrome Android */
+  #overlay .modal .row-4{
+    grid-template-columns:1fr 1fr!important;
+    gap:8px!important;
   }
 
   /* Sugestões de categoria: wrap */
