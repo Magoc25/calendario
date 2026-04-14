@@ -406,9 +406,9 @@ body.comfortable .ev-pill{font-size:11px;padding:3px 5px 3px 7px}
 }
 
 /* ── Context menu ── */
-.ctx-menu{display:none;position:fixed;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);box-shadow:var(--shadow-modal);z-index:800;min-width:170px;padding:4px 0;animation:slideUp .12s ease}
+.ctx-menu{display:none;position:fixed;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);box-shadow:var(--shadow-modal);z-index:800;min-width:170px;padding:4px 0;animation:slideUp .12s ease;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;}
 .ctx-menu.open{display:block}
-.ctx-item{padding:8px 14px;font-size:12px;font-weight:500;color:var(--text);cursor:pointer;display:flex;align-items:center;gap:8px;transition:background .12s}
+.ctx-item{padding:8px 14px;font-size:12px;font-weight:500;color:var(--text);cursor:pointer;display:flex;align-items:center;gap:8px;transition:background .12s;-webkit-user-select:none;user-select:none;}
 .ctx-item:hover{background:var(--surface2)}
 .ctx-item.danger{color:#e03131}
 .ctx-item.danger:hover{background:#fff1f1}
@@ -874,6 +874,7 @@ body.comfortable .ev-pill{font-size:11px;padding:3px 5px 3px 7px}
   -webkit-touch-callout:none;
 }
 /* long-press visual feedback */
+.ev-pill,.dp-ev,.week-ev{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;}
 .ev-pill.lp-active,.dp-ev.lp-active,.week-ev.lp-active{
   outline:2px solid var(--accent);
   opacity:.7;
