@@ -490,6 +490,8 @@ body.comfortable .ev-pill{font-size:11px;padding:3px 5px 3px 7px}
   }
   /* Vista Hoje: remove overflow-y:auto interno, deixa página rolar */
   #todayCard{overflow:visible!important;}
+  /* Vista Semana: o card contém o body scrollável internamente */
+  #weekCard{overflow:hidden!important;height:auto!important;}
 
   .sidebar{position:fixed;top:0;left:-220px;height:100vh;z-index:100;transition:left .25s ease;width:220px!important;min-width:220px!important}
   .sidebar.mobile-open{left:0}
@@ -510,10 +512,28 @@ body.comfortable .ev-pill{font-size:11px;padding:3px 5px 3px 7px}
   .day-panel{position:fixed;bottom:0;left:0;right:0;width:100%!important;min-width:0!important;max-height:55vh;border-top:1px solid var(--border);border-left:none;z-index:80;transition:transform .25s ease}
   .day-panel:not(.open){transform:translateY(100%)}
   .day-panel.open{transform:translateY(0)}
-  /* Vista semana mobile: coluna única, sem scroll horizontal */
-  .week-view .week-header-row{overflow-x:hidden;}
-  .week-body{overflow-x:hidden!important;overflow-y:auto;}
-  /* week-ev na coluna única: fonte maior e mais espaço */
+  /* ── Vista Semana mobile: layout flex (sobrescreve grid de 7 colunas) ── */
+  /* Header: flex em vez de grid para os 7 chips caberem */
+  .week-header-row{
+    display:flex!important;
+    overflow:hidden;
+  }
+  .week-time-spacer{
+    min-width:44px;max-width:44px;flex-shrink:0;
+  }
+  /* Body: flex em vez de grid para coluna única */
+  .week-body{
+    display:flex!important;
+    overflow-x:hidden!important;
+    overflow-y:auto;
+    /* altura fixa para o body ter scroll interno */
+    height:calc(100dvh - 220px);
+    max-height:calc(100dvh - 220px);
+    flex-shrink:0;
+  }
+  .week-time-col{flex-shrink:0;min-width:44px;max-width:44px;}
+  .wm-single-col{flex:1!important;width:auto!important;}
+  /* Eventos na coluna única: fonte e texto maiores */
   .wm-single-col .week-ev{font-size:11px!important;}
   .wm-single-col .week-ev-title{white-space:normal!important;font-size:11px!important;}
   .wm-single-col .week-ev-time{font-size:10px!important;}
