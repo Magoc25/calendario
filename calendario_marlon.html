@@ -1104,6 +1104,9 @@ body.comfortable .ev-pill{font-size:11px;padding:3px 5px 3px 7px}
     margin-bottom:14px!important;
   }
 
+  /* Seletor de hora customizado: oculto no desktop, visível no mobile */
+  .cts-wrap{display:none}
+
   /* row-2 (categoria+cor) → 1 coluna */
   #overlay .modal .row-2{
     grid-template-columns:1fr!important;
@@ -1135,6 +1138,35 @@ body.comfortable .ev-pill{font-size:11px;padding:3px 5px 3px 7px}
   /* Swatches de cor: maiores para toque */
   #overlay .modal .color-swatch{
     width:28px!important;height:28px!important;
+  }
+
+  /* Seletor de hora customizado no mobile: troca input[type=time] por selects */
+  #overlay .modal .native-time-input{display:none!important;}
+  #overlay .modal .cts-wrap{
+    display:flex!important;
+    align-items:center;
+    gap:4px;
+    width:100%;
+    box-sizing:border-box;
+  }
+  #overlay .modal .cts-part{
+    flex:1;
+    font-size:16px!important;
+    padding:10px 8px!important;
+    border-radius:10px!important;
+    min-height:44px!important;
+    border:1px solid var(--border);
+    background:var(--surface2);
+    color:var(--text);
+    text-align:center;
+    -webkit-appearance:none;
+    appearance:none;
+  }
+  #overlay .modal .cts-sep{
+    font-size:20px;
+    font-weight:700;
+    color:var(--muted);
+    flex-shrink:0;
   }
 
   /* Rodapé sticky com os botões de ação */
@@ -1452,8 +1484,24 @@ body.comfortable .ev-pill{font-size:11px;padding:3px 5px 3px 7px}
     <div class="row-4">
       <div class="field"><label>Data início *</label><input type="date" id="evDate"></div>
       <div class="field"><label>Data fim</label><input type="date" id="evDateEnd" title="Para eventos multi-dia"></div>
-      <div class="field"><label>Início</label><input type="time" id="evStart" value="08:00"></div>
-      <div class="field"><label>Fim</label><input type="time" id="evEnd" value="09:00"></div>
+      <div class="field">
+        <label>Início</label>
+        <input type="time" id="evStart" value="08:00" class="native-time-input">
+        <div class="cts-wrap" id="evStartSel">
+          <select class="cts-part" id="evStartH"></select>
+          <span class="cts-sep">:</span>
+          <select class="cts-part" id="evStartM"></select>
+        </div>
+      </div>
+      <div class="field">
+        <label>Fim</label>
+        <input type="time" id="evEnd" value="09:00" class="native-time-input">
+        <div class="cts-wrap" id="evEndSel">
+          <select class="cts-part" id="evEndH"></select>
+          <span class="cts-sep">:</span>
+          <select class="cts-part" id="evEndM"></select>
+        </div>
+      </div>
     </div>
     <div class="field">
       <label>Alerta antecipado</label>
@@ -3014,6 +3062,38 @@ document.getElementById('evDate').addEventListener('change',function(){
   else hint.style.display='none';
 });
 
+/* ── Seletor de hora customizado (mobile) ── */
+(function initCts(){
+  const pad=n=>String(n).padStart(2,'0');
+  // Popular horas e minutos nos selects
+  ['evStartH','evEndH'].forEach(id=>{
+    const sel=document.getElementById(id);
+    for(let h=0;h<24;h++){const o=document.createElement('option');o.value=pad(h);o.textContent=pad(h);sel.appendChild(o);}
+  });
+  ['evStartM','evEndM'].forEach(id=>{
+    const sel=document.getElementById(id);
+    for(let m=0;m<60;m+=5){const o=document.createElement('option');o.value=pad(m);o.textContent=pad(m);sel.appendChild(o);}
+  });
+  // Selects → input hidden
+  function syncToInput(field){
+    const h=document.getElementById(field+'H').value;
+    const m=document.getElementById(field+'M').value;
+    document.getElementById(field==='evStart'?'evStart':'evEnd').value=h+':'+m;
+  }
+  ['evStartH','evStartM'].forEach(id=>document.getElementById(id).addEventListener('change',()=>syncToInput('evStart')));
+  ['evEndH','evEndM'].forEach(id=>document.getElementById(id).addEventListener('change',()=>syncToInput('evEnd')));
+  // Input → selects (chame ao abrir o formulário)
+  window.ctsSync=function(inputId){
+    const val=document.getElementById(inputId).value||'08:00';
+    const [h,m]=val.split(':');
+    const field=inputId==='evStart'?'evStart':'evEnd';
+    document.getElementById(field+'H').value=pad(parseInt(h||'8'));
+    // minuto mais próximo em múltiplo de 5
+    const mn=Math.round(parseInt(m||'0')/5)*5%60;
+    document.getElementById(field+'M').value=pad(mn);
+  };
+})();
+
 function openNew(date){
   editingId=null;editingDate=null;
   document.getElementById('modalTitle').textContent='Novo evento';
@@ -3022,6 +3102,7 @@ function openNew(date){
   document.getElementById('evDate').value=date||ds(cur.getFullYear(),cur.getMonth(),1);
   document.getElementById('evDateEnd').value=date||ds(cur.getFullYear(),cur.getMonth(),1);
   document.getElementById('evStart').value='08:00';document.getElementById('evEnd').value='09:00';
+  if(window.ctsSync){ctsSync('evStart');ctsSync('evEnd');}
   document.getElementById('evAlert').value='15';document.getElementById('evRrule').value='';
   document.getElementById('recurBox').classList.remove('show');document.getElementById('customDaysWrap').classList.remove('show');
   document.querySelectorAll('.cat-tag,.day-chip').forEach(t=>t.classList.remove('selected','sel'));
@@ -3046,6 +3127,7 @@ function openEdit(id,dateCtx){
   document.getElementById('evTitle').value=ev.title;document.getElementById('evCategory').value=ev.category||'';
   document.getElementById('evDate').value=ev.date;document.getElementById('evDateEnd').value=ev.dateEnd||ev.date;
   document.getElementById('evStart').value=ev.start||'08:00';document.getElementById('evEnd').value=ev.end||'09:00';
+  if(window.ctsSync){ctsSync('evStart');ctsSync('evEnd');}
   document.getElementById('evAlert').value=ev.alert!=null?String(ev.alert):'15';
   document.getElementById('evRrule').value=ev.rrule||'';document.getElementById('evUntil').value=ev.until||'';
   document.getElementById('evLocation').value=ev.location||'';document.getElementById('evDesc').value=ev.desc||'';
