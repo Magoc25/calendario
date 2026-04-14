@@ -1007,6 +1007,152 @@ body.comfortable .ev-pill{font-size:11px;padding:3px 5px 3px 7px}
   .search-input{width:90px;}
   .search-input:focus{width:130px;}
 
+  /* ══════════════════════════════════════
+     FORMULÁRIO DE EVENTO — FULLSCREEN
+     ══════════════════════════════════════ */
+
+  /* Overlay: alinha na base para o modal subir */
+  #overlay{
+    align-items:flex-end!important;
+    padding:0!important;
+  }
+
+  /* Modal: tela cheia, slide de baixo para cima */
+  #overlay .modal{
+    width:100%!important;
+    max-width:100%!important;
+    height:100dvh!important;
+    max-height:100dvh!important;
+    border-radius:0!important;
+    border:none!important;
+    margin:0!important;
+    /* sem padding lateral — cada seção define o seu */
+    padding:0!important;
+    overflow-y:auto!important;
+    overflow-x:hidden!important;
+    display:flex!important;
+    flex-direction:column!important;
+    /* sobrescreve animação slideUp original */
+    animation:mobileFormUp .28s cubic-bezier(.4,0,.2,1)!important;
+  }
+  @keyframes mobileFormUp{
+    from{transform:translateY(60px);opacity:.6;}
+    to{transform:translateY(0);opacity:1;}
+  }
+
+  /* Cabeçalho sticky: título + botão fechar */
+  #overlay .modal .modal-close{
+    position:sticky!important;
+    top:0!important;
+    /* deixa espaço para o título ao lado */
+    float:right!important;
+    width:40px!important;height:40px!important;
+    font-size:20px!important;
+    margin:12px 12px 0 0!important;
+    background:var(--surface2)!important;
+    border-radius:50%!important;
+    border:1px solid var(--border)!important;
+    z-index:5!important;
+  }
+  #overlay .modal .modal-title{
+    position:sticky!important;
+    top:0!important;
+    background:var(--surface)!important;
+    border-bottom:1px solid var(--border)!important;
+    padding:16px 56px 14px 16px!important;
+    margin:0!important;
+    font-size:17px!important;
+    z-index:4!important;
+    /* o modal-close (float:right) fica dentro desta área */
+  }
+
+  /* Corpo do formulário: padding lateral */
+  #overlay .modal .done-row,
+  #overlay .modal .free-slot-hint,
+  #overlay .modal .conflict-warning,
+  #overlay .modal .row-2,
+  #overlay .modal .row-4,
+  #overlay .modal .field,
+  #overlay .modal .recur-box{
+    padding-left:16px!important;
+    padding-right:16px!important;
+  }
+  #overlay .modal .done-row{
+    padding-top:12px!important;
+  }
+
+  /* Campos: fonte 16px (evita zoom automático do iOS ao focar) */
+  #overlay .modal input:not([type=color]):not([type=checkbox]),
+  #overlay .modal select,
+  #overlay .modal textarea{
+    font-size:16px!important;
+    padding:10px 12px!important;
+    border-radius:10px!important;
+    min-height:44px!important;
+  }
+  #overlay .modal label{
+    font-size:12px!important;
+    margin-bottom:6px!important;
+    display:block;
+  }
+  #overlay .modal .field{
+    margin-bottom:14px!important;
+  }
+
+  /* Linhas de 2 e 4 colunas → 1 coluna empilhada */
+  #overlay .modal .row-2,
+  #overlay .modal .row-4{
+    grid-template-columns:1fr!important;
+    gap:0!important;
+  }
+
+  /* Sugestões de categoria: wrap */
+  #overlay .modal .cat-tags{
+    flex-wrap:wrap!important;
+    gap:6px!important;
+  }
+  #overlay .modal .cat-tag{
+    padding:6px 12px!important;
+    font-size:12px!important;
+  }
+
+  /* Chips de dias (recorrência) */
+  #overlay .modal .day-chip{
+    padding:7px 12px!important;
+    font-size:12px!important;
+  }
+
+  /* Swatches de cor: maiores para toque */
+  #overlay .modal .color-swatch{
+    width:28px!important;height:28px!important;
+  }
+
+  /* Rodapé sticky com os botões de ação */
+  #overlay .modal .modal-actions{
+    position:sticky!important;
+    bottom:0!important;
+    background:var(--surface)!important;
+    border-top:1.5px solid var(--border)!important;
+    padding:12px 16px max(16px,env(safe-area-inset-bottom)) 16px!important;
+    margin:auto 0 0!important; /* empurra para o fim do flex */
+    gap:10px!important;
+    flex-direction:row!important;
+    z-index:4!important;
+  }
+  #overlay .modal .modal-actions .btn-save,
+  #overlay .modal .modal-actions .btn-cancel{
+    flex:1!important;
+    padding:14px 12px!important;
+    font-size:14px!important;
+    border-radius:12px!important;
+  }
+  #overlay .modal .modal-actions .btn-del{
+    padding:14px 12px!important;
+    font-size:12px!important;
+    border-radius:12px!important;
+    white-space:nowrap;
+  }
+
   /* Extra bottom padding so content isn't hidden by bottom nav */
   body{padding-bottom:58px;}
   .cal-footer{margin-bottom:4px;}
