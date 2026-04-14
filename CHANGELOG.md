@@ -5,6 +5,38 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 
 ---
 
+## [2.1.0] — Abril 2026
+
+### 📱 Mobile — Experiência aprimorada
+
+#### 🆕 Adicionado
+- **Bottom Navigation Bar** — barra fixa com 6 abas (Hoje, Mês, Semana, Lista, Rotinas, Revisão)
+- **FAB flutuante (＋)** — botão de novo evento sempre acessível no mobile
+- **Vista Semana mobile** — exibe 1 dia por vez com 7 chips de navegação no topo; swipe lateral troca o dia
+- **Formulário de evento fullscreen** — sobe em tela cheia com animação; título e botões Salvar/Cancelar fixos (sticky)
+- **Drum roll de hora** — seletor de hora e minuto com rolagem vertical (scroll snap) no lugar do picker nativo, evitando bugs de posicionamento no Chrome Android
+- **Swipe lateral** no `calMain` para navegar entre meses e dias da semana
+- **Long press** em eventos do painel do dia e vista semana → menu de contexto em pills
+- **Opção "📅 Mover para…"** no menu de contexto — entra em modo de seleção de dia com banner e botão Cancelar
+- **Backdrop invisível** no menu de contexto — toque fora fecha o menu sem propagar para o calendário
+- **Botão "✕ Cancelar"** no menu de contexto
+- **Vista Mês — dots coloridos** — pílulas viram pontos de 8px com cor do evento via `--pill-ev-color`
+
+#### 🔧 Melhorado
+- Header mobile simplificado — visíveis apenas Stats, Tema, Alertas e Nuvem; demais opções acessíveis pelo menu ⋯
+- Clique em evento na grade do mês (mobile) redireciona para o painel do dia em vez de abrir edição direta (imprecisão de toque)
+- Long press desabilitado nas pílulas da grade do mês no mobile (sem precisão suficiente); mantido no painel do dia e vista semana
+- `user-select:none` e `touch-callout:none` em pílulas e menu de contexto — elimina seleção de texto indesejada no long press
+- Campos de formulário com `font-size:16px` — evita zoom automático do iOS ao focar inputs
+- Scroll corrigido no mobile: `body/app/main` com `height:auto` e `overflow:visible` em vez do layout fixo do desktop
+
+#### 🗂 Categorias atualizadas
+- Removidas dos atalhos rápidos: Rotina, Pessoal
+- Adicionadas: **NAPNE, Pesquisa, Extensão, TCC, Viagem, Saúde**
+- Rotina e Pessoal mantidas no mapa de ícones para compatibilidade com eventos existentes
+
+---
+
 ## [2.0.0] — Abril 2026
 
 ### 🆕 Adicionado
