@@ -406,12 +406,15 @@ body.comfortable .ev-pill{font-size:11px;padding:3px 5px 3px 7px}
 }
 
 /* ── Context menu ── */
+.ctx-backdrop{display:none;position:fixed;inset:0;z-index:799;}
+.ctx-backdrop.open{display:block;}
 .ctx-menu{display:none;position:fixed;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);box-shadow:var(--shadow-modal);z-index:800;min-width:170px;padding:4px 0;animation:slideUp .12s ease;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;}
 .ctx-menu.open{display:block}
 .ctx-item{padding:8px 14px;font-size:12px;font-weight:500;color:var(--text);cursor:pointer;display:flex;align-items:center;gap:8px;transition:background .12s;-webkit-user-select:none;user-select:none;}
 .ctx-item:hover{background:var(--surface2)}
 .ctx-item.danger{color:#e03131}
 .ctx-item.danger:hover{background:#fff1f1}
+.ctx-item.ctx-cancel{color:var(--muted);justify-content:center;font-size:11px;}
 .ctx-sep{height:1px;background:var(--border);margin:3px 0}
 
 /* ── Multi-calendar ── */
@@ -1848,6 +1851,9 @@ body.comfortable .ev-pill{font-size:11px;padding:3px 5px 3px 7px}
   <button class="move-mode-cancel" id="moveCancelBtn">Cancelar</button>
 </div>
 
+<!-- Backdrop do menu de contexto (fecha sem propagar o toque) -->
+<div class="ctx-backdrop" id="ctxBackdrop"></div>
+
 <!-- CONTEXT MENU -->
 <div class="ctx-menu" id="ctxMenu">
   <div class="ctx-item" id="ctxEdit">✏️ Editar evento</div>
@@ -1856,6 +1862,8 @@ body.comfortable .ev-pill{font-size:11px;padding:3px 5px 3px 7px}
   <div class="ctx-item" id="ctxSkip">⏭ Pular esta ocorrência</div>
   <div class="ctx-sep"></div>
   <div class="ctx-item danger" id="ctxDelete">🗑 Excluir evento</div>
+  <div class="ctx-sep"></div>
+  <div class="ctx-item ctx-cancel" id="ctxCancel">✕ Cancelar</div>
 </div>
 
 <!-- NOTES MODAL -->
@@ -3565,17 +3573,21 @@ function hasNotes(evId){return !!notesStore[evId]&&notesStore[evId].trim().lengt
 
 /* ═══════ CONTEXT MENU ═══════ */
 let ctxEvId=null,ctxEvDate=null;
+function closeCtxMenu(){
+  document.getElementById('ctxMenu').classList.remove('open');
+  document.getElementById('ctxBackdrop').classList.remove('open');
+}
 function openCtxMenu(e,evId,evDate){
   ctxEvId=evId;ctxEvDate=evDate;
   const ev=events.find(x=>x.id===evId);
   const menu=document.getElementById('ctxMenu');
   document.getElementById('ctxSkip').style.display=ev&&ev.rrule?'flex':'none';
-  // Show notes indicator if notes exist
   const hasN=hasNotes(evId);
   document.getElementById('ctxNotes').textContent=hasN?'📝 Notas (com conteúdo)':'📝 Notas do evento';
   menu.style.left=Math.min(e.clientX,window.innerWidth-190)+'px';
   menu.style.top=Math.min(e.clientY,window.innerHeight-180)+'px';
   menu.classList.add('open');
+  document.getElementById('ctxBackdrop').classList.add('open');
 }
 /* ── Mover evento ── */
 let _moveEvId=null,_moveEvDate=null;
@@ -3615,8 +3627,11 @@ function moveEventToDate(evId,fromDate,toDate){
 
 document.getElementById('moveCancelBtn').addEventListener('click',exitMoveMode);
 
+document.getElementById('ctxCancel').addEventListener('click',closeCtxMenu);
+document.getElementById('ctxBackdrop').addEventListener('click',e=>{e.stopPropagation();closeCtxMenu();});
+
 document.getElementById('ctxMove').addEventListener('click',()=>{
-  document.getElementById('ctxMenu').classList.remove('open');
+  closeCtxMenu();
   if(!ctxEvId)return;
   _moveEvId=ctxEvId;_moveEvDate=ctxEvDate;
   // Fecha painel do dia e vai para vista Mês
@@ -3629,15 +3644,15 @@ document.getElementById('ctxMove').addEventListener('click',()=>{
 });
 
 document.getElementById('ctxEdit').addEventListener('click',()=>{
-  document.getElementById('ctxMenu').classList.remove('open');
+  closeCtxMenu();
   if(ctxEvId)openEdit(ctxEvId,ctxEvDate);
 });
 document.getElementById('ctxNotes').addEventListener('click',()=>{
-  document.getElementById('ctxMenu').classList.remove('open');
+  closeCtxMenu();
   if(ctxEvId)openNotes(ctxEvId);
 });
 document.getElementById('ctxSkip').addEventListener('click',()=>{
-  document.getElementById('ctxMenu').classList.remove('open');
+  closeCtxMenu();
   if(!ctxEvId||!ctxEvDate)return;
   const ev=events.find(x=>x.id===ctxEvId);
   if(!ev||!ev.rrule)return;
@@ -3649,7 +3664,7 @@ document.getElementById('ctxSkip').addEventListener('click',()=>{
   }
 });
 document.getElementById('ctxDelete').addEventListener('click',()=>{
-  document.getElementById('ctxMenu').classList.remove('open');
+  closeCtxMenu();
   if(!ctxEvId)return;
   if(!confirm('Excluir este evento?'))return;
   events=events.filter(e=>e.id!==ctxEvId);
@@ -3657,13 +3672,8 @@ document.getElementById('ctxDelete').addEventListener('click',()=>{
   delete notesStore[ctxEvId];saveNotes();
   save();render();if(selectedDay)renderDayPanel(selectedDay);toast('Evento excluído.');
 });
-document.addEventListener('click',e=>{
-  if(!e.target.closest('#ctxMenu'))document.getElementById('ctxMenu').classList.remove('open');
-});
 document.addEventListener('keydown',e=>{
-  if(e.key==='Escape'){
-    document.getElementById('ctxMenu').classList.remove('open');
-  }
+  if(e.key==='Escape')closeCtxMenu();
 });
 
 /* ═══════ PDF VISUAL EXPORT ═══════ */
