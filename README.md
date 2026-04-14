@@ -6,7 +6,7 @@ Desenvolvido por **Marlon Gomes da Costa (MGC Dev)**
 
 > ⚠️ **Este é um projeto pessoal**, desenvolvido de forma independente pelo autor. Não representa, não é financiado e não tem vínculo institucional com o IFMA ou qualquer outra organização. O autor é professor do IFMA Campus São Raimundo das Mangabeiras, mas o Calendário MGC é uma iniciativa exclusivamente pessoal.
 
-[![Versão](https://img.shields.io/badge/versão-2.0.0-blue)](#changelog)
+[![Versão](https://img.shields.io/badge/versão-2.1.0-blue)](#changelog)
 [![Licença](https://img.shields.io/badge/licença-uso%20pessoal%20livre-green)](#licença)
 [![PIX](https://img.shields.io/badge/apoie-PIX-brightgreen)](#apoiar)
 
@@ -67,9 +67,18 @@ Quando quiser sincronizar entre computadores ou acessar pelo celular, basta conf
 ### Interface
 - 5 temas visuais: Oceano, Sereno, Aurora, Marfim, Ardósia
 - Modo compacto e normal
-- Responsivo para celular (menu hambúrguer, painel deslizante)
 - Atalhos de teclado (0–5, ←/→, T, N, S, F)
 - Feriados nacionais brasileiros automáticos (fixos + móveis via algoritmo da Páscoa)
+
+### Mobile
+- **Bottom Navigation Bar** — 6 abas fixas na base (Hoje, Mês, Semana, Lista, Rotinas, Revisão)
+- **FAB flutuante (＋)** — novo evento com um toque, sempre visível
+- **Vista Mês** — eventos como dots coloridos; toque no dia abre painel de eventos abaixo
+- **Vista Semana** — 1 dia por vez com chips de navegação e swipe lateral
+- **Swipe lateral** para navegar entre meses e dias
+- **Long press** em evento → menu de contexto (Editar, Notas, Mover, Pular, Excluir)
+- **Mover evento** — seleciona o dia destino diretamente na grade do mês
+- **Formulário fullscreen** — sobe em tela cheia com seletor de hora em drum roll (roda de rolagem)
 
 ---
 
