@@ -408,6 +408,8 @@ body.comfortable .ev-pill{font-size:11px;padding:3px 5px 3px 7px}
 /* ── Context menu ── */
 .ctx-backdrop{display:none;position:fixed;inset:0;z-index:799;}
 .ctx-backdrop.open{display:block;}
+/* Drum roll de hora: oculto por padrão — só aparece no mobile via media query */
+.cts-wrap{display:none;}
 .ctx-menu{display:none;position:fixed;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);box-shadow:var(--shadow-modal);z-index:800;min-width:170px;padding:4px 0;animation:slideUp .12s ease;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;}
 .ctx-menu.open{display:block}
 .ctx-item{padding:8px 14px;font-size:12px;font-weight:500;color:var(--text);cursor:pointer;display:flex;align-items:center;gap:8px;transition:background .12s;-webkit-user-select:none;user-select:none;}
@@ -1128,9 +1130,6 @@ body.comfortable .ev-pill{font-size:11px;padding:3px 5px 3px 7px}
   #overlay .modal .field{
     margin-bottom:14px!important;
   }
-
-  /* Seletor de hora customizado: oculto no desktop, visível no mobile */
-  .cts-wrap{display:none}
 
   /* row-2 (categoria+cor) → 1 coluna */
   #overlay .modal .row-2{
