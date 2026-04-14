@@ -1140,33 +1140,77 @@ body.comfortable .ev-pill{font-size:11px;padding:3px 5px 3px 7px}
     width:28px!important;height:28px!important;
   }
 
-  /* Seletor de hora customizado no mobile: troca input[type=time] por selects */
+  /* ── Drum roll de hora (mobile) ── */
   #overlay .modal .native-time-input{display:none!important;}
   #overlay .modal .cts-wrap{
     display:flex!important;
     align-items:center;
-    gap:4px;
+    gap:6px;
     width:100%;
     box-sizing:border-box;
   }
-  #overlay .modal .cts-part{
+  #overlay .modal .cts-drum-wrap{
     flex:1;
-    font-size:16px!important;
-    padding:10px 8px!important;
-    border-radius:10px!important;
-    min-height:44px!important;
-    border:1px solid var(--border);
+    position:relative;
+    height:132px;           /* 3 itens × 44px */
+    border-radius:14px;
     background:var(--surface2);
-    color:var(--text);
-    text-align:center;
-    -webkit-appearance:none;
-    appearance:none;
+    border:1px solid var(--border);
+    overflow:hidden;
+  }
+  /* linhas de seleção ao redor do item do meio */
+  #overlay .modal .cts-drum-wrap::after{
+    content:'';
+    position:absolute;
+    top:50%;transform:translateY(-50%);
+    left:8px;right:8px;
+    height:44px;
+    border-top:2px solid var(--accent,#3b5bdb);
+    border-bottom:2px solid var(--accent,#3b5bdb);
+    border-radius:4px;
+    pointer-events:none;
+    z-index:2;
+  }
+  /* fade superior e inferior */
+  #overlay .modal .cts-drum-wrap::before{
+    content:'';
+    position:absolute;
+    inset:0;
+    background:linear-gradient(to bottom,
+      var(--surface2) 0%,
+      transparent 30%,
+      transparent 70%,
+      var(--surface2) 100%);
+    pointer-events:none;
+    z-index:3;
+  }
+  #overlay .modal .cts-drum{
+    height:100%;
+    overflow-y:scroll;
+    scroll-snap-type:y mandatory;
+    -webkit-overflow-scrolling:touch;
+    scrollbar-width:none;
+  }
+  #overlay .modal .cts-drum::-webkit-scrollbar{display:none}
+  #overlay .modal .cts-drum-pad{height:44px;flex-shrink:0;}
+  #overlay .modal .cts-drum-item{
+    height:44px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:20px;
+    font-weight:600;
+    color:var(--muted);
+    scroll-snap-align:center;
+    flex-shrink:0;
+    user-select:none;
   }
   #overlay .modal .cts-sep{
-    font-size:20px;
+    font-size:28px;
     font-weight:700;
-    color:var(--muted);
+    color:var(--text);
     flex-shrink:0;
+    margin-bottom:4px;
   }
 
   /* Rodapé sticky com os botões de ação */
@@ -1488,18 +1532,18 @@ body.comfortable .ev-pill{font-size:11px;padding:3px 5px 3px 7px}
         <label>Início</label>
         <input type="time" id="evStart" value="08:00" class="native-time-input">
         <div class="cts-wrap" id="evStartSel">
-          <select class="cts-part" id="evStartH"></select>
+          <div class="cts-drum-wrap"><div class="cts-drum" id="evStartH-drum"></div></div>
           <span class="cts-sep">:</span>
-          <select class="cts-part" id="evStartM"></select>
+          <div class="cts-drum-wrap"><div class="cts-drum" id="evStartM-drum"></div></div>
         </div>
       </div>
       <div class="field">
         <label>Fim</label>
         <input type="time" id="evEnd" value="09:00" class="native-time-input">
         <div class="cts-wrap" id="evEndSel">
-          <select class="cts-part" id="evEndH"></select>
+          <div class="cts-drum-wrap"><div class="cts-drum" id="evEndH-drum"></div></div>
           <span class="cts-sep">:</span>
-          <select class="cts-part" id="evEndM"></select>
+          <div class="cts-drum-wrap"><div class="cts-drum" id="evEndM-drum"></div></div>
         </div>
       </div>
     </div>
@@ -3062,36 +3106,57 @@ document.getElementById('evDate').addEventListener('change',function(){
   else hint.style.display='none';
 });
 
-/* ── Seletor de hora customizado (mobile) ── */
-(function initCts(){
+/* ── Drum roll de hora (mobile) ── */
+(function initCtsDrums(){
   const pad=n=>String(n).padStart(2,'0');
-  // Popular horas e minutos nos selects
-  ['evStartH','evEndH'].forEach(id=>{
-    const sel=document.getElementById(id);
-    for(let h=0;h<24;h++){const o=document.createElement('option');o.value=pad(h);o.textContent=pad(h);sel.appendChild(o);}
-  });
-  ['evStartM','evEndM'].forEach(id=>{
-    const sel=document.getElementById(id);
-    for(let m=0;m<60;m+=5){const o=document.createElement('option');o.value=pad(m);o.textContent=pad(m);sel.appendChild(o);}
-  });
-  // Selects → input hidden
-  function syncToInput(field){
-    const h=document.getElementById(field+'H').value;
-    const m=document.getElementById(field+'M').value;
-    document.getElementById(field==='evStart'?'evStart':'evEnd').value=h+':'+m;
+  const ITEM_H=44;
+  const HOURS=Array.from({length:24},(_,i)=>pad(i));
+  const MINS =Array.from({length:12},(_,i)=>pad(i*5));
+
+  function buildDrum(drum,items){
+    drum.innerHTML='<div class="cts-drum-pad"></div>'
+      +items.map(v=>`<div class="cts-drum-item">${v}</div>`).join('')
+      +'<div class="cts-drum-pad"></div>';
   }
-  ['evStartH','evStartM'].forEach(id=>document.getElementById(id).addEventListener('change',()=>syncToInput('evStart')));
-  ['evEndH','evEndM'].forEach(id=>document.getElementById(id).addEventListener('change',()=>syncToInput('evEnd')));
-  // Input → selects (chame ao abrir o formulário)
+
+  function getVal(drum,items){
+    const idx=Math.min(Math.round(drum.scrollTop/ITEM_H),items.length-1);
+    return items[Math.max(0,idx)];
+  }
+
+  function syncToInput(field,hDrum,mDrum){
+    const h=getVal(hDrum,HOURS);
+    const m=getVal(mDrum,MINS);
+    document.getElementById(field).value=h+':'+m;
+  }
+
+  function setupDrum(drum,field,hDrum,mDrum){
+    let t;
+    drum.addEventListener('scroll',()=>{clearTimeout(t);t=setTimeout(()=>syncToInput(field,hDrum,mDrum),120);},{passive:true});
+  }
+
   window.ctsSync=function(inputId){
     const val=document.getElementById(inputId).value||'08:00';
-    const [h,m]=val.split(':');
-    const field=inputId==='evStart'?'evStart':'evEnd';
-    document.getElementById(field+'H').value=pad(parseInt(h||'8'));
-    // minuto mais próximo em múltiplo de 5
-    const mn=Math.round(parseInt(m||'0')/5)*5%60;
-    document.getElementById(field+'M').value=pad(mn);
+    const [hStr,mStr]=val.split(':');
+    const hIdx=Math.max(0,Math.min(23,parseInt(hStr)||0));
+    const mIdx=Math.max(0,Math.min(11,Math.round((parseInt(mStr)||0)/5)));
+    const hDrum=document.getElementById(inputId+'H-drum');
+    const mDrum=document.getElementById(inputId+'M-drum');
+    // usa requestAnimationFrame para garantir que o drum está visível antes de rolar
+    requestAnimationFrame(()=>{
+      hDrum.scrollTop=hIdx*ITEM_H;
+      mDrum.scrollTop=mIdx*ITEM_H;
+    });
   };
+
+  ['evStart','evEnd'].forEach(field=>{
+    const hDrum=document.getElementById(field+'H-drum');
+    const mDrum=document.getElementById(field+'M-drum');
+    buildDrum(hDrum,HOURS);
+    buildDrum(mDrum,MINS);
+    setupDrum(hDrum,field,hDrum,mDrum);
+    setupDrum(mDrum,field,hDrum,mDrum);
+  });
 })();
 
 function openNew(date){
@@ -3102,7 +3167,6 @@ function openNew(date){
   document.getElementById('evDate').value=date||ds(cur.getFullYear(),cur.getMonth(),1);
   document.getElementById('evDateEnd').value=date||ds(cur.getFullYear(),cur.getMonth(),1);
   document.getElementById('evStart').value='08:00';document.getElementById('evEnd').value='09:00';
-  if(window.ctsSync){ctsSync('evStart');ctsSync('evEnd');}
   document.getElementById('evAlert').value='15';document.getElementById('evRrule').value='';
   document.getElementById('recurBox').classList.remove('show');document.getElementById('customDaysWrap').classList.remove('show');
   document.querySelectorAll('.cat-tag,.day-chip').forEach(t=>t.classList.remove('selected','sel'));
@@ -3116,7 +3180,8 @@ function openNew(date){
   document.getElementById('evCalendar').value=calendars[0]?.id||'default';
   // Auto-suggest slot
   if(date){const slot=suggestFreeSlot(date);const h=document.getElementById('freeSlotHint');if(slot){h.textContent=`💡 Próximo horário livre: ${slot.start} – ${slot.end} (clique para usar)`;h.style.display='block';h.onclick=()=>{document.getElementById('evStart').value=slot.start;document.getElementById('evEnd').value=slot.end;h.style.display='none';};}else h.style.display='none';}
-  document.getElementById('overlay').classList.add('open');setTimeout(()=>document.getElementById('evTitle').focus(),60);
+  document.getElementById('overlay').classList.add('open');
+  setTimeout(()=>{document.getElementById('evTitle').focus();if(window.ctsSync){ctsSync('evStart');ctsSync('evEnd');}},60);
 }
 
 function openEdit(id,dateCtx){
@@ -3127,7 +3192,6 @@ function openEdit(id,dateCtx){
   document.getElementById('evTitle').value=ev.title;document.getElementById('evCategory').value=ev.category||'';
   document.getElementById('evDate').value=ev.date;document.getElementById('evDateEnd').value=ev.dateEnd||ev.date;
   document.getElementById('evStart').value=ev.start||'08:00';document.getElementById('evEnd').value=ev.end||'09:00';
-  if(window.ctsSync){ctsSync('evStart');ctsSync('evEnd');}
   document.getElementById('evAlert').value=ev.alert!=null?String(ev.alert):'15';
   document.getElementById('evRrule').value=ev.rrule||'';document.getElementById('evUntil').value=ev.until||'';
   document.getElementById('evLocation').value=ev.location||'';document.getElementById('evDesc').value=ev.desc||'';
@@ -3140,7 +3204,8 @@ function openEdit(id,dateCtx){
   document.getElementById('evCalendar').value=ev.calendarId||'default';
   setDoneUI(ev.rrule?isDoneOn(ev,editingDate):!!ev.done);
   currentTags=[...(ev.tags||[])];renderTagPills();
-  document.getElementById('overlay').classList.add('open');setTimeout(()=>document.getElementById('evTitle').focus(),60);
+  document.getElementById('overlay').classList.add('open');
+  setTimeout(()=>{document.getElementById('evTitle').focus();if(window.ctsSync){ctsSync('evStart');ctsSync('evEnd');}},60);
 }
 
 const closeModal=()=>{document.getElementById('overlay').classList.remove('open');editingId=null;editingDate=null;};
