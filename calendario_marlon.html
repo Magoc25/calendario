@@ -451,6 +451,10 @@ body.comfortable .ev-pill{font-size:11px;padding:3px 5px 3px 7px}
   /* ── CORREÇÃO FUNDAMENTAL DE SCROLL ──
      Desktop usa layout fixo (tudo overflow:hidden, altura 100vh).
      Mobile precisa que o DOCUMENTO role — não containers internos. */
+  html{
+    max-width:100vw;
+    overflow-x:hidden;            /* impede largura > viewport (picker nativo fica fora da tela) */
+  }
   body{
     height:auto!important;        /* remove height:100vh do desktop */
     min-height:100vh;
