@@ -1052,8 +1052,8 @@ body.comfortable .ev-pill{font-size:11px;padding:3px 5px 3px 7px}
   #overlay .modal{
     width:100%!important;
     max-width:100%!important;
-    height:100dvh!important;
-    max-height:100dvh!important;
+    height:100dvh;
+    max-height:100dvh;
     border-radius:0!important;
     border:none!important;
     margin:0!important;
@@ -3230,6 +3230,7 @@ function openNew(date){
   // Auto-suggest slot
   if(date){const slot=suggestFreeSlot(date);const h=document.getElementById('freeSlotHint');if(slot){h.textContent=`💡 Próximo horário livre: ${slot.start} – ${slot.end} (clique para usar)`;h.style.display='block';h.onclick=()=>{document.getElementById('evStart').value=slot.start;document.getElementById('evEnd').value=slot.end;h.style.display='none';};}else h.style.display='none';}
   document.getElementById('overlay').classList.add('open');
+  if(window._vvAttach)window._vvAttach();
   setTimeout(()=>{document.getElementById('evTitle').focus();if(window.ctsSync){ctsSync('evStart');ctsSync('evEnd');}},60);
 }
 
@@ -3254,10 +3255,15 @@ function openEdit(id,dateCtx){
   setDoneUI(ev.rrule?isDoneOn(ev,editingDate):!!ev.done);
   currentTags=[...(ev.tags||[])];renderTagPills();
   document.getElementById('overlay').classList.add('open');
+  if(window._vvAttach)window._vvAttach();
   setTimeout(()=>{document.getElementById('evTitle').focus();if(window.ctsSync){ctsSync('evStart');ctsSync('evEnd');}},60);
 }
 
-const closeModal=()=>{document.getElementById('overlay').classList.remove('open');editingId=null;editingDate=null;};
+const closeModal=()=>{
+  if(window._vvDetach)window._vvDetach();
+  document.getElementById('overlay').classList.remove('open');
+  editingId=null;editingDate=null;
+};
 document.getElementById('cancelBtn').addEventListener('click',closeModal);
 document.getElementById('closeBtn').addEventListener('click',closeModal);
 document.getElementById('overlay').addEventListener('click',e=>{if(e.target===document.getElementById('overlay'))closeModal();});
@@ -3847,6 +3853,44 @@ window.addEventListener('resize',()=>{
   fab.style.opacity=ratio<0.7?'0':'';
   fab.style.pointerEvents=ratio<0.7?'none':'';
 });
+
+/* ═══════ VIRTUAL KEYBOARD — ajuste de altura do modal ═══════
+   Quando o teclado virtual sobe no mobile, o visualViewport encolhe.
+   Fixamos a height do modal ao espaço visível para que os campos
+   fiquem acessíveis e o scroll interno continue funcionando.
+================================================================ */
+(()=>{
+  if(!window.visualViewport)return; // navegadores antigos — sem suporte
+  const isMobile=()=>window.innerWidth<=768;
+
+  const modal=()=>document.querySelector('#overlay .modal');
+
+  function onVVResize(){
+    if(!isMobile())return;
+    const m=modal();
+    if(!m)return;
+    const h=window.visualViewport.height+'px';
+    // setProperty garante override mesmo sobre regras sem !important
+    m.style.setProperty('height', h);
+    m.style.setProperty('max-height', h);
+  }
+
+  function attachVV(){
+    if(!isMobile())return;
+    window.visualViewport.addEventListener('resize', onVVResize);
+    onVVResize();
+  }
+
+  function detachVV(){
+    window.visualViewport.removeEventListener('resize', onVVResize);
+    const m=modal();
+    if(m){m.style.removeProperty('height');m.style.removeProperty('max-height');}
+  }
+
+  // Expõe para openNew / openEdit / closeModal usarem
+  window._vvAttach = attachVV;
+  window._vvDetach = detachVV;
+})();
 
 /* ═══════ MOBILE SIDEBAR ═══════ */
 document.getElementById('hamburgerBtn').addEventListener('click',()=>{
