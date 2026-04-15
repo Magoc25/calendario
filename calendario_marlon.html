@@ -1480,7 +1480,7 @@ body.comfortable .ev-pill{font-size:11px;padding:3px 5px 3px 7px}
           <span style="margin-left:auto;display:flex;align-items:center;gap:6px">
             <button class="footer-link-btn" id="reviewsBtn" title="Ver avaliações">⭐ Avaliações</button>
             <button class="footer-link-btn pix-btn" id="pixBtn" title="Apoiar o projeto">☕ Apoiar</button>
-            <span style="font-size:9px;color:var(--hint);opacity:.5;user-select:none">© MGC · v2.0.0</span>
+            <span id="appVersion" style="font-size:9px;color:var(--hint);opacity:.5;user-select:none">© MGC · v2.0.0</span>
           </span>
         </div>
       </div>
@@ -5235,6 +5235,29 @@ document.getElementById('deleteBtn').addEventListener('click',_patchedSyncAlerts
   const params=new URLSearchParams(location.search);
   if(params.get('action')==='new')setTimeout(()=>openNew(null),500);
   if(params.get('view')==='today'){viewMode='today';render();}
+})();
+
+/* ── Versão automática via CHANGELOG.md ── */
+(async()=>{
+  const el=document.getElementById('appVersion');
+  if(!el)return;
+  const CACHE_KEY='mgc_app_version';
+  const CACHE_TTL=6*60*60*1000; // 6 horas
+  const cached=JSON.parse(localStorage.getItem(CACHE_KEY)||'null');
+  if(cached&&Date.now()-cached.ts<CACHE_TTL){
+    el.textContent='© MGC · '+cached.v;
+    return;
+  }
+  try{
+    const res=await fetch('./CHANGELOG.md',{cache:'no-cache'});
+    if(!res.ok)return;
+    const text=await res.text();
+    const match=text.match(/##\s+\[(\d+\.\d+\.\d+)\]/);
+    if(!match)return;
+    const v='v'+match[1];
+    el.textContent='© MGC · '+v;
+    localStorage.setItem(CACHE_KEY,JSON.stringify({v,ts:Date.now()}));
+  }catch(e){/* offline — mantém valor hardcoded */}
 })();
 </script>
 </body>
