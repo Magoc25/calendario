@@ -823,6 +823,50 @@ body.comfortable .upcoming-ev{padding:10px 13px;margin-bottom:7px}
 .rev-donated{font-size:9px;background:#e6fff0;color:#00863a;border-radius:10px;padding:1px 7px;font-weight:600}
 .rev-empty{text-align:center;padding:40px 0;color:var(--muted);font-size:12px}
 
+/* ── Standalone Notes View ── */
+.notes-view{padding:0!important;overflow-y:auto}
+.nv-wrap{padding:18px 20px 80px}
+.nv-topbar{display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap}
+.nv-title{font-size:16px;font-weight:700;color:var(--text);flex-shrink:0}
+.nv-search{flex:1;min-width:140px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:6px 10px;font-size:12px;background:var(--input-bg);color:var(--text);font-family:'DM Sans',sans-serif;outline:none}
+.nv-search:focus{border-color:var(--accent)}
+.nv-new-btn{background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;white-space:nowrap;transition:background .15s;flex-shrink:0}
+.nv-new-btn:hover{background:var(--accent-dark)}
+.nv-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}
+.nv-empty{text-align:center;padding:60px 20px;color:var(--muted);font-size:13px}
+.nv-empty-icon{font-size:40px;margin-bottom:10px}
+/* Note card */
+.note-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px;cursor:pointer;transition:all .15s;position:relative;border-left:4px solid var(--accent);display:flex;flex-direction:column;gap:6px;min-height:100px}
+.note-card:hover{box-shadow:0 4px 16px rgba(0,0,0,.09);transform:translateY(-1px)}
+.note-card.pinned{border-top:2px solid var(--accent)}
+.note-card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:6px}
+.note-card-title{font-size:13px;font-weight:700;color:var(--text);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.note-card-pin-icon{font-size:13px;opacity:.7;flex-shrink:0}
+.note-card-preview{font-size:11px;color:var(--muted);line-height:1.5;overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;flex:1}
+.note-card-footer{display:flex;align-items:center;justify-content:space-between;margin-top:4px}
+.note-card-date{font-size:9.5px;color:var(--hint)}
+.note-card-actions{display:flex;gap:4px;opacity:0;transition:opacity .15s}
+.note-card:hover .note-card-actions{opacity:1}
+.note-card-btn{background:none;border:none;cursor:pointer;font-size:13px;padding:2px 4px;border-radius:4px;line-height:1;transition:background .12s}
+.note-card-btn:hover{background:var(--surface2)}
+/* Note edit modal */
+.note-edit-modal{width:680px;max-width:calc(100vw - 20px);max-height:92vh;display:flex;flex-direction:column}
+.ne-header{display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-shrink:0}
+.ne-title-input{flex:1;border:none;border-bottom:2px solid var(--border);padding:4px 0;font-size:16px;font-weight:700;color:var(--text);background:transparent;font-family:'DM Sans',sans-serif;outline:none;transition:border-color .15s}
+.ne-title-input:focus{border-bottom-color:var(--accent)}
+.ne-color-pick{width:28px;height:28px;border-radius:50%;border:2px solid var(--border);cursor:pointer;flex-shrink:0;overflow:hidden;padding:0;background:none}
+.ne-color-pick::-webkit-color-swatch-wrapper{padding:0}
+.ne-color-pick::-webkit-color-swatch{border:none;border-radius:50%}
+.ne-pin-btn{background:none;border:1px solid var(--border);border-radius:var(--radius-sm);padding:4px 8px;font-size:11px;cursor:pointer;color:var(--muted);transition:all .15s;flex-shrink:0}
+.ne-pin-btn.active{background:var(--accent-light);color:var(--accent);border-color:var(--accent)}
+/* Mobile */
+@media(max-width:768px){
+  .nv-wrap{padding:12px 12px 80px}
+  .nv-grid{grid-template-columns:1fr}
+  .note-card-actions{opacity:1}
+  .note-edit-modal{max-height:100dvh}
+}
+
 /* ── Notes editor ── */
 .notes-modal{width:700px;max-width:calc(100vw - 24px);max-height:90vh;display:flex;flex-direction:column}
 .notes-header{display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-shrink:0}
@@ -1429,6 +1473,7 @@ body.comfortable .upcoming-ev{padding:10px 13px;margin-bottom:7px}
           <button class="view-btn" id="btnWeek">Semana</button>
           <button class="view-btn" id="btnUpcoming">Próximos</button>
           <button class="view-btn" id="btnRoutines">🔄 Rotinas</button>
+          <button class="view-btn" id="btnNotes">📝 Notas</button>
           <button class="view-btn" id="btnReview">📋 Revisão</button>
         </div>
         <div class="search-wrap">
@@ -1518,6 +1563,10 @@ body.comfortable .upcoming-ev{padding:10px 13px;margin-bottom:7px}
         <!-- Review view -->
         <div class="cal-card review-view" id="reviewCard" style="display:none;overflow-y:auto">
           <div id="reviewContent"></div>
+        </div>
+        <!-- Notes view -->
+        <div class="cal-card notes-view" id="notesCard" style="display:none;overflow-y:auto">
+          <div id="notesViewContent"></div>
         </div>
         <!-- Footer -->
         <div class="cal-footer">
@@ -1892,6 +1941,9 @@ body.comfortable .upcoming-ev{padding:10px 13px;margin-bottom:7px}
     <button class="bn-item" id="bnRoutines" data-bnview="routines">
       <span class="bn-icon">🔄</span><span>Rotinas</span>
     </button>
+    <button class="bn-item" id="bnNotes" data-bnview="notes">
+      <span class="bn-icon">📝</span><span>Notas</span>
+    </button>
     <button class="bn-item" id="bnReview" data-bnview="review">
       <span class="bn-icon">✍️</span><span>Revisão</span>
     </button>
@@ -1923,6 +1975,60 @@ body.comfortable .upcoming-ev{padding:10px 13px;margin-bottom:7px}
 </div>
 
 <!-- NOTES MODAL -->
+<!-- Note Edit Modal (Standalone Notes) -->
+<div class="overlay" id="noteEditOverlay">
+  <div class="modal note-edit-modal">
+    <button class="modal-close" id="neClose">✕</button>
+    <div class="ne-header">
+      <input type="color" class="ne-color-pick" id="neColorPick" value="#3b5bdb" title="Cor da nota">
+      <input type="text" class="ne-title-input" id="neTitleInput" placeholder="Título da nota…" maxlength="100">
+      <button class="ne-pin-btn" id="nePinBtn" title="Fixar nota">📌 Fixar</button>
+    </div>
+    <div class="notes-toolbar">
+      <button class="ntb" data-necmd="bold" title="Negrito (Ctrl+B)"><b>B</b></button>
+      <button class="ntb" data-necmd="italic" title="Itálico (Ctrl+I)"><i>I</i></button>
+      <button class="ntb" data-necmd="underline" title="Sublinhado (Ctrl+U)"><u>U</u></button>
+      <button class="ntb" data-necmd="strikeThrough" title="Tachado"><s>S</s></button>
+      <span class="ntb-sep"></span>
+      <button class="ntb" data-necmd="insertUnorderedList" title="Lista">☰</button>
+      <button class="ntb" data-necmd="insertOrderedList" title="Lista numerada">1.</button>
+      <button class="ntb" data-necmd="indent" title="Recuar">→</button>
+      <button class="ntb" data-necmd="outdent" title="Desfazer recuo">←</button>
+      <span class="ntb-sep"></span>
+      <button class="ntb" data-necmd="justifyLeft" title="Esquerda">⬅</button>
+      <button class="ntb" data-necmd="justifyCenter" title="Centro">↔</button>
+      <button class="ntb" data-necmd="justifyRight" title="Direita">➡</button>
+      <span class="ntb-sep"></span>
+      <select id="neFontSize" style="font-size:11px;padding:2px 4px;border:1px solid var(--border);border-radius:4px;background:var(--input-bg);color:var(--text);height:28px">
+        <option value="1">Pequeno</option>
+        <option value="3" selected>Normal</option>
+        <option value="5">Grande</option>
+        <option value="7">Enorme</option>
+      </select>
+      <span class="ntb-sep"></span>
+      <div class="ntb-color" title="Cor do texto">
+        <div class="ntb-color-btn">🎨</div>
+        <input type="color" id="neFontColor" value="#1a1f36">
+      </div>
+      <div class="ntb-color" title="Marca-texto">
+        <div class="ntb-color-btn" style="font-size:11px">HL</div>
+        <input type="color" id="neHighlight" value="#fef08a">
+      </div>
+      <span class="ntb-sep"></span>
+      <button class="ntb" data-necmd="undo" title="Desfazer">↩</button>
+      <button class="ntb" data-necmd="redo" title="Refazer">↪</button>
+    </div>
+    <div class="notes-editor" id="neEditor" contenteditable="true" placeholder="Escreva sua nota aqui…" style="min-height:320px"></div>
+    <div class="notes-footer">
+      <span class="notes-saved" id="neSavedLabel">📝 Nova nota</span>
+      <div style="display:flex;gap:8px">
+        <button class="btn-cancel" id="neDeleteBtn" style="color:#e03131;border-color:#e03131">🗑 Excluir</button>
+        <button class="btn-save" id="neSaveBtn">Salvar e fechar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="overlay" id="notesOverlay">
   <div class="modal notes-modal">
     <button class="modal-close" id="notesClose">✕</button>
@@ -2847,15 +2953,19 @@ function render(){
   document.getElementById('upcomingCard').classList.toggle('show',viewMode==='upcoming');
   document.getElementById('routinesCard').style.display=viewMode==='routines'?'flex':'none';
   document.getElementById('reviewCard').style.display=viewMode==='review'?'flex':'none';
+  document.getElementById('notesCard').style.display=viewMode==='notes'?'flex':'none';
+  // Resetar topbar ao sair da aba Notas para recriar corretamente ao voltar
+  if(viewMode!=='notes')document.getElementById('notesViewContent').innerHTML='';
   // Also hide footer on non-calendar views
   const footer=document.querySelector('.cal-footer');
-  if(footer)footer.style.display=['today','routines','review'].includes(viewMode)?'none':'flex';
+  if(footer)footer.style.display=['today','routines','review','notes'].includes(viewMode)?'none':'flex';
   if(viewMode==='month')renderMonth();
   else if(viewMode==='week')renderWeek();
   else if(viewMode==='upcoming')renderUpcoming();
   else if(viewMode==='today')renderToday();
   else if(viewMode==='routines')renderRoutinesView();
   else if(viewMode==='review')renderReviewView();
+  else if(viewMode==='notes')renderNotesView();
   renderSidebar();updateProgress();renderTodayPreview();updateTagBar();
   const n=events.length;document.getElementById('evCount').textContent=`${n} evento${n!==1?'s':''}`;
   syncBottomNav();
@@ -3360,7 +3470,7 @@ document.getElementById('deleteBtn').addEventListener('click',()=>{
 });
 
 /* ═══════ VIEW TOGGLE ═══════ */
-['Today','Month','Week','Upcoming','Routines','Review'].forEach(v=>{
+['Today','Month','Week','Upcoming','Routines','Review','Notes'].forEach(v=>{
   const btn=document.getElementById('btn'+v);
   if(!btn)return;
   btn.addEventListener('click',()=>{
@@ -3841,7 +3951,7 @@ function addLongPress(el,evId,evDate){
 /* ── Bottom Navigation Bar ── */
 const BN_VIEW_MAP={
   today:'btnToday',month:'btnMonth',week:'btnWeek',
-  upcoming:'btnUpcoming',routines:'btnRoutines',review:'btnReview'
+  upcoming:'btnUpcoming',routines:'btnRoutines',review:'btnReview',notes:'btnNotes'
 };
 
 function syncBottomNav(){
@@ -4526,6 +4636,214 @@ function renderReviewView(){
   });
 }
 
+/* ═══════ STANDALONE NOTES ═══════ */
+let standaloneNotes=[];
+try{standaloneNotes=JSON.parse(localStorage.getItem('cal_standalone_notes')||'[]');}catch(e){}
+
+function saveStandaloneNotes(){
+  localStorage.setItem('cal_standalone_notes',JSON.stringify(standaloneNotes));
+  localStorage.setItem('cal_local_ts',new Date().toISOString());
+  if(sbClient){clearTimeout(_cloudSaveTimer);_cloudSaveTimer=setTimeout(()=>syncToCloud(true),1500);}
+}
+
+let _editingNoteId=null,_neAutoSave=null;
+
+function openNoteEdit(noteId){
+  const isNew=!noteId;
+  if(isNew){
+    _editingNoteId=null;
+    document.getElementById('neTitleInput').value='';
+    document.getElementById('neEditor').innerHTML='';
+    document.getElementById('neColorPick').value='#3b5bdb';
+    document.getElementById('nePinBtn').classList.remove('active');
+    document.getElementById('nePinBtn').textContent='📌 Fixar';
+    document.getElementById('neSavedLabel').textContent='📝 Nova nota';
+    document.getElementById('neDeleteBtn').style.display='none';
+  } else {
+    const note=standaloneNotes.find(n=>n.id===noteId);
+    if(!note)return;
+    _editingNoteId=noteId;
+    document.getElementById('neTitleInput').value=note.title||'';
+    document.getElementById('neEditor').innerHTML=note.content||'';
+    document.getElementById('neColorPick').value=note.color||'#3b5bdb';
+    const pinBtn=document.getElementById('nePinBtn');
+    pinBtn.classList.toggle('active',!!note.pinned);
+    pinBtn.textContent=note.pinned?'📌 Fixado':'📌 Fixar';
+    document.getElementById('neSavedLabel').textContent='💾 Salvo automaticamente';
+    document.getElementById('neDeleteBtn').style.display='';
+  }
+  document.getElementById('noteEditOverlay').classList.add('open');
+  setTimeout(()=>document.getElementById('neEditor').focus(),80);
+}
+
+function saveNoteEdit(){
+  const title=document.getElementById('neTitleInput').value.trim()||'Sem título';
+  const content=document.getElementById('neEditor').innerHTML;
+  const color=document.getElementById('neColorPick').value;
+  const pinned=document.getElementById('nePinBtn').classList.contains('active');
+  if(!content.trim()||content==='<br>'){toast('Escreva algo na nota!');return;}
+  const now=new Date().toISOString();
+  if(_editingNoteId){
+    const idx=standaloneNotes.findIndex(n=>n.id===_editingNoteId);
+    if(idx>-1)standaloneNotes[idx]={...standaloneNotes[idx],title,content,color,pinned,updatedAt:now};
+  } else {
+    standaloneNotes.unshift({id:uid(),title,content,color,pinned,createdAt:now,updatedAt:now});
+  }
+  saveStandaloneNotes();
+  document.getElementById('noteEditOverlay').classList.remove('open');
+  renderNotesView();toast('Nota salva!');
+}
+
+function deleteNote(noteId){
+  if(!confirm('Excluir esta nota?'))return;
+  standaloneNotes=standaloneNotes.filter(n=>n.id!==noteId);
+  saveStandaloneNotes();
+  document.getElementById('noteEditOverlay').classList.remove('open');
+  renderNotesView();toast('Nota excluída.');
+}
+
+function _renderNotesGrid(search){
+  const s=(search||'').toLowerCase();
+  const filtered=standaloneNotes.filter(n=>
+    !s||(n.title||'').toLowerCase().includes(s)||
+    (n.content||'').replace(/<[^>]+>/g,'').toLowerCase().includes(s)
+  );
+  const ordered=[...filtered.filter(n=>n.pinned),...filtered.filter(n=>!n.pinned)];
+  const fmtDate=iso=>{if(!iso)return'';const d=new Date(iso);return`${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()}`;};
+  const preview=html=>html.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim().slice(0,120);
+
+  const grid=document.getElementById('nvGrid');
+  if(!grid)return;
+  grid.innerHTML=ordered.length===0
+    ?`<div class="nv-empty"><div class="nv-empty-icon">📝</div>${s?'Nenhuma nota encontrada.':'Nenhuma nota ainda.<br><small>Clique em "+ Nova nota" para começar.</small>'}</div>`
+    :`<div class="nv-grid">
+      ${ordered.map(n=>`
+        <div class="note-card${n.pinned?' pinned':''}" data-note-id="${n.id}" style="border-left-color:${n.color||'var(--accent)'}">
+          <div class="note-card-top">
+            <div class="note-card-title">${n.pinned?'📌 ':''}${n.title||'Sem título'}</div>
+          </div>
+          <div class="note-card-preview">${preview(n.content||'')}</div>
+          <div class="note-card-footer">
+            <span class="note-card-date">${fmtDate(n.updatedAt||n.createdAt)}</span>
+            <div class="note-card-actions">
+              <button class="note-card-btn" data-note-pin="${n.id}" title="${n.pinned?'Desafixar':'Fixar'}">${n.pinned?'📌':'📍'}</button>
+              <button class="note-card-btn" data-note-del="${n.id}" title="Excluir" style="color:#e03131">🗑</button>
+            </div>
+          </div>
+        </div>`).join('')}
+    </div>`;
+
+  // Wire card clicks
+  grid.querySelectorAll('.note-card').forEach(card=>{
+    card.addEventListener('click',e=>{
+      if(e.target.closest('[data-note-pin],[data-note-del]'))return;
+      openNoteEdit(card.dataset.noteId);
+    });
+  });
+  grid.querySelectorAll('[data-note-pin]').forEach(btn=>{
+    btn.addEventListener('click',e=>{e.stopPropagation();
+      const n=standaloneNotes.find(x=>x.id===btn.dataset.notePin);
+      if(n){n.pinned=!n.pinned;n.updatedAt=new Date().toISOString();saveStandaloneNotes();_renderNotesGrid(document.getElementById('nvSearch')?.value||'');}
+    });
+  });
+  grid.querySelectorAll('[data-note-del]').forEach(btn=>{
+    btn.addEventListener('click',e=>{e.stopPropagation();
+      if(!confirm('Excluir esta nota?'))return;
+      standaloneNotes=standaloneNotes.filter(x=>x.id!==btn.dataset.noteDel);
+      saveStandaloneNotes();_renderNotesGrid(document.getElementById('nvSearch')?.value||'');toast('Nota excluída.');
+    });
+  });
+}
+
+function renderNotesView(){
+  // Render the static topbar only if not already present (avoid losing focus on search)
+  const container=document.getElementById('notesViewContent');
+  if(!document.getElementById('nvGrid')){
+    container.innerHTML=`
+    <div class="nv-wrap">
+      <div class="nv-topbar">
+        <span class="nv-title">📝 Notas</span>
+        <input type="text" class="nv-search" id="nvSearch" placeholder="Buscar notas…">
+        <button class="nv-new-btn" id="nvNewBtn">+ Nova nota</button>
+      </div>
+      <div id="nvGrid"></div>
+    </div>`;
+    document.getElementById('nvSearch').addEventListener('input',function(){
+      _renderNotesGrid(this.value);
+    });
+    document.getElementById('nvNewBtn').addEventListener('click',()=>openNoteEdit(null));
+  }
+  _renderNotesGrid(document.getElementById('nvSearch')?.value||'');
+}
+
+// Wire note edit modal buttons
+document.getElementById('neClose').addEventListener('click',()=>{
+  document.getElementById('noteEditOverlay').classList.remove('open');
+});
+document.getElementById('neSaveBtn').addEventListener('click',saveNoteEdit);
+document.getElementById('neDeleteBtn').addEventListener('click',()=>deleteNote(_editingNoteId));
+document.getElementById('nePinBtn').addEventListener('click',()=>{
+  const btn=document.getElementById('nePinBtn');
+  btn.classList.toggle('active');
+  btn.textContent=btn.classList.contains('active')?'📌 Fixado':'📌 Fixar';
+});
+// Toolbar commands for note editor
+document.querySelectorAll('[data-necmd]').forEach(btn=>{
+  btn.addEventListener('mousedown',e=>{e.preventDefault();
+    document.execCommand(btn.dataset.necmd,false,null);
+    document.getElementById('neEditor').focus();
+  });
+});
+document.getElementById('neFontSize').addEventListener('change',function(){
+  document.execCommand('fontSize',false,this.value);
+  document.getElementById('neEditor').focus();
+});
+document.getElementById('neFontColor').addEventListener('input',function(){
+  document.execCommand('foreColor',false,this.value);
+});
+document.getElementById('neHighlight').addEventListener('input',function(){
+  document.execCommand('hiliteColor',false,this.value);
+});
+// Keyboard shortcuts in note editor
+document.getElementById('neEditor').addEventListener('keydown',e=>{
+  if(e.ctrlKey||e.metaKey){
+    if(e.key==='b'){e.preventDefault();document.execCommand('bold',false,null);}
+    else if(e.key==='i'){e.preventDefault();document.execCommand('italic',false,null);}
+    else if(e.key==='u'){e.preventDefault();document.execCommand('underline',false,null);}
+    else if(e.key==='s'){e.preventDefault();saveNoteEdit();}
+  }
+});
+// Auto-save on input (debounced)
+document.getElementById('neEditor').addEventListener('input',()=>{
+  clearTimeout(_neAutoSave);
+  document.getElementById('neSavedLabel').textContent='…editando';
+  _neAutoSave=setTimeout(()=>{
+    const title=document.getElementById('neTitleInput').value.trim()||'Sem título';
+    const content=document.getElementById('neEditor').innerHTML;
+    const color=document.getElementById('neColorPick').value;
+    const pinned=document.getElementById('nePinBtn').classList.contains('active');
+    if(!content.trim()||content==='<br>')return;
+    const now=new Date().toISOString();
+    if(_editingNoteId){
+      const idx=standaloneNotes.findIndex(n=>n.id===_editingNoteId);
+      if(idx>-1)standaloneNotes[idx]={...standaloneNotes[idx],title,content,color,pinned,updatedAt:now};
+    } else {
+      const newId=uid();
+      standaloneNotes.unshift({id:newId,title,content,color,pinned,createdAt:now,updatedAt:now});
+      _editingNoteId=newId;
+    }
+    saveStandaloneNotes();
+    document.getElementById('neSavedLabel').textContent='💾 Salvo automaticamente';
+    if(viewMode==='notes')renderNotesView();
+  },900);
+});
+// Close overlay clicking backdrop
+document.getElementById('noteEditOverlay').addEventListener('click',e=>{
+  if(e.target===document.getElementById('noteEditOverlay')){
+    saveNoteEdit();
+  }
+});
+
 /* ═══════ QUICK CAPTURE ═══════ */
 document.getElementById('qcBtn').addEventListener('click',()=>{
   const input=document.getElementById('qcInput');
@@ -4616,6 +4934,7 @@ function getLocalPayload(){
     quick_tasks: JSON.stringify(quickTasks),
     reviews: JSON.stringify(reviews),
     top3: JSON.stringify(top3Data),
+    standalone_notes: JSON.stringify(standaloneNotes),
     updated_at: new Date().toISOString()
   };
 }
@@ -4636,6 +4955,7 @@ function applyRemotePayload(row){
     if(row.quick_tasks)try{const q=JSON.parse(row.quick_tasks);if(Array.isArray(q))quickTasks=q;}catch(e){}
     if(row.reviews)try{const rv=JSON.parse(row.reviews);if(rv&&typeof rv==='object')reviews=rv;}catch(e){}
     if(row.top3)try{const t3=JSON.parse(row.top3);if(t3&&typeof t3==='object')top3Data=t3;}catch(e){}
+    if(row.standalone_notes)try{const sn=JSON.parse(row.standalone_notes);if(Array.isArray(sn))standaloneNotes=sn;}catch(e){}
     // Persist locally
     localStorage.setItem('cal_marlon_v8',row.events||'[]');
     localStorage.setItem('cal_notes',row.notes||'{}');
@@ -4645,6 +4965,7 @@ function applyRemotePayload(row){
     if(row.quick_tasks)localStorage.setItem('cal_qtasks',row.quick_tasks);
     if(row.reviews)localStorage.setItem('cal_reviews',row.reviews);
     if(row.top3)localStorage.setItem('cal_top3',row.top3);
+    if(row.standalone_notes)localStorage.setItem('cal_standalone_notes',row.standalone_notes);
   }catch(e){console.warn('Error applying remote payload',e);}
 }
 
