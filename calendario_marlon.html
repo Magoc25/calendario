@@ -5249,7 +5249,7 @@ document.getElementById('deleteBtn').addEventListener('click',_patchedSyncAlerts
     return;
   }
   try{
-    const res=await fetch('./CHANGELOG.md',{cache:'no-cache'});
+    const res=await fetch('./CHANGELOG.md?_='+Date.now(),{cache:'no-cache'});
     if(!res.ok)return;
     const text=await res.text();
     const match=text.match(/##\s+\[(\d+\.\d+\.\d+)\]/);
