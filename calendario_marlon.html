@@ -386,8 +386,61 @@ body.compact .ev-pill{font-size:8.5px;padding:0 3px 0 4px}
 body.compact .day{padding:2px}
 body.compact .dow{padding:5px 0;font-size:8.5px}
 body.compact .holiday-label{font-size:7.5px;padding:0 3px}
+/* Compact — Aba Hoje */
+body.compact .tv-wrap{padding:10px 12px;gap:10px}
+body.compact .tv-header{padding-bottom:8px}
+body.compact .tv-panel{padding:9px 10px}
+body.compact .tv-panel-title{margin-bottom:6px;font-size:9.5px}
+body.compact .tv-ev-item{padding:4px 0}
+body.compact .tr-item{padding:4px 0}
+body.compact .qt-item{padding:3px 0}
+body.compact .top3-item{padding:5px 7px}
+/* Compact — Semana */
+body.compact .week-slot{height:36px}
+body.compact .week-ev{font-size:8.5px;padding:1px 3px}
+body.compact .week-ev-time{font-size:7.5px}
+body.compact .week-day-head{font-size:9px;padding:4px 0}
+/* Compact — Dia e Próximos */
+body.compact .dp-ev{padding:5px 8px;margin-bottom:6px}
+body.compact .dp-ev-title{font-size:11px}
+body.compact .dp-ev-time{font-size:8.5px}
+body.compact .dp-ev-cat{font-size:8.5px}
+body.compact .upcoming-ev{padding:5px 8px;margin-bottom:3px}
+body.compact .up-title{font-size:11px}
+body.compact .up-time{font-size:9px}
+/* Comfortable — Mês */
 body.comfortable .day{padding:6px}
 body.comfortable .ev-pill{font-size:11px;padding:3px 5px 3px 7px}
+/* Comfortable — Aba Hoje */
+body.comfortable .tv-wrap{padding:22px 24px;gap:18px}
+body.comfortable .tv-panel{padding:16px}
+body.comfortable .tv-ev-item{padding:9px 0}
+body.comfortable .tr-item{padding:8px 0}
+body.comfortable .qt-item{padding:8px 0}
+/* Comfortable — Semana */
+body.comfortable .week-slot{height:56px}
+body.comfortable .week-ev{font-size:10.5px;padding:3px 5px}
+/* Comfortable — Dia e Próximos */
+body.comfortable .dp-ev{padding:11px 13px;margin-bottom:12px}
+body.comfortable .dp-ev-title{font-size:13px}
+body.comfortable .upcoming-ev{padding:10px 13px;margin-bottom:7px}
+
+/* Compact/Comfortable — mobile overrides */
+@media(max-width:768px){
+  /* tv-wrap: preserva padding-bottom 72px da bottom nav */
+  body.compact .tv-wrap{padding:8px 8px 72px;gap:8px}
+  body.comfortable .tv-wrap{padding:14px 14px 72px;gap:14px}
+  /* Semana mobile usa !important — compact preserva fonte legível */
+  body.compact .week-ev{font-size:11px!important;padding:2px 4px!important}
+  body.compact .week-ev-time{font-size:10px!important}
+  body.comfortable .week-ev{font-size:11px!important}
+  body.comfortable .week-ev-time{font-size:10px!important}
+  /* Mês mobile já é compacto — compact não reduz mais */
+  body.compact .day{padding:2px;min-height:48px}
+  body.compact .ev-pill{font-size:9px;padding:1px 3px 1px 4px}
+  body.comfortable .day{padding:4px;min-height:58px}
+  body.comfortable .ev-pill{font-size:10px;padding:2px 4px 2px 5px}
+}
 
 /* Transition animation */
 .cal-grid.slide-in-right{animation:slideInRight .22s ease}
@@ -617,6 +670,10 @@ body.comfortable .ev-pill{font-size:11px;padding:3px 5px 3px 7px}
 /* Today events list */
 .tv-ev-item{display:flex;align-items:flex-start;gap:8px;padding:7px 0;border-bottom:1px solid var(--border)}
 .tv-ev-item:last-child{border-bottom:none}
+.tv-ev-item.done{opacity:.5}
+.tv-ev-item.done .tv-ev-title{text-decoration:line-through;color:var(--muted)}
+.tv-ev-check{width:14px;height:14px;border-radius:3px;border:1.5px solid var(--border);cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:8px;transition:all .15s;margin-top:2px}
+.tv-ev-check.done{background:var(--accent);border-color:var(--accent);color:#fff}
 .tv-ev-time{font-size:10px;font-weight:700;color:var(--accent);min-width:36px;margin-top:1px}
 .tv-ev-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:3px}
 .tv-ev-body{flex:1;min-width:0}
@@ -4100,8 +4157,8 @@ function renderToday(){
   const qtasks=getTodayTasks();
 
   // Progress
-  const totalItems=top3.filter(x=>x.text).length+todayRouts.length+qtasks.length;
-  const doneItems=top3.filter(x=>x.done&&x.text).length+checks.length+qtasks.filter(x=>x.done).length;
+  const totalItems=todayRouts.length+qtasks.length+todayEvs.length;
+  const doneItems=checks.length+qtasks.filter(x=>x.done).length+todayEvs.filter(ev=>isDoneOn(ev,td)).length;
   const pct=totalItems>0?Math.round(doneItems/totalItems*100):0;
   const r=22,circ=2*Math.PI*r,offset=circ-(pct/100*circ);
 
@@ -4139,17 +4196,24 @@ function renderToday(){
           <div class="tv-ring-sub">itens concluídos hoje</div>
         </div>
       </div>
-      ${top3.map((item,i)=>`
-        <div class="top3-item${item.done?' done':''} drop-zone" data-top3slot="${i}">
+      ${top3.map((item,i)=>{
+          let realDone=false;
+          if(item.text&&item.srcId){
+            if(item.srcType==='event'){const ev=events.find(e=>e.id===item.srcId);realDone=ev?isDoneOn(ev,td):false;}
+            else if(item.srcType==='routine'){realDone=checks.includes(item.srcId);}
+            else if(item.srcType==='task'){const t=qtasks.find(x=>x.id===item.srcId);realDone=t?t.done:false;}
+          }else{realDone=item.done;}
+          return`
+        <div class="top3-item${realDone?' done':''} drop-zone" data-top3slot="${i}">
           <div class="top3-num">${i+1}</div>
           ${item.text
             ?`<span class="top3-text">${srcIcon[item.srcType]||''} ${item.text}</span>
                <span class="top3-source">${item.srcType==='event'?'evento':item.srcType==='routine'?'rotina':item.srcType==='task'?'tarefa':''}</span>
-               <div class="top3-check${item.done?' checked':''}" data-top3check="${i}">${item.done?'✓':''}</div>
+               <div class="top3-check${realDone?' checked':''}" data-top3check="${i}" data-top3type="${item.srcType||''}" data-top3src="${item.srcId||''}">${realDone?'✓':''}</div>
                <button class="top3-clear" data-top3clear="${i}" title="Remover">✕</button>`
             :`<span class="top3-hint">Arraste um compromisso, rotina ou tarefa para cá</span>`
           }
-        </div>`).join('')}
+        </div>`;}).join('')}
     </div>
 
     <!-- Today events — DRAGGABLE -->
@@ -4157,18 +4221,19 @@ function renderToday(){
       <div class="tv-panel-title">📅 Compromissos de hoje</div>
       <div class="drop-hint">Arraste um evento para o Top 3 ↑</div>
       ${todayEvs.length===0?'<div style="font-size:11px;color:var(--muted);padding:4px 0 6px">Nenhum evento agendado.</div>':
-        todayEvs.map(ev=>`
-          <div class="tv-ev-item tv-draggable" draggable="true"
+        todayEvs.map(ev=>{const evDone=isDoneOn(ev,td);return`
+          <div class="tv-ev-item tv-draggable${evDone?' done':''}" draggable="true"
                data-drag-type="event" data-drag-text="${ev.title.replace(/"/g,'&quot;')}"
                data-drag-id="${ev.id}" data-drag-color="${getCalColor(ev)}">
             <span class="tv-drag-handle">⠿</span>
+            <div class="tv-ev-check${evDone?' done':''}" data-evcheck="${ev.id}" data-evdate="${td}">${evDone?'✓':''}</div>
             <div class="tv-ev-time">${ev.start||'—'}</div>
             <div class="tv-ev-dot" style="background:${getCalColor(ev)}"></div>
             <div class="tv-ev-body">
               <div class="tv-ev-title">${ev.title}</div>
               <div class="tv-ev-cat">${ev.category||''}${ev.location?' · 📍'+ev.location:''}</div>
             </div>
-          </div>`).join('')}
+          </div>`}).join('')}
       <button class="qt-add-btn" style="margin-top:8px;font-size:10px" onclick="openNew('${td}')">+ Novo evento hoje</button>
     </div>
 
@@ -4258,9 +4323,20 @@ function renderToday(){
   // ── Wire Top 3 check & clear ──
   document.querySelectorAll('[data-top3check]').forEach(el=>{
     el.addEventListener('click',e=>{e.stopPropagation();
-      const i=parseInt(el.dataset.top3check);
-      const cur3=getTop3();cur3[i].done=!cur3[i].done;
-      top3Data[todayDs()]=cur3;saveTop3();renderToday();
+      const srcType=el.dataset.top3type,srcId=el.dataset.top3src;
+      if(srcId&&srcType==='event'){
+        toggleDone(srcId,td);renderToday();render();
+      }else if(srcId&&srcType==='routine'){
+        const rc=getRoutineChecks(td),isDoneNow=rc.includes(srcId);
+        setRoutineCheck(td,srcId,!isDoneNow);renderToday();toast(!isDoneNow?'Rotina concluída ✓':'Rotina desmarcada');
+      }else if(srcId&&srcType==='task'){
+        const t=quickTasks.find(x=>x.id===srcId);
+        if(t){t.done=!t.done;saveQuickTasks();}renderToday();
+      }else{
+        const i=parseInt(el.dataset.top3check);
+        const cur3=getTop3();cur3[i].done=!cur3[i].done;
+        top3Data[todayDs()]=cur3;saveTop3();renderToday();
+      }
     });
   });
   document.querySelectorAll('[data-top3clear]').forEach(el=>{
@@ -4268,6 +4344,13 @@ function renderToday(){
       const i=parseInt(el.dataset.top3clear);
       const cur3=getTop3();cur3[i]={text:'',done:false};
       top3Data[todayDs()]=cur3;saveTop3();renderToday();
+    });
+  });
+
+  // ── Wire event checks ──
+  document.querySelectorAll('[data-evcheck]').forEach(el=>{
+    el.addEventListener('click',e=>{e.stopPropagation();
+      toggleDone(el.dataset.evcheck,el.dataset.evdate);renderToday();render();
     });
   });
 
