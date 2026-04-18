@@ -1427,6 +1427,9 @@ body.comfortable .upcoming-ev{padding:10px 13px;margin-bottom:7px}
 
   /* Keep bottom nav above day-panel slide */
   .day-panel{z-index:82;}
+
+  /* Garante que o último evento não fique atrás da bottom nav (58px) */
+  .dp-body{padding-bottom:70px!important;}
 }
 </style>
 </head>
@@ -3086,11 +3089,29 @@ function saveFired(){localStorage.setItem('cal_fired',JSON.stringify([...firedAl
 
 const notifSupported='Notification' in window;
 function getNotifPerm(){return notifSupported?Notification.permission:'denied';}
+
+// Flag de opt-in/out do app — independente da permissão do navegador
+function isNotifEnabled(){return localStorage.getItem('cal_notif_on')!=='0';}
+function setNotifEnabled(v){localStorage.setItem('cal_notif_on',v?'1':'0');}
+
 function updateNotifBadge(){
-  const p=getNotifPerm(),b=document.getElementById('notifBadge');
-  b.className='notif-badge '+(p==='granted'?'nb-granted':p==='denied'?'nb-denied':'nb-default');
-  const titles={granted:'Alertas ativos ✓ — clique para testar',denied:'🚫 Bloqueado — clique no cadeado 🔒 e permita notificações',default:'⚠️ Clique para ativar alertas de desktop'};
-  document.getElementById('notifBtn').title=titles[p]||titles.default;
+  const p=getNotifPerm(),b=document.getElementById('notifBadge'),btn=document.getElementById('notifBtn');
+  const enabled=isNotifEnabled();
+  if(p==='granted'){
+    if(enabled){
+      b.className='notif-badge nb-granted';
+      btn.title='Alertas ativos ✓ — clique para desativar';
+    }else{
+      b.className='notif-badge nb-denied';
+      btn.title='Alertas desativados — clique para ativar';
+    }
+  }else if(p==='denied'){
+    b.className='notif-badge nb-denied';
+    btn.title='🚫 Bloqueado — clique no cadeado 🔒 e permita notificações';
+  }else{
+    b.className='notif-badge nb-default';
+    btn.title='⚠️ Clique para ativar alertas de desktop';
+  }
 }
 
 /* ── Web Audio chime (no external file needed) ── */
@@ -3120,6 +3141,7 @@ function playAlertSound(){
 
 /* ── Show in-page card + OS notification ── */
 function showNotifCard(ev,dateStr,alertMin){
+  if(!isNotifEnabled())return; // usuário desativou os alertas no app
   // 1. Play sound
   playAlertSound();
 
@@ -3233,22 +3255,37 @@ document.addEventListener('visibilitychange',()=>{if(document.visibilityState===
 document.getElementById('notifBtn').addEventListener('click',async()=>{
   if(!notifSupported){toast('Navegador não suporta notificações.');return;}
   const p=getNotifPerm();
+
   if(p==='granted'){
-    playAlertSound();
-    try{const n=new Notification('🔔 Teste de alerta',{body:'Funcionando! Aparece mesmo com o navegador minimizado.',requireInteraction:false});setTimeout(()=>n.close(),5000);}catch(e){}
-    toast('✓ Teste disparado — verifique a bandeja do SO!');
+    // Toggle: ativa ↔ desativa
+    if(isNotifEnabled()){
+      setNotifEnabled(false);
+      updateNotifBadge();
+      toast('🔕 Alertas desativados.');
+    }else{
+      setNotifEnabled(true);
+      scheduleAlerts();
+      updateNotifBadge();
+      playAlertSound();
+      try{const n=new Notification('✓ Alertas reativados!',{body:'Você voltará a receber lembretes.',requireInteraction:false});setTimeout(()=>n.close(),4000);}catch(e){}
+      toast('🔔 Alertas ativados!');
+    }
     return;
   }
+
   if(p==='denied'){toast('🚫 Bloqueado. Clique no cadeado 🔒 na barra de endereços → Notificações → Permitir.');return;}
+
+  // Estado default: pede permissão
   toast('Aguardando sua decisão no navegador…');
   const result=await Notification.requestPermission();
-  updateNotifBadge();
   if(result==='granted'){
+    setNotifEnabled(true);
     scheduleAlerts();
+    updateNotifBadge();
     playAlertSound();
     try{const n=new Notification('✓ Alertas ativados!',{body:'Você receberá lembretes mesmo com o navegador minimizado.',requireInteraction:false});setTimeout(()=>n.close(),5000);}catch(e){}
     toast('✓ Alertas ativados com sucesso!');
-  } else if(result==='denied')toast('🚫 Negado. Clique no cadeado 🔒 → Notificações → Permitir.');
+  } else if(result==='denied'){updateNotifBadge();toast('🚫 Negado. Clique no cadeado 🔒 → Notificações → Permitir.');}
   else toast('Permissão não concedida. Tente novamente.');
 });
 
@@ -4432,6 +4469,33 @@ function renderToday(){
     });
   });
 
+  // ── Auto-scroll durante drag no mobile ──
+  // Quando o usuário arrasta perto da borda superior/inferior,
+  // a página rola automaticamente para expor o Top 3 ou as tarefas.
+  if('ontouchstart' in window){
+    let _asDir=0,_asRAF=null;
+    function _asTick(){
+      if(!_asDir){_asRAF=null;return;}
+      window.scrollBy({top:_asDir,behavior:'instant'});
+      _asRAF=requestAnimationFrame(_asTick);
+    }
+    document.addEventListener('dragover',e=>{
+      const y=e.clientY,h=window.innerHeight,ZONE=110;
+      if(y<ZONE){
+        const speed=Math.round(-12*(1-y/ZONE));
+        if(_asDir!==speed){_asDir=speed;if(!_asRAF)_asRAF=requestAnimationFrame(_asTick);}
+      }else if(y>h-ZONE){
+        const speed=Math.round(12*(1-(h-y)/ZONE));
+        if(_asDir!==speed){_asDir=speed;if(!_asRAF)_asRAF=requestAnimationFrame(_asTick);}
+      }else{
+        _asDir=0;
+      }
+    },{passive:true});
+    const _asStop=()=>{_asDir=0;if(_asRAF){cancelAnimationFrame(_asRAF);_asRAF=null;}};
+    document.addEventListener('dragend',_asStop);
+    document.addEventListener('drop',_asStop);
+  }
+
   // ── Wire Top 3 check & clear ──
   document.querySelectorAll('[data-top3check]').forEach(el=>{
     el.addEventListener('click',e=>{e.stopPropagation();
@@ -5443,6 +5507,42 @@ const PIX_KEY='4c6086a2-4bb8-474b-a4cf-ced8c8d82189';
 const PIX_NAME='MGC Dev';
 const PIX_CITY='Sao Raimundo';
 
+/* ── Reviews compartilhadas (Supabase público, somente leitura+inserção) ── */
+const REV_SB_URL='https://qvddbmlhucxndvbakvyd.supabase.co';
+const REV_SB_KEY='sb_publishable_0Saq2ZYXgGEApcbvWAahtw_VQ9b9iTq';
+let revClient=null;
+try{revClient=window.supabase.createClient(REV_SB_URL,REV_SB_KEY);}catch(e){}
+
+async function loadSharedReviews(){
+  if(!revClient)return;
+  try{
+    const{data,error}=await revClient.from('app_reviews').select('*').order('ts',{ascending:false}).limit(200);
+    if(error||!data)return;
+    // Mescla com reviews locais, deduplica por id
+    const localIds=new Set(appReviews.map(r=>r.id));
+    const novos=data.filter(r=>!localIds.has(r.id));
+    if(novos.length){
+      appReviews=[...appReviews,...novos].sort((a,b)=>new Date(b.ts)-new Date(a.ts));
+      saveAppReviews();
+    }
+  }catch(e){}
+}
+
+async function pushReviewToCloud(review){
+  if(!revClient)return;
+  try{
+    await revClient.from('app_reviews').insert({
+      id:review.id,
+      name:review.name,
+      comment:review.comment,
+      stars:review.stars,
+      donated:review.donated,
+      date:review.date,
+      ts:review.ts
+    });
+  }catch(e){}
+}
+
 function pixEmv(key,name,city,amount){
   const f=(id,val)=>{const v=String(val);return id+String(v.length).padStart(2,'0')+v;};
   const mai=f('26',f('00','BR.GOV.BCB.PIX')+f('01',key));
@@ -5529,8 +5629,10 @@ function submitReview(donated=true){
   const comment=document.getElementById('pixRevComment').value.trim();
   const stars=pixSelectedRating;
   if(stars===0&&!comment){document.getElementById('pixOverlay').classList.remove('open');return;}
-  appReviews.unshift({id:uid(),name,comment,stars,donated,date:todayDs(),ts:new Date().toISOString()});
+  const review={id:uid(),name,comment,stars,donated,date:todayDs(),ts:new Date().toISOString()};
+  appReviews.unshift(review);
   saveAppReviews();
+  pushReviewToCloud(review); // envia para o Supabase compartilhado
   document.getElementById('pixPanelThanks').style.display='none';
   document.getElementById('pixPanelFinal').style.display='';
 }
@@ -5559,7 +5661,9 @@ function renderReviewsModal(){
       ${r.comment?`<div class="rev-comment">"${r.comment}"</div>`:''}</div>`).join('');
   document.getElementById('reviewsOverlay').classList.add('open');
 }
-document.getElementById('reviewsBtn').addEventListener('click',renderReviewsModal);
+document.getElementById('reviewsBtn').addEventListener('click',()=>{
+  loadSharedReviews().then(()=>renderReviewsModal());
+});
 document.getElementById('reviewsClose').addEventListener('click',()=>document.getElementById('reviewsOverlay').classList.remove('open'));
 document.getElementById('reviewsOverlay').addEventListener('click',e=>{if(e.target===document.getElementById('reviewsOverlay'))document.getElementById('reviewsOverlay').classList.remove('open');});
 
@@ -5579,6 +5683,8 @@ const _sbReady=initSupabase();
 if(_sbReady){
   syncFromCloud(true).then(()=>{render();});
 }
+// Carrega avaliações compartilhadas de todos os usuários
+loadSharedReviews();
 
 /* ═══════ PWA — SERVICE WORKER ═══════ */
 let _swReg=null;
