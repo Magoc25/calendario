@@ -54,6 +54,7 @@ Quando quiser sincronizar entre computadores ou acessar pelo celular, basta conf
 - Som de chime ao disparar
 - Soneca (+30 min, +1h, +3h, Amanhã)
 - Funciona mesmo com o navegador minimizado
+- **Toggle ativar/desativar** — clique no 🔔 para ligar (verde) ou desligar (vermelho) os alertas sem revogar a permissão do navegador
 
 ### Integração e Export
 - **Sincronização Supabase** — dados em nuvem, automática entre dispositivos
@@ -79,6 +80,8 @@ Quando quiser sincronizar entre computadores ou acessar pelo celular, basta conf
 - **Long press** em evento → menu de contexto (Editar, Notas, Mover, Pular, Excluir)
 - **Mover evento** — seleciona o dia destino diretamente na grade do mês
 - **Formulário fullscreen** — sobe em tela cheia com seletor de hora em drum roll (roda de rolagem)
+- **Teclado virtual** — formulário ajusta altura automaticamente ao teclado, mantendo campos visíveis
+- **Drag Top 3** — ao arrastar para o Top 3, a página rola automaticamente ao chegar nas bordas
 
 ---
 
@@ -197,6 +200,8 @@ create table cal_sync (
   quick_tasks text,
   reviews text,
   top3 text,
+  standalone_notes text,
+  routine_checks text,
   updated_at timestamptz default now()
 );
 
@@ -205,6 +210,12 @@ alter table cal_sync enable row level security;
 create policy "Allow all operations" on cal_sync
   for all using (true) with check (true);
 ```
+
+> ⚠️ **Se já criou a tabela antes** e quer adicionar as colunas que faltam, rode no SQL Editor:
+> ```sql
+> alter table cal_sync add column if not exists standalone_notes text;
+> alter table cal_sync add column if not exists routine_checks text;
+> ```
 
 #### 3. Copiar as chaves
 Vá em **Settings → Data API**:
@@ -344,11 +355,32 @@ O arquivo JSON inclui: eventos, notas, rotinas, tarefas, revisões, avaliações
 
 ## ☕ Apoiar o Projeto
 
-O Calendário MGC é gratuito. Se ele foi útil para você, considere apoiar o desenvolvimento:
+O Calendário MGC é gratuito e de código aberto. Se ele foi útil para você, considere apoiar o desenvolvimento:
 
 Clique em **☕ Apoiar** no rodapé do calendário para fazer uma contribuição via PIX.
 
 **Chave PIX:** `4c6086a2-4bb8-474b-a4cf-ced8c8d82189` · MGC Dev
+
+### ⭐ Avaliações compartilhadas
+
+Após apoiar, você pode deixar uma avaliação com estrelas e comentário. As avaliações são **compartilhadas entre todos os usuários** — qualquer pessoa que abrir o app verá os comentários acumulados da comunidade.
+
+Para ver as avaliações, clique em **⭐ Avaliações** no rodapé do calendário.
+
+### 👑 Badges de apoiador
+
+O sistema reconhece automaticamente a lealdade de quem apoia ao longo do tempo, com base no número de **meses distintos** em que fez uma contribuição:
+
+| Badge | Meses de apoio |
+|---|---|
+| ☕ Apoiador | 1 mês |
+| ⭐ Fã | 2–3 meses |
+| 🔥 Dedicado | 4–6 meses |
+| 👑 Patrono | 7+ meses |
+
+O badge aparece automaticamente ao lado do seu nome nos comentários. A partir de 🔥 Dedicado, seu nome entra na seção **🏆 Apoiadores em Destaque** no topo do modal de avaliações.
+
+> 💡 Use sempre o mesmo nome ao avaliar para acumular meses de apoio corretamente.
 
 ---
 
