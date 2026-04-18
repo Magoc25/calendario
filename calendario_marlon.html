@@ -822,6 +822,15 @@ body.comfortable .upcoming-ev{padding:10px 13px;margin-bottom:7px}
 .rev-comment{font-size:11px;color:var(--muted);line-height:1.5;margin-top:4px}
 .rev-donated{font-size:9px;background:#e6fff0;color:#00863a;border-radius:10px;padding:1px 7px;font-weight:600}
 .rev-empty{text-align:center;padding:40px 0;color:var(--muted);font-size:12px}
+.rev-badge{font-size:9px;font-weight:700;border-radius:10px;padding:1px 7px;white-space:nowrap}
+.rev-badge-1{background:#fff3e0;color:#e65100;}   /* ☕ Apoiador */
+.rev-badge-2{background:#fff9e6;color:#c77c00;}   /* ⭐ Fã */
+.rev-badge-3{background:#fff0f6;color:#c2255c;}   /* 🔥 Dedicado */
+.rev-badge-4{background:#ffd700;color:#5a3e00;}   /* 👑 Patrono */
+.rev-patrons{background:linear-gradient(135deg,#fffbea,#fff3cd);border:1.5px solid #ffd700;border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:14px}
+.rev-patrons-title{font-size:10px;font-weight:700;color:#7a5c00;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px}
+.rev-patron-list{display:flex;flex-wrap:wrap;gap:6px}
+.rev-patron-chip{display:flex;align-items:center;gap:4px;background:#fff8dc;border:1px solid #f0c040;border-radius:20px;padding:3px 10px;font-size:11px;font-weight:600;color:#5a3e00}
 
 /* ── Standalone Notes View ── */
 .notes-view{padding:0!important;overflow-y:auto}
@@ -1903,6 +1912,7 @@ body.comfortable .upcoming-ev{padding:10px 13px;margin-bottom:7px}
     <button class="modal-close" id="reviewsClose">✕</button>
     <div class="modal-title">⭐ Avaliações do Calendário MGC</div>
     <div id="revSummary" class="rev-summary"></div>
+    <div id="revPatrons"></div>
     <div class="rev-list" id="revList"></div>
   </div>
 </div>
@@ -5660,10 +5670,25 @@ document.getElementById('pixSubmitReview').addEventListener('click',()=>submitRe
 document.getElementById('pixSkipReview').addEventListener('click',()=>document.getElementById('pixOverlay').classList.remove('open'));
 document.getElementById('pixFinalClose').addEventListener('click',()=>document.getElementById('pixOverlay').classList.remove('open'));
 
+// Calcula quantos meses distintos um usuário doou e retorna seu badge
+function getUserBadge(name,reviews){
+  const meses=new Set(
+    reviews.filter(r=>r.donated&&r.name.trim().toLowerCase()===name.trim().toLowerCase()&&r.date)
+           .map(r=>r.date.slice(0,7)) // 'YYYY-MM'
+  );
+  const n=meses.size;
+  if(n>=7)return{emoji:'👑',label:'Patrono',cls:'rev-badge-4'};
+  if(n>=4)return{emoji:'🔥',label:'Dedicado',cls:'rev-badge-3'};
+  if(n>=2)return{emoji:'⭐',label:'Fã',cls:'rev-badge-2'};
+  if(n===1)return{emoji:'☕',label:'Apoiador',cls:'rev-badge-1'};
+  return null;
+}
+
 function renderReviewsModal(){
   const ratedReviews=appReviews.filter(r=>r.stars>0);
   const avg=ratedReviews.length?ratedReviews.reduce((s,r)=>s+r.stars,0)/ratedReviews.length:0;
   const bars=[5,4,3,2,1].map(n=>({n,cnt:ratedReviews.filter(r=>r.stars===n).length,pct:ratedReviews.length?Math.round(ratedReviews.filter(r=>r.stars===n).length/ratedReviews.length*100):0}));
+
   const summaryEl=document.getElementById('revSummary');
   summaryEl.innerHTML=appReviews.length===0?'<div style="font-size:11px;color:var(--muted)">Nenhuma avaliação ainda. Seja o primeiro!</div>':`
     <div><div class="rev-big-stars">${avg>0?avg.toFixed(1):'—'}</div>
@@ -5671,13 +5696,34 @@ function renderReviewsModal(){
     <div class="rev-big-label">${ratedReviews.length} avaliação${ratedReviews.length!==1?'ões':''}</div></div>
     <div class="rev-star-bars">${bars.map(b=>`<div class="rev-bar-row"><span class="rev-bar-label">${b.n}⭐</span><div class="rev-bar-track"><div class="rev-bar-fill" style="width:${b.pct}%"></div></div><span class="rev-bar-count">${b.cnt}</span></div>`).join('')}</div>
     <div style="text-align:center;font-size:10px;color:var(--muted)">${appReviews.length} usuário${appReviews.length!==1?'s':''}<br>apoiaram</div>`;
+
+  // Seção de Patronos (👑 7+ meses) e Dedicados (🔥 4-6 meses)
+  const nomesDonors=[...new Set(appReviews.filter(r=>r.donated).map(r=>r.name.trim()))];
+  const patronos=nomesDonors.filter(n=>getUserBadge(n,appReviews)?.label==='Patrono');
+  const dedicados=nomesDonors.filter(n=>getUserBadge(n,appReviews)?.label==='Dedicado');
+  const destaque=[...patronos,...dedicados];
+  const patronsEl=document.getElementById('revPatrons');
+  patronsEl.innerHTML=destaque.length?`
+    <div class="rev-patrons">
+      <div class="rev-patrons-title">🏆 Apoiadores em Destaque</div>
+      <div class="rev-patron-list">
+        ${destaque.map(n=>{const b=getUserBadge(n,appReviews);return`<div class="rev-patron-chip">${b.emoji} ${n}</div>`;}).join('')}
+      </div>
+    </div>`:'';
+
+  // Lista de avaliações com badge em cada card
   const listEl=document.getElementById('revList');
   listEl.innerHTML=appReviews.length===0?'<div class="rev-empty">Nenhuma avaliação ainda.<br><span style="font-size:10px">Clique em ☕ Apoiar para deixar a sua!</span></div>':
-    appReviews.map(r=>`<div class="rev-item">
-      <div class="rev-item-header"><div class="rev-name">${r.name}</div>${r.donated?'<span class="rev-donated">✓ Apoiou</span>':''}
-      <div class="rev-date">${r.date?r.date.split('-').reverse().join('/'):'—'}</div></div>
-      ${r.stars>0?`<div class="rev-stars-row">${'⭐'.repeat(r.stars)}${'☆'.repeat(5-r.stars)}</div>`:''}
-      ${r.comment?`<div class="rev-comment">"${r.comment}"</div>`:''}</div>`).join('');
+    appReviews.map(r=>{
+      const badge=getUserBadge(r.name,appReviews);
+      const badgeHtml=badge?`<span class="rev-badge ${badge.cls}">${badge.emoji} ${badge.label}</span>`:'';
+      return`<div class="rev-item">
+        <div class="rev-item-header"><div class="rev-name">${r.name}</div>${badgeHtml}${r.donated?'<span class="rev-donated">✓ Apoiou</span>':''}
+        <div class="rev-date">${r.date?r.date.split('-').reverse().join('/'):'—'}</div></div>
+        ${r.stars>0?`<div class="rev-stars-row">${'⭐'.repeat(r.stars)}${'☆'.repeat(5-r.stars)}</div>`:''}
+        ${r.comment?`<div class="rev-comment">"${r.comment}"</div>`:''}</div>`;
+    }).join('');
+
   document.getElementById('reviewsOverlay').classList.add('open');
 }
 document.getElementById('reviewsBtn').addEventListener('click',()=>{
