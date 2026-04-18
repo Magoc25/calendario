@@ -5543,6 +5543,25 @@ async function pushReviewToCloud(review){
   }catch(e){}
 }
 
+async function migrateLocalReviews(){
+  if(!revClient)return;
+  if(localStorage.getItem('cal_reviews_migrated')==='1')return;
+  if(!appReviews.length){localStorage.setItem('cal_reviews_migrated','1');return;}
+  try{
+    // Busca ids já existentes no Supabase para não duplicar
+    const{data}=await revClient.from('app_reviews').select('id');
+    const remoteIds=new Set((data||[]).map(r=>r.id));
+    const pendentes=appReviews.filter(r=>r.id&&!remoteIds.has(r.id));
+    for(const r of pendentes){
+      await revClient.from('app_reviews').insert({
+        id:r.id,name:r.name,comment:r.comment,
+        stars:r.stars,donated:r.donated,date:r.date,ts:r.ts
+      });
+    }
+    localStorage.setItem('cal_reviews_migrated','1');
+  }catch(e){}
+}
+
 function pixEmv(key,name,city,amount){
   const f=(id,val)=>{const v=String(val);return id+String(v.length).padStart(2,'0')+v;};
   const mai=f('26',f('00','BR.GOV.BCB.PIX')+f('01',key));
@@ -5684,7 +5703,8 @@ if(_sbReady){
   syncFromCloud(true).then(()=>{render();});
 }
 // Carrega avaliações compartilhadas de todos os usuários
-loadSharedReviews();
+// e migra reviews locais antigas para o Supabase (roda só uma vez por dispositivo)
+loadSharedReviews().then(()=>migrateLocalReviews());
 
 /* ═══════ PWA — SERVICE WORKER ═══════ */
 let _swReg=null;
