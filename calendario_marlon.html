@@ -4149,6 +4149,8 @@ function setRoutineCheck(dateStr,routineId,done){
   if(done){if(!checks.includes(routineId))checks.push(routineId);}
   else checks=checks.filter(x=>x!==routineId);
   localStorage.setItem('cal_rchecks_'+dateStr,JSON.stringify(checks));
+  localStorage.setItem('cal_local_ts',new Date().toISOString());
+  if(sbClient){clearTimeout(_cloudSaveTimer);_cloudSaveTimer=setTimeout(()=>syncToCloud(true),1500);}
 }
 
 /* ── Routines view ── */
@@ -5004,6 +5006,14 @@ function setSyncStatus(status,title){
 }
 
 function getLocalPayload(){
+  // Coleta todos os checks de rotinas por data
+  const rchecks={};
+  for(let i=0;i<localStorage.length;i++){
+    const k=localStorage.key(i);
+    if(k&&k.startsWith('cal_rchecks_')){
+      try{rchecks[k.replace('cal_rchecks_','')]=JSON.parse(localStorage.getItem(k)||'[]');}catch(e){}
+    }
+  }
   return {
     events: JSON.stringify(events),
     notes: JSON.stringify(notesStore),
@@ -5015,6 +5025,7 @@ function getLocalPayload(){
     reviews: JSON.stringify(reviews),
     top3: JSON.stringify(top3Data),
     standalone_notes: JSON.stringify(standaloneNotes),
+    routine_checks: JSON.stringify(rchecks),
     updated_at: new Date().toISOString()
   };
 }
@@ -5046,6 +5057,14 @@ function applyRemotePayload(row){
     if(row.reviews)localStorage.setItem('cal_reviews',row.reviews);
     if(row.top3)localStorage.setItem('cal_top3',row.top3);
     if(row.standalone_notes)localStorage.setItem('cal_standalone_notes',row.standalone_notes);
+    if(row.routine_checks)try{
+      const rc=JSON.parse(row.routine_checks);
+      if(rc&&typeof rc==='object'){
+        Object.entries(rc).forEach(([date,ids])=>{
+          localStorage.setItem('cal_rchecks_'+date,JSON.stringify(ids));
+        });
+      }
+    }catch(e){}
   }catch(e){console.warn('Error applying remote payload',e);}
 }
 
