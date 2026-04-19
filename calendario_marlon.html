@@ -1141,7 +1141,7 @@ body.comfortable .upcoming-ev{padding:10px 13px;margin-bottom:7px}
   /* ── Esconder botões secundários do header no mobile ──
      Mantidos visíveis: Stats, Tema, Alertas (notif), Nuvem (sync)
      Ficam no menu ⋯: Backup, Imprimir, PDF, Google */
-  #printBtn,#pdfBtn,
+  #printBtn,#pdfBtn,#gcalDedupeBtn,
   #backupWrap,
   #gcalBtn,
   #addBtn,        /* substituído pelo FAB */
@@ -1504,6 +1504,7 @@ body.comfortable .upcoming-ev{padding:10px 13px;margin-bottom:7px}
         <button class="hbtn" id="statsBtn">📊 Stats</button>
         <button class="hbtn" id="printBtn" title="Imprimir">🖨️</button>
         <button class="hbtn" id="pdfBtn" title="Exportar PDF visual">📄 PDF</button>
+        <button class="hbtn" id="gcalDedupeBtn" title="Limpar eventos duplicados">🧹</button>
         <div id="backupWrap" style="position:relative">
           <button class="hbtn" id="backupBtn">💾 Backup</button>
           <div class="popup" id="backupPopup">
@@ -1513,8 +1514,6 @@ body.comfortable .upcoming-ev{padding:10px 13px;margin-bottom:7px}
             <div class="divider"></div>
             <button class="popup-btn" id="exportIcsBtn">📅 Exportar .ics</button>
             <button class="popup-btn" id="importIcsBtn">📅 Importar .ics</button>
-            <div class="divider"></div>
-            <button class="popup-btn" id="gcalDedupeBtn" style="color:#92400e">🧹 Limpar duplicados</button>
             <input type="file" id="importFile" accept=".json" style="display:none">
             <input type="file" id="importIcsFile" accept=".ics" style="display:none">
           </div>
@@ -1954,6 +1953,9 @@ body.comfortable .upcoming-ev{padding:10px 13px;margin-bottom:7px}
       <button class="mms-item" id="mmsBackup">
         <span class="mms-icon">💾</span><span>Backup</span>
       </button>
+      <button class="mms-item" id="mmsDedupe">
+        <span class="mms-icon">🧹</span><span>Duplicados</span>
+      </button>
       <button class="mms-item" id="mmsPrint">
         <span class="mms-icon">🖨️</span><span>Imprimir</span>
       </button>
@@ -1962,6 +1964,20 @@ body.comfortable .upcoming-ev{padding:10px 13px;margin-bottom:7px}
       </button>
     </div>
     <button class="mms-close" id="mmsClose">Fechar</button>
+  </div>
+</div>
+
+<!-- BACKUP MODAL (mobile) -->
+<div class="overlay" id="backupMobileOverlay">
+  <div class="modal" style="max-width:340px">
+    <button class="modal-close" id="backupMobileClose">✕</button>
+    <div class="modal-title">💾 Backup</div>
+    <div style="display:flex;flex-direction:column;gap:10px;margin-top:8px">
+      <button class="btn-save" id="mobileExportJsonBtn">⬇ Exportar JSON</button>
+      <button class="btn-cancel" id="mobileImportJsonBtn">⬆ Importar JSON</button>
+      <button class="btn-cancel" id="mobileExportIcsBtn">📅 Exportar .ics</button>
+      <button class="btn-cancel" id="mobileImportIcsBtn">📅 Importar .ics</button>
+    </div>
   </div>
 </div>
 
@@ -3683,6 +3699,30 @@ document.getElementById('exportIcsBtn').addEventListener('click',()=>{
   document.getElementById('backupPopup').classList.remove('open');toast(`${events.length} evento(s) exportados!`);
 });
 
+/* ═══════ BACKUP MOBILE MODAL ═══════ */
+(()=>{
+  const closeMobileBackup=()=>document.getElementById('backupMobileOverlay').classList.remove('open');
+  document.getElementById('backupMobileClose').addEventListener('click',closeMobileBackup);
+  document.getElementById('backupMobileOverlay').addEventListener('click',e=>{if(e.target===document.getElementById('backupMobileOverlay'))closeMobileBackup();});
+
+  document.getElementById('mobileExportJsonBtn').addEventListener('click',()=>{
+    document.getElementById('exportJsonBtn').click();
+    closeMobileBackup();
+  });
+  document.getElementById('mobileImportJsonBtn').addEventListener('click',()=>{
+    document.getElementById('importFile').click();
+    closeMobileBackup();
+  });
+  document.getElementById('mobileExportIcsBtn').addEventListener('click',()=>{
+    document.getElementById('exportIcsBtn').click();
+    closeMobileBackup();
+  });
+  document.getElementById('mobileImportIcsBtn').addEventListener('click',()=>{
+    document.getElementById('importIcsFile').click();
+    closeMobileBackup();
+  });
+})();
+
 /* ═══════ NOTES SYSTEM ═══════ */
 let notesEvId=null,notesAutoSaveTimer=null;
 let notesStore={};
@@ -4080,9 +4120,20 @@ document.getElementById('mobileFab').addEventListener('click',()=>openNew(null))
   };
 
   wire('mmsGcal',   'gcalBtn');
-  wire('mmsBackup', 'backupBtn');
   wire('mmsPrint',  'printBtn');
   wire('mmsPdf',    'pdfBtn');
+
+  // Backup mobile — abre modal próprio em vez do popup do header
+  document.getElementById('mmsBackup').addEventListener('click',()=>{
+    closeSheet();
+    setTimeout(()=>document.getElementById('backupMobileOverlay').classList.add('open'),280);
+  });
+
+  // Limpar duplicados mobile
+  document.getElementById('mmsDedupe').addEventListener('click',()=>{
+    closeSheet();
+    setTimeout(()=>document.getElementById('gcalDedupeBtn').click(),280);
+  });
 })();
 
 // Ocultar FAB quando o teclado virtual aparecer (campo com foco)
