@@ -5476,6 +5476,8 @@ function gcalIsMobile(){
 
 function gcalAuthViaRedirect(clientId, email){
   const redirectUri=window.location.href.split('#')[0].split('?')[0];
+  localStorage.setItem('cal_gcal_debug_uri', redirectUri);
+  localStorage.setItem('cal_gcal_debug_cid', clientId.substring(0,40));
   const params=new URLSearchParams({
     client_id:clientId,
     redirect_uri:redirectUri,
@@ -5893,6 +5895,11 @@ document.getElementById('gcalDedupeDeleteBtn').addEventListener('click',()=>{
 
 // Auto-init client if Client ID already saved
 window.addEventListener('load',()=>{
+  const dbgUri=localStorage.getItem('cal_gcal_debug_uri');
+  const dbgCid=localStorage.getItem('cal_gcal_debug_cid');
+  if(dbgUri&&localStorage.getItem('cal_gcal_redirect_pending')){
+    setTimeout(()=>alert('🔍 Debug OAuth\n\nRedirect URI:\n'+dbgUri+'\n\nClient ID (início):\n'+dbgCid),1500);
+  }
   gcalHandleRedirectReturn();
   const clientId=localStorage.getItem(GCAL_CLIENT_ID_KEY);
   if(clientId&&window.google?.accounts?.oauth2){
