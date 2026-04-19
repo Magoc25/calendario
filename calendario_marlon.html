@@ -5408,6 +5408,22 @@ async function gcalSync(pullOnly=false){
     const gcalEvents=data.items||[];
     let added=0,updated=0,pushed=0,errors=0;
 
+    // ── Dedup: remove local duplicates (same title+date, keep the one with gcalId or the first) ──
+    const seen={};
+    const deduped=[];
+    for(const ev of events){
+      const key=(ev.title||'').trim().toLowerCase()+'|'+ev.date;
+      if(!seen[key]){seen[key]=ev;deduped.push(ev);}
+      else if(ev.gcalId&&!seen[key].gcalId){
+        // prefer the one with gcalId
+        deduped.splice(deduped.indexOf(seen[key]),1,ev);
+        seen[key]=ev;
+      }
+    }
+    if(deduped.length<events.length){
+      events.length=0;events.push(...deduped);
+    }
+
     // Map existing events by gcalId for quick lookup
     const localByGcalId={};
     events.forEach(ev=>{if(ev.gcalId)localByGcalId[ev.gcalId]=ev;});
@@ -5417,11 +5433,26 @@ async function gcalSync(pullOnly=false){
       if(gcEv.status==='cancelled')continue;
       const local=localByGcalId[gcEv.id];
       if(!local){
+        // No gcalId match — check by title+date to avoid duplicates
+        const gcDate=(gcEv.start?.date||gcEv.start?.dateTime||'').slice(0,10);
+        const gcTitle=(gcEv.summary||'').trim().toLowerCase();
+        const titleDateMatch=events.find(ev=>
+          !ev.gcalId &&
+          ev.date===gcDate &&
+          (ev.title||'').trim().toLowerCase()===gcTitle
+        );
+        if(titleDateMatch){
+          // Same event, just missing gcalId — link them instead of duplicating
+          titleDateMatch.gcalId=gcEv.id;
+          titleDateMatch.gcalUpdated=gcEv.updated||new Date().toISOString();
+          localByGcalId[gcEv.id]=titleDateMatch;
+        } else {
         // New event from Google → add locally
         const newEv=gcalToMgc(gcEv);
         events.push(newEv);
         localByGcalId[gcEv.id]=newEv;
         added++;
+        }
       } else {
         // Exists — check if Google version is newer
         const gcUpdated=new Date(gcEv.updated||0).getTime();
