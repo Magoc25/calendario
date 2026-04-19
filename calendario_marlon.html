@@ -5757,7 +5757,7 @@ document.getElementById('gcalLoginBtn').addEventListener('click',()=>{
   setTimeout(()=>{
     if(gcalTokenClient){
       r.textContent='🔑 Abrindo login do Google...';
-      gcalTokenClient.requestAccessToken();
+      gcalTokenClient.requestAccessToken({prompt:'select_account'});
     } else {
       r.textContent='⚠️ Biblioteca Google ainda carregando. Aguarde 3 segundos e tente novamente.';
     }
