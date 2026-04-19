@@ -182,6 +182,78 @@ Quando quiser sincronizar entre computadores ou acessar pelo celular, basta conf
 
 ---
 
+## 🪜 Evolua no seu ritmo — Do básico ao completo
+
+> Não precisa configurar tudo de uma vez. O Calendário MGC funciona bem em qualquer nível — use o básico hoje e avance quando sentir necessidade.
+
+---
+
+### Nível 1 — Só o arquivo no navegador _(zero configuração)_
+
+**Como começar:** baixe `calendario_marlon.html` e abra no Chrome ou Edge. É só isso.
+
+| ✅ O que você tem | ❌ O que ainda não tem |
+|---|---|
+| Agenda completa com todos os recursos | Acesso pelo celular ou outros computadores |
+| Alertas e notificações | Sincronização automática entre dispositivos |
+| PDF, impressão, exportar .ics | Atualização automática do app |
+| Backup local (exportar/importar JSON) | Integração com Google Agenda |
+
+**Backup importante:** exporte o JSON regularmente (💾 Backup → Exportar JSON) e guarde em lugar seguro. Se o navegador for limpo ou o PC formatado, seus dados podem ser perdidos.
+
+**Quando avançar para o Nível 2?** Quando quiser acessar o calendário pelo celular ou em outro computador.
+
+---
+
+### Nível 2 — Supabase + GitHub Pages _(app no celular, sync automático)_
+
+**O que muda:** seus dados vão para a nuvem (Supabase) e o calendário fica acessível por uma URL pública do GitHub Pages — de qualquer dispositivo, a qualquer hora.
+
+> 🔒 **Sua agenda não fica visível para ninguém.** A URL pública abre o calendário vazio para qualquer pessoa que acessar. Seus eventos, notas e rotinas ficam no `localStorage` do seu navegador e nas suas chaves privadas do Supabase — que ninguém conhece a não ser você. Repositório público não significa dados públicos.
+
+| ✅ O que você ganha | ❌ O que ainda não tem |
+|---|---|
+| URL permanente acessível de qualquer lugar | Integração com Google Agenda |
+| Sync automático entre todos os dispositivos | — |
+| App instalável no celular (Android e iOS) | — |
+| Atualizações automáticas ao atualizar o arquivo no GitHub | — |
+
+#### Instalar como app no celular
+
+Depois de configurar o GitHub Pages e acessar a URL pelo celular:
+
+**Android (Chrome):**
+1. Abra a URL no Chrome
+2. Menu (⋮) → **Adicionar à tela inicial**
+3. Confirme — o ícone do app aparece na tela inicial
+
+**iPhone / iPad (Safari):**
+1. Abra a URL no Safari *(não funciona no Chrome no iOS)*
+2. Toque no botão **Compartilhar** (ícone de seta para cima)
+3. Role para baixo → **Adicionar à tela de início**
+4. Confirme — o app aparece na tela inicial
+
+> 💡 Após instalar, o app abre em tela cheia, sem barra de endereços, como um aplicativo nativo.
+
+**Quando avançar para o Nível 3?** Quando quiser que o Google Agenda e o Calendário MGC fiquem sincronizados automaticamente — criar um evento em um aparece no outro.
+
+---
+
+### Nível 3 — + Google Calendar _(integração total)_
+
+**O que muda:** sincronização bidirecional com o Google Agenda. Eventos criados no Google aparecem no MGC; eventos criados no MGC são enviados ao Google. Mover um evento no MGC atualiza automaticamente no Google.
+
+| ✅ O que você ganha |
+|---|
+| Sync bidirecional com Google Agenda |
+| Auto-sync ao abrir o app e a cada 30 minutos |
+| Mover evento no MGC atualiza o Google em segundos |
+| Basta conectar em um dispositivo — os demais recebem via Supabase |
+
+> ⚠️ Este nível exige a configuração mais trabalhosa (Google Cloud Console), mas é feita **uma única vez**, em um único dispositivo. Veja o passo a passo completo em [Configurar Google Calendar](#configurar-google-calendar).
+
+---
+
 ## 🔧 Guias de Configuração
 
 ### Configurar Supabase
