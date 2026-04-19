@@ -2624,6 +2624,7 @@ function renderMonth(){
       } else {
         ev.dateEnd=nd;
       }
+      ev.localUpdatedAt=new Date().toISOString();
       save();render();
       if(selectedDay)renderDayPanel(selectedDay);
       const [yy,mm,dd]=nd.split('-');
@@ -3975,6 +3976,7 @@ function moveEventToDate(evId,fromDate,toDate){
     }else{
       ev.dateEnd=toDate;
     }
+    ev.localUpdatedAt=new Date().toISOString();
   }
   save();render();
   toast('Evento movido ✓');
