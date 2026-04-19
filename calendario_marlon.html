@@ -1784,6 +1784,11 @@ body.comfortable .upcoming-ev{padding:10px 13px;margin-bottom:7px}
         <input type="text" id="gcalClientId" placeholder="123456789-abc.apps.googleusercontent.com" style="font-size:11px">
       </div>
       <div class="field">
+        <label>E-mail da conta Google (opcional)</label>
+        <input type="email" id="gcalEmail" placeholder="seuemail@gmail.com" style="font-size:13px">
+        <small style="color:var(--muted);font-size:11px;margin-top:4px;display:block">Informe para o login ir direto para a conta correta</small>
+      </div>
+      <div class="field">
         <label>Fuso horário dos eventos</label>
         <select id="gcalTimezone">
           <option value="America/Fortaleza">America/Fortaleza (UTC-3, padrão Maranhão)</option>
@@ -5249,6 +5254,7 @@ function updateGcalBtn(){
 function gcalShowPanel(){
   const clientId=localStorage.getItem(GCAL_CLIENT_ID_KEY)||'';
   document.getElementById('gcalClientId').value=clientId;
+  document.getElementById('gcalEmail').value=localStorage.getItem('cal_gcal_email')||'';
   document.getElementById('gcalTimezone').value=localStorage.getItem(GCAL_TZ_KEY)||'America/Fortaleza';
   if(gcalIsConnected()){
     document.getElementById('gcalPanelConfig').style.display='none';
@@ -5296,9 +5302,11 @@ function gcalInitClient(clientId){
   if(!window.google?.accounts?.oauth2){
     toast('Biblioteca Google ainda carregando, tente novamente em 2s.');return;
   }
+  const gcalEmailHint=localStorage.getItem('cal_gcal_email')||'';
   gcalTokenClient=window.google.accounts.oauth2.initTokenClient({
     client_id:clientId,
     scope:GCAL_SCOPE,
+    ...(gcalEmailHint?{login_hint:gcalEmailHint}:{}),
     callback:(resp)=>{
       if(resp.error){
         const r=document.getElementById('gcalConfigResult');
@@ -5478,8 +5486,11 @@ document.getElementById('gcalLoginBtn').addEventListener('click',()=>{
     r.textContent='⚠️ Cole o Client ID antes de continuar.';
     return;
   }
+  const gcalEmail=document.getElementById('gcalEmail').value.trim();
   localStorage.setItem(GCAL_CLIENT_ID_KEY,clientId);
   localStorage.setItem(GCAL_TZ_KEY,tz);
+  if(gcalEmail) localStorage.setItem('cal_gcal_email',gcalEmail);
+  else localStorage.removeItem('cal_gcal_email');
   const r=document.getElementById('gcalConfigResult');
   r.style.display='block';r.style.background='#fff8e1';r.style.color='#92400e';
   r.textContent='🔄 Inicializando cliente Google...';
@@ -5498,6 +5509,7 @@ document.getElementById('gcalClearBtn').addEventListener('click',()=>{
   localStorage.removeItem(GCAL_CLIENT_ID_KEY);
   localStorage.removeItem(GCAL_TOKEN_KEY);
   localStorage.removeItem(GCAL_TZ_KEY);
+  localStorage.removeItem('cal_gcal_email');
   gcalToken=null;gcalTokenExpiry=0;gcalTokenClient=null;
   updateGcalBtn();
   document.getElementById('gcalOverlay').classList.remove('open');
