@@ -3563,9 +3563,25 @@ document.getElementById('saveBtn').addEventListener('click',()=>{
 });
 
 document.getElementById('deleteBtn').addEventListener('click',()=>{
-  if(!editingId)return;events=events.filter(e=>e.id!==editingId);
-  save();closeModal();render();if(selectedDay)renderDayPanel(selectedDay);toast('Evento excluído.');
+  if(!editingId)return;
+  deleteEventById(editingId);
+  closeModal();
 });
+
+async function deleteEventById(id){
+  const ev=events.find(e=>e.id===id);
+  events=events.filter(e=>e.id!==id);
+  save();render();if(selectedDay)renderDayPanel(selectedDay);
+  toast('Evento excluído.');
+  // Se tem gcalId e está conectado ao Google, apaga lá também
+  if(ev?.gcalId&&gcalIsConnected()){
+    const calId=localStorage.getItem(GCAL_CAL_KEY)||'primary';
+    fetch(`${GCAL_API}/calendars/${encodeURIComponent(calId)}/events/${encodeURIComponent(ev.gcalId)}`,{
+      method:'DELETE',
+      headers:{Authorization:`Bearer ${gcalToken}`}
+    }).catch(e=>console.warn('Erro ao excluir no Google:',e));
+  }
+}
 
 /* ═══════ VIEW TOGGLE ═══════ */
 ['Today','Month','Week','Upcoming','Routines','Review','Notes'].forEach(v=>{
@@ -3962,10 +3978,8 @@ document.getElementById('ctxDelete').addEventListener('click',()=>{
   closeCtxMenu();
   if(!ctxEvId)return;
   if(!confirm('Excluir este evento?'))return;
-  events=events.filter(e=>e.id!==ctxEvId);
-  // Also remove notes
   delete notesStore[ctxEvId];saveNotes();
-  save();render();if(selectedDay)renderDayPanel(selectedDay);toast('Evento excluído.');
+  deleteEventById(ctxEvId);
 });
 document.addEventListener('keydown',e=>{
   if(e.key==='Escape')closeCtxMenu();
