@@ -3555,7 +3555,12 @@ document.getElementById('saveBtn').addEventListener('click',()=>{
     if(isDone&&editingDate&&!ev.doneInstances.includes(editingDate))ev.doneInstances.push(editingDate);
     else if(!isDone&&editingDate)ev.doneInstances=(ev.doneInstances||[]).filter(d=>d!==editingDate);
   } else ev.done=isDone;
-  if(editingId){const i=events.findIndex(e=>e.id===editingId);if(i>-1)events[i]=ev;}else events.push(ev);
+  ev.localUpdatedAt=new Date().toISOString();
+  if(editingId){
+    const old=events.find(e=>e.id===editingId);
+    if(old){ev.gcalId=old.gcalId;ev.gcalUpdated=old.gcalUpdated;} // preserve gcal link
+    const i=events.findIndex(e=>e.id===editingId);if(i>-1)events[i]=ev;
+  }else events.push(ev);
   save();closeModal();render();if(selectedDay)renderDayPanel(selectedDay);
   rescheduleAlerts();
   toast(editingId?'Evento atualizado!':'Evento salvo!');
@@ -5567,6 +5572,7 @@ async function gcalSync(pullOnly=false){
       singleEvents:'true',
       maxResults:'500',
       orderBy:'startTime',
+      showDeleted:'true',
       fields:'items(id,summary,description,location,start,end,updated,status,recurringEventId,extendedProperties)'
     });
     const resp=await fetch(`${GCAL_API}/calendars/${encodeURIComponent(calId)}/events?${params}`,{
@@ -5602,6 +5608,16 @@ async function gcalSync(pullOnly=false){
     const localGcalIds=new Set(events.map(ev=>ev.gcalId).filter(Boolean));
     // IDs excluídos pelo usuário — nunca reimportar
     const deletedIds=gcalGetDeletedIds();
+
+    // ── Fix #1: remover localmente eventos cancelados/excluídos no Google ──
+    let removed=0;
+    for(const gcEv of gcalEvents){
+      if(gcEv.status==='cancelled'&&localByGcalId[gcEv.id]){
+        const localId=localByGcalId[gcEv.id].id;
+        events=events.filter(e=>e.id!==localId);
+        removed++;
+      }
+    }
 
     // Process Google events → local
     for(const gcEv of gcalEvents){
@@ -5667,12 +5683,35 @@ async function gcalSync(pullOnly=false){
           } else {errors++;}
         }catch(e){errors++;console.warn('push error:',e);}
       }
+
+      // ── UPDATE: sync local edits back to Google for existing events ──
+      const toUpdate=events.filter(ev=>
+        ev.gcalId &&
+        ev.localUpdatedAt &&
+        ev.title && ev.date &&
+        new Date(ev.localUpdatedAt).getTime() > new Date(ev.gcalUpdated||0).getTime()
+      );
+      for(const ev of toUpdate){
+        try{
+          const body=mgcToGcal(ev);
+          const res=await fetch(`${GCAL_API}/calendars/${encodeURIComponent(calId)}/events/${encodeURIComponent(ev.gcalId)}`,{
+            method:'PUT',
+            headers:{Authorization:`Bearer ${gcalToken}`,'Content-Type':'application/json'},
+            body:JSON.stringify(body)
+          });
+          const updated_res=await res.json();
+          if(updated_res.id){
+            ev.gcalUpdated=updated_res.updated||new Date().toISOString();
+            pushed++;
+          } else {errors++;}
+        }catch(e){errors++;console.warn('update error:',e);}
+      }
     }
 
     save();render();updateGcalBtn();
     const msg=pullOnly
-      ?`✓ Importado do Google: ${added} novo${added!==1?'s':''}, ${updated} atualizado${updated!==1?'s':''}`
-      :`✓ Sync concluído: ${added} importado${added!==1?'s':''} · ${updated} atualizado${updated!==1?'s':''} · ${pushed} enviado${pushed!==1?'s':''}${errors?` · ${errors} erro(s)`:''}`;
+      ?`✓ Importado do Google: ${added} novo${added!==1?'s':''}, ${updated} atualizado${updated!==1?'s':''}${removed?` · ${removed} removido${removed!==1?'s':''}`:''}`
+      :`✓ Sync concluído: ${added} importado${added!==1?'s':''} · ${updated} atualizado${updated!==1?'s':''} · ${pushed} enviado${pushed!==1?'s':''}${removed?` · ${removed} removido${removed!==1?'s':''}`: ''}${errors?` · ${errors} erro(s)`:''}`;
     if(r){r.style.background='#dcfce7';r.style.color='#166534';r.textContent=msg;}
     toast(msg);
 
