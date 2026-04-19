@@ -2226,6 +2226,14 @@ const DEFAULT_CALS=[
   {id:'ifma',name:'IFMA',color:'#0ca678',visible:true},
   {id:'pessoal',name:'Pessoal',color:'#e64980',visible:true}
 ];
+const GCAL_CALENDAR_ID='gcal';
+
+function ensureGcalCalendar(){
+  if(!calendars.find(c=>c.id===GCAL_CALENDAR_ID)){
+    calendars.push({id:GCAL_CALENDAR_ID,name:'Google Agenda',color:'#4285f4',visible:true});
+    saveCalendars();
+  }
+}
 let calendars=DEFAULT_CALS;
 let editingCalId=null,selectedCalColor='#3b5bdb';
 try{
@@ -5446,7 +5454,7 @@ function gcalToMgc(gcEv){
     start:startTime,
     end:endTime,
     color:'#4285f4',
-    calendarId:gcEv.extendedProperties?.private?.mgcCalendarId||'default',
+    calendarId:gcEv.extendedProperties?.private?.mgcCalendarId||GCAL_CALENDAR_ID,
     category:''
   };
   return ev;
@@ -5455,6 +5463,7 @@ function gcalToMgc(gcEv){
 // Main sync function
 async function gcalSync(pullOnly=false){
   if(!gcalIsConnected()){toast('Conecte ao Google primeiro.');return;}
+  ensureGcalCalendar();
   const calId=document.getElementById('gcalCalendarSelect')?.value||localStorage.getItem(GCAL_CAL_KEY)||'primary';
   localStorage.setItem(GCAL_CAL_KEY,calId);
   const tz=localStorage.getItem(GCAL_TZ_KEY)||'America/Fortaleza';
@@ -5713,8 +5722,20 @@ window.addEventListener('load',()=>{
     const cid=localStorage.getItem(GCAL_CLIENT_ID_KEY);
     if(cid&&!gcalTokenClient&&window.google?.accounts?.oauth2){gcalInitClient(cid);}
     updateGcalBtn();
+    // Auto-sync on load if token still valid
+    if(gcalIsConnected()){
+      setTimeout(()=>gcalSync(false).catch(()=>{}),3000);
+    }
   },2000);
 });
+
+// Auto-sync every 30 minutes while app is open
+setInterval(()=>{
+  if(gcalIsConnected()){
+    gcalSync(false).catch(()=>{});
+  }
+},30*60*1000);
+
 updateGcalBtn();
 
 /* ═══════ PIX & REVIEWS SYSTEM ═══════ */
