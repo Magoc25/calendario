@@ -5373,8 +5373,37 @@ function gcalHandleError(err){
     gcalToken=null;gcalTokenExpiry=0;
     localStorage.removeItem(GCAL_TOKEN_KEY);
     updateGcalBtn();
-    toast('Sessão Google expirada. Clique em 📆 Google para reconectar.');
+    // Try silent refresh before asking user to reconnect
+    gcalSilentRefresh().catch(()=>{
+      toast('Sessão Google expirada. Clique em 📆 Google para reconectar.');
+    });
   }
+}
+
+// Silent token refresh — uses existing Google session, no popup shown
+function gcalSilentRefresh(){
+  return new Promise((resolve,reject)=>{
+    if(!gcalTokenClient){
+      // Client not initialized yet — try to init first
+      const clientId=localStorage.getItem(GCAL_CLIENT_ID_KEY);
+      if(!clientId||!window.google?.accounts?.oauth2){reject('no client');return;}
+      gcalInitClient(clientId);
+      setTimeout(()=>gcalSilentRefresh().then(resolve).catch(reject),1000);
+      return;
+    }
+    const origCallback=gcalTokenClient.callback;
+    gcalTokenClient.callback=(resp)=>{
+      gcalTokenClient.callback=origCallback;
+      if(resp.error){reject(resp.error);return;}
+      gcalToken=resp.access_token;
+      gcalTokenExpiry=Date.now()+(resp.expires_in-60)*1000;
+      localStorage.setItem(GCAL_TOKEN_KEY,JSON.stringify({access_token:gcalToken,expiry:gcalTokenExpiry}));
+      updateGcalBtn();
+      resolve();
+    };
+    // prompt:'' = silent, no UI shown; fails if no active Google session
+    gcalTokenClient.requestAccessToken({prompt:''});
+  });
 }
 
 function gcalInitClient(clientId){
@@ -5462,7 +5491,11 @@ function gcalToMgc(gcEv){
 
 // Main sync function
 async function gcalSync(pullOnly=false){
-  if(!gcalIsConnected()){toast('Conecte ao Google primeiro.');return;}
+  if(!gcalIsConnected()){
+    // Try silent refresh before giving up
+    try{ await gcalSilentRefresh(); }
+    catch(e){ toast('Conecte ao Google primeiro.'); return; }
+  }
   ensureGcalCalendar();
   const calId=document.getElementById('gcalCalendarSelect')?.value||localStorage.getItem(GCAL_CAL_KEY)||'primary';
   localStorage.setItem(GCAL_CAL_KEY,calId);
@@ -5722,9 +5755,15 @@ window.addEventListener('load',()=>{
     const cid=localStorage.getItem(GCAL_CLIENT_ID_KEY);
     if(cid&&!gcalTokenClient&&window.google?.accounts?.oauth2){gcalInitClient(cid);}
     updateGcalBtn();
-    // Auto-sync on load if token still valid
-    if(gcalIsConnected()){
-      setTimeout(()=>gcalSync(false).catch(()=>{}),3000);
+    // Auto-sync on load — tenta silent refresh se token expirado
+    const clientId=localStorage.getItem(GCAL_CLIENT_ID_KEY);
+    if(clientId){
+      setTimeout(async()=>{
+        if(!gcalIsConnected()){
+          try{ await gcalSilentRefresh(); }catch(e){ return; }
+        }
+        gcalSync(false).catch(()=>{});
+      },3000);
     }
   },2000);
 });
