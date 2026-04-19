@@ -3569,9 +3569,21 @@ document.getElementById('deleteBtn').addEventListener('click',()=>{
 });
 
 const GCAL_DELETE_QUEUE_KEY='cal_gcal_delete_queue';
+const GCAL_DELETED_IDS_KEY='cal_gcal_deleted_ids';
 
-function gcalEnqueueDelete(gcalId){
+// Retorna conjunto de gcalIds que o usuário excluiu localmente
+function gcalGetDeletedIds(){
+  try{return new Set(JSON.parse(localStorage.getItem(GCAL_DELETED_IDS_KEY)||'[]'));}
+  catch(e){return new Set();}
+}
+
+// Registra gcalId como "excluído pelo usuário" — nunca reimportar
+function gcalMarkDeleted(gcalId){
   try{
+    const ids=gcalGetDeletedIds();
+    ids.add(gcalId);
+    localStorage.setItem(GCAL_DELETED_IDS_KEY,JSON.stringify([...ids]));
+    // Também na fila para apagar no Google
     const q=JSON.parse(localStorage.getItem(GCAL_DELETE_QUEUE_KEY)||'[]');
     if(!q.includes(gcalId)){q.push(gcalId);localStorage.setItem(GCAL_DELETE_QUEUE_KEY,JSON.stringify(q));}
   }catch(e){}
@@ -3589,8 +3601,9 @@ async function gcalProcessDeleteQueue(){
           method:'DELETE',
           headers:{Authorization:`Bearer ${gcalToken}`}
         });
+        // 204=deletado, 404=já não existe — ambos ok, remover da fila
         if(res.status!==204&&res.status!==200&&res.status!==404){
-          remaining.push(gcalId); // keep if failed (not 404)
+          remaining.push(gcalId);
         }
       }catch(e){remaining.push(gcalId);}
     }
@@ -3603,10 +3616,8 @@ function deleteEventById(id){
   events=events.filter(e=>e.id!==id);
   save();render();if(selectedDay)renderDayPanel(selectedDay);
   toast('Evento excluído.');
-  // Se tem gcalId, enfileira para excluir no Google na próxima sync
   if(ev?.gcalId){
-    gcalEnqueueDelete(ev.gcalId);
-    // Tenta apagar imediatamente se conectado
+    gcalMarkDeleted(ev.gcalId);
     if(gcalIsConnected()) gcalProcessDeleteQueue().catch(()=>{});
   }
 }
@@ -5589,10 +5600,15 @@ async function gcalSync(pullOnly=false){
 
     // Build set of local gcalIds for recurring base event lookup
     const localGcalIds=new Set(events.map(ev=>ev.gcalId).filter(Boolean));
+    // IDs excluídos pelo usuário — nunca reimportar
+    const deletedIds=gcalGetDeletedIds();
 
     // Process Google events → local
     for(const gcEv of gcalEvents){
       if(gcEv.status==='cancelled')continue;
+      // Nunca reimportar evento que o usuário excluiu
+      if(deletedIds.has(gcEv.id))continue;
+      if(gcEv.recurringEventId&&deletedIds.has(gcEv.recurringEventId))continue;
       // Skip instances of recurring series that already exist locally
       if(gcEv.recurringEventId&&localGcalIds.has(gcEv.recurringEventId))continue;
       const local=localByGcalId[gcEv.id];
