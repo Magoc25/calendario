@@ -1830,6 +1830,27 @@ body.comfortable .upcoming-ev{padding:10px 13px;margin-bottom:7px}
         <button class="btn-cancel" id="gcalSyncPullBtn">⬇ Importar do Google</button>
         <button class="btn-save" id="gcalSyncBtn">🔄 Sincronizar agora</button>
       </div>
+      <div style="margin-top:10px;border-top:1px solid var(--border);padding-top:10px">
+        <button class="btn-cancel" id="gcalDedupeBtn" style="width:100%;font-size:11px;color:#92400e;border-color:#fcd34d">🧹 Limpar eventos duplicados</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- DEDUPE MODAL -->
+<div class="overlay" id="gcalDedupeOverlay">
+  <div class="modal" style="max-width:520px">
+    <button class="modal-close" id="gcalDedupeClose">✕</button>
+    <div class="modal-title">🧹 Limpar eventos duplicados</div>
+    <p style="font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.6">
+      Eventos com o mesmo nome e horário aparecendo em várias datas. Selecione os grupos que deseja excluir completamente.
+    </p>
+    <div id="gcalDedupeList" style="max-height:340px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:12px"></div>
+    <div id="gcalDedupeEmpty" style="display:none;font-size:12px;color:var(--muted);text-align:center;padding:20px">✓ Nenhum grupo de duplicados encontrado.</div>
+    <div class="modal-actions">
+      <button class="btn-cancel" id="gcalDedupeCancelBtn">Fechar</button>
+      <button class="btn-cancel" id="gcalDedupeSelectAll" style="font-size:11px">Selecionar tudo</button>
+      <button class="btn-save" id="gcalDedupeDeleteBtn" style="background:#e03131;border-color:#e03131">🗑 Excluir selecionados</button>
     </div>
   </div>
 </div>
@@ -5566,6 +5587,70 @@ document.getElementById('gcalDisconnectBtn').addEventListener('click',()=>{
 
 document.getElementById('gcalSyncBtn').addEventListener('click',()=>gcalSync(false));
 document.getElementById('gcalSyncPullBtn').addEventListener('click',()=>gcalSync(true));
+
+// ── Limpeza de duplicados ──────────────────────────────
+document.getElementById('gcalDedupeBtn').addEventListener('click',()=>{
+  // Agrupar eventos por título (lowercase) + horário de início
+  const groups={};
+  events.forEach(ev=>{
+    const key=(ev.title||'').trim().toLowerCase()+'|'+(ev.start||'');
+    if(!groups[key])groups[key]={title:ev.title,start:ev.start||'(dia todo)',evs:[]};
+    groups[key].evs.push(ev);
+  });
+
+  // Filtrar apenas grupos com 2+ eventos
+  const dupes=Object.values(groups).filter(g=>g.evs.length>=2)
+    .sort((a,b)=>b.evs.length-a.evs.length);
+
+  const list=document.getElementById('gcalDedupeList');
+  const empty=document.getElementById('gcalDedupeEmpty');
+
+  if(!dupes.length){
+    list.style.display='none';
+    empty.style.display='block';
+  } else {
+    list.style.display='block';
+    empty.style.display='none';
+    list.innerHTML=dupes.map((g,i)=>{
+      const dates=g.evs.map(e=>e.date).sort();
+      const from=dates[0],to=dates[dates.length-1];
+      return `<label style="display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border-bottom:1px solid var(--border);cursor:pointer;font-size:12px">
+        <input type="checkbox" data-idx="${i}" style="margin-top:2px;flex-shrink:0">
+        <div>
+          <div style="font-weight:600;color:var(--text)">${g.title}</div>
+          <div style="color:var(--muted);font-size:11px">${g.evs.length} ocorrências · ${g.start} · ${from} → ${to}</div>
+        </div>
+      </label>`;
+    }).join('');
+    // Store dupes on element for deletion
+    list._dupes=dupes;
+  }
+
+  document.getElementById('gcalDedupeOverlay').classList.add('open');
+});
+
+document.getElementById('gcalDedupeClose').addEventListener('click',()=>document.getElementById('gcalDedupeOverlay').classList.remove('open'));
+document.getElementById('gcalDedupeCancelBtn').addEventListener('click',()=>document.getElementById('gcalDedupeOverlay').classList.remove('open'));
+document.getElementById('gcalDedupeOverlay').addEventListener('click',e=>{if(e.target===document.getElementById('gcalDedupeOverlay'))document.getElementById('gcalDedupeOverlay').classList.remove('open');});
+
+document.getElementById('gcalDedupeSelectAll').addEventListener('click',()=>{
+  document.querySelectorAll('#gcalDedupeList input[type=checkbox]').forEach(cb=>cb.checked=true);
+});
+
+document.getElementById('gcalDedupeDeleteBtn').addEventListener('click',()=>{
+  const list=document.getElementById('gcalDedupeList');
+  const dupes=list._dupes;
+  if(!dupes)return;
+  const checked=[...document.querySelectorAll('#gcalDedupeList input[type=checkbox]:checked')].map(cb=>parseInt(cb.dataset.idx));
+  if(!checked.length){toast('Selecione ao menos um grupo.');return;}
+  const idsToDelete=new Set();
+  checked.forEach(i=>dupes[i].evs.forEach(ev=>idsToDelete.add(ev.id)));
+  const before=events.length;
+  events=events.filter(ev=>!idsToDelete.has(ev.id));
+  save();render();
+  document.getElementById('gcalDedupeOverlay').classList.remove('open');
+  toast(`🗑 ${before-events.length} eventos excluídos.`);
+});
 
 // Auto-init client if Client ID already saved
 window.addEventListener('load',()=>{
