@@ -58,10 +58,11 @@ Quando quiser sincronizar entre computadores ou acessar pelo celular, basta conf
 
 ### Integração e Export
 - **Sincronização Supabase** — dados em nuvem, automática entre dispositivos
-- **Google Calendar** — sincronização bidirecional com OAuth2
+- **Google Calendar** — sincronização bidirecional com OAuth2; basta conectar em um dispositivo, os demais recebem via Supabase
 - **Exportar .ics** — compatível com Google Calendar, Apple Calendar e Outlook
 - **Importar .ics** — importe eventos de outras agendas
 - **Backup JSON** — exporta e importa todos os dados (eventos, notas, rotinas, revisões)
+- **🧹 Limpar duplicados** — remove em massa eventos com mesmo nome e horário (útil após primeira sync com Google)
 - **PDF visual** do mês atual
 - **Impressão** com CSS otimizado
 
@@ -82,6 +83,8 @@ Quando quiser sincronizar entre computadores ou acessar pelo celular, basta conf
 - **Formulário fullscreen** — sobe em tela cheia com seletor de hora em drum roll (roda de rolagem)
 - **Teclado virtual** — formulário ajusta altura automaticamente ao teclado, mantendo campos visíveis
 - **Drag Top 3** — ao arrastar para o Top 3, a página rola automaticamente ao chegar nas bordas
+- **Backup mobile** — menu ⋯ → Backup abre modal com todas as opções (Exportar/Importar JSON e .ics)
+- **Limpar duplicados mobile** — menu ⋯ → Duplicados abre ferramenta de limpeza em massa
 
 ---
 
@@ -162,14 +165,20 @@ Quando quiser sincronizar entre computadores ou acessar pelo celular, basta conf
 **Ideal para:** quem já usa o Google Agenda e quer sincronização bidirecional.
 
 ```
- 📅 Google Agenda ◄──────────────────────────────►  📅 Calendário MGC
-                        (bidirecional)
+ 📅 Google Agenda
+        ↕ (sync manual)
+ 📅 Calendário MGC  ◄──►  ☁️ Supabase  ◄──►  📱 Celular / outros dispositivos
+   (1 dispositivo)              (automático)
 ```
+
+> 💡 **Você só precisa conectar o Google em um dispositivo.** Os eventos sincronizados chegam automaticamente nos outros via Supabase. O celular não precisa ter conta Google configurada.
 
 **Passos:**
 1. Complete o Cenário 3
 2. Configure a Google Calendar API — veja [Configurar Google Calendar](#configurar-google-calendar)
 3. Clique em 📆 Google → Conectar com Google → autorize
+4. Clique em **Sincronizar agora** — eventos do Google chegam ao app e vão para o Supabase
+5. Os outros dispositivos recebem automaticamente via Supabase
 
 ---
 
@@ -266,31 +275,104 @@ https://seunome.github.io/calendario/calendario_marlon.html
 
 ### Configurar Google Calendar
 
-#### 1. Google Cloud Console
-1. Acesse [console.cloud.google.com](https://console.cloud.google.com)
-2. **Novo projeto** → Nome: `Calendario MGC` → Criar
-3. **APIs e serviços → Biblioteca** → buscar `Google Calendar API` → **Ativar**
+> **Pré-requisito:** tenha o Cenário 3 (GitHub Pages) funcionando antes de configurar o Google Calendar, pois você vai precisar da URL do seu GitHub Pages.
 
-#### 2. Tela de consentimento OAuth
-1. **APIs e serviços → Tela de consentimento OAuth**
-2. Tipo: **Externo** → Criar
-3. Nome do app: `Calendario MGC` · E-mail: seu e-mail
-4. **Salvar e continuar** em todas as telas
-5. Em **Usuários de teste**: adicione seu próprio e-mail
-6. Clique em **Voltar ao painel**
+#### 1. Criar projeto no Google Cloud Console
+1. Acesse [console.cloud.google.com](https://console.cloud.google.com) com sua conta Google
+2. No seletor de projetos (topo da página) → clique em **Novo projeto**
+3. Nome: `Calendario MGC` → clique em **Criar**
+4. Aguarde a criação e certifique-se que o novo projeto está selecionado no seletor de projetos
 
-#### 3. Criar credencial OAuth
-1. **APIs e serviços → Credenciais → + Criar credenciais → ID do cliente OAuth**
-2. Tipo: **Aplicativo da Web**
-3. Nome: `Calendario MGC Web`
-4. **Origens JavaScript autorizadas** → adicione sua URL do GitHub Pages: `https://seunome.github.io`
-5. Clique em **Criar** → copie o **Client ID**
+#### 2. Ativar a Google Calendar API
+1. No menu lateral → **APIs e serviços → Biblioteca**
+2. Na barra de busca, digite `Google Calendar API`
+3. Clique no resultado → clique em **Ativar**
 
-#### 4. Configurar no calendário
-1. Clique em 📆 Google → cole o **Client ID**
-2. Selecione o fuso horário
-3. Clique em **🔑 Conectar com Google**
-4. Na janela pop-up: selecione sua conta → Avançado → Ir para Calendario MGC → autorize
+#### 3. Configurar a Tela de Consentimento OAuth (Branding)
+> ⚠️ A interface do Google Cloud Console foi atualizada. O fluxo agora é diferente das versões anteriores.
+
+1. No menu lateral → **APIs e serviços → Tela de permissão OAuth** (ou **OAuth consent screen**)
+2. Clique em **Vamos começar** (ou **Get started**)
+3. Preencha os campos:
+   - **Nome do app:** `Calendario MGC`
+   - **E-mail de suporte ao usuário:** seu e-mail Google (o mesmo que usa no Google Agenda)
+4. Clique em **Próximo**
+5. Em **Público-alvo**, selecione **Externo** → clique em **Próximo**
+6. Em **Informações de contato**, preencha:
+   - **Endereço de e-mail:** seu e-mail Google (mesmo da conta usada)
+7. Clique em **Próximo** → marque que concorda com os termos → clique em **Continuar**
+
+> 💡 **Sobre os e-mails solicitados:** tanto o e-mail de suporte quanto o de contato devem ser o mesmo e-mail da conta Google que você está usando. Não há problema em usar o mesmo endereço nos dois campos.
+
+#### 4. Criar a Credencial OAuth (Client ID)
+1. Ainda em **APIs e serviços → Tela de permissão OAuth**, clique na aba **Clientes** (no topo da página)
+2. Clique em **Criar cliente** (ou **+ Create client**)
+3. Em **Tipo de aplicativo**, selecione **Aplicativo da Web**
+4. Em **Nome**, coloque: `Calendario MGC`
+5. Em **Origens JavaScript autorizadas**, clique em **+ Adicionar URI** e insira:
+   ```
+   https://seunome.github.io
+   ```
+   > ⚠️ Substitua `seunome` pelo seu username real do GitHub. Use **apenas a origem** (sem `/calendario/` no final).
+6. Clique em **Criar**
+7. Uma janela aparecerá com o **Client ID** — copie-o (é uma string longa terminando em `.apps.googleusercontent.com`)
+
+> 💡 **O Client ID pode ser exposto no código front-end** — ele foi projetado para isso. O que nunca deve ser exposto é o Client Secret, mas para aplicativos web o Google não o utiliza.
+
+#### 5. Adicionar usuários de teste
+Como o app está em modo **Externo** e não verificado pelo Google, apenas contas na lista de testes podem autorizar o login:
+
+1. Em **APIs e serviços → Tela de permissão OAuth**, clique na aba **Público-alvo** (ou **Audience**)
+2. Em **Usuários de teste**, clique em **+ Adicionar usuários**
+3. Adicione **todas as contas Google** que vão usar o app (ex: conta principal e Gmail secundário)
+4. Clique em **Adicionar**
+
+> ⚠️ Se aparecer **"Acesso bloqueado"** ao tentar conectar, é porque a conta usada no login não está nessa lista. Adicione-a e tente novamente.
+
+> 💡 A lista controla **quais contas têm permissão** para autorizar — não define qual será usada automaticamente. A escolha acontece no momento do login.
+
+#### 6. Configurar no Calendário MGC
+1. Abra o calendário → clique em **📆 Google**
+2. Cole o **Client ID** no campo indicado
+3. No campo **E-mail da conta Google** (opcional), insira o e-mail que deseja usar — isso faz o login ir direto para a conta correta, sem mostrar seletor
+4. Selecione o **fuso horário**:
+   - Use **America/Sao_Paulo** (funciona para todo o Brasil, incluindo regiões que não adotam horário de verão)
+   - ⚠️ Evite **America/Fortaleza** — pode causar erros na API
+5. Clique em **🔑 Conectar com Google**
+6. Na janela pop-up que abrir:
+   - Selecione sua conta Google
+   - Se aparecer aviso "Google não verificou este app" → clique em **Avançado** → **Ir para Calendario MGC (não seguro)**
+   - Clique em **Continuar** para autorizar
+7. Após autorizar, selecione **qual agenda** deseja sincronizar (geralmente é o seu e-mail principal)
+8. Clique em **Sincronizar agora**
+
+> 💡 **Você só precisa conectar o Google em um dispositivo.** Os eventos sincronizados vão para o Supabase e chegam automaticamente nos outros dispositivos. O celular não precisa ter conta Google configurada.
+
+#### 7. Resultado esperado na primeira sincronização
+```
+Sync concluído: X importados · Y atualizados · Z enviados · W erro(s)
+```
+- **Importados** — eventos do Google Agenda trazidos para o Calendário MGC
+- **Enviados** — eventos do Calendário MGC enviados para o Google Agenda
+- **Erros** — eventos que não puderam ser sincronizados (datas inválidas, campos obrigatórios ausentes, etc.)
+
+> 💡 Alguns erros na primeira sync são normais. Clique em **Sincronizar agora** novamente se necessário.
+
+#### 8. Limpeza de duplicados (se necessário)
+Na primeira sincronização, eventos recorrentes podem gerar cópias. Para remover em massa:
+
+1. Clique em **🧹** no header (desktop) ou menu **⋯ → Duplicados** (mobile)
+2. O modal lista grupos de eventos com mesmo nome e horário
+3. Clique em **Selecionar tudo** → **🗑 Excluir selecionados**
+
+#### 9. Troubleshooting
+
+| Erro | Causa | Solução |
+|---|---|---|
+| Acesso bloqueado | Conta não está na lista de usuários de teste | Adicionar o e-mail em Público-alvo → Usuários de teste |
+| Error 401 | Client ID inválido ou origem não autorizada | Verificar se `https://seunome.github.io` está em Origens JavaScript autorizadas |
+| Login vai para conta errada | Navegador tem múltiplas contas Google | Preencher o campo **E-mail da conta Google** no painel 📆 |
+| Eventos duplicados | Primeira sync importou ocorrências de séries recorrentes | Usar **🧹 Limpar duplicados** |
 
 ---
 
