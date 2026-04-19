@@ -3568,18 +3568,46 @@ document.getElementById('deleteBtn').addEventListener('click',()=>{
   closeModal();
 });
 
-async function deleteEventById(id){
+const GCAL_DELETE_QUEUE_KEY='cal_gcal_delete_queue';
+
+function gcalEnqueueDelete(gcalId){
+  try{
+    const q=JSON.parse(localStorage.getItem(GCAL_DELETE_QUEUE_KEY)||'[]');
+    if(!q.includes(gcalId)){q.push(gcalId);localStorage.setItem(GCAL_DELETE_QUEUE_KEY,JSON.stringify(q));}
+  }catch(e){}
+}
+
+async function gcalProcessDeleteQueue(){
+  try{
+    const q=JSON.parse(localStorage.getItem(GCAL_DELETE_QUEUE_KEY)||'[]');
+    if(!q.length)return;
+    const calId=localStorage.getItem(GCAL_CAL_KEY)||'primary';
+    const remaining=[];
+    for(const gcalId of q){
+      try{
+        const res=await fetch(`${GCAL_API}/calendars/${encodeURIComponent(calId)}/events/${encodeURIComponent(gcalId)}`,{
+          method:'DELETE',
+          headers:{Authorization:`Bearer ${gcalToken}`}
+        });
+        if(res.status!==204&&res.status!==200&&res.status!==404){
+          remaining.push(gcalId); // keep if failed (not 404)
+        }
+      }catch(e){remaining.push(gcalId);}
+    }
+    localStorage.setItem(GCAL_DELETE_QUEUE_KEY,JSON.stringify(remaining));
+  }catch(e){console.warn('gcalProcessDeleteQueue error:',e);}
+}
+
+function deleteEventById(id){
   const ev=events.find(e=>e.id===id);
   events=events.filter(e=>e.id!==id);
   save();render();if(selectedDay)renderDayPanel(selectedDay);
   toast('Evento excluído.');
-  // Se tem gcalId e está conectado ao Google, apaga lá também
-  if(ev?.gcalId&&gcalIsConnected()){
-    const calId=localStorage.getItem(GCAL_CAL_KEY)||'primary';
-    fetch(`${GCAL_API}/calendars/${encodeURIComponent(calId)}/events/${encodeURIComponent(ev.gcalId)}`,{
-      method:'DELETE',
-      headers:{Authorization:`Bearer ${gcalToken}`}
-    }).catch(e=>console.warn('Erro ao excluir no Google:',e));
+  // Se tem gcalId, enfileira para excluir no Google na próxima sync
+  if(ev?.gcalId){
+    gcalEnqueueDelete(ev.gcalId);
+    // Tenta apagar imediatamente se conectado
+    if(gcalIsConnected()) gcalProcessDeleteQueue().catch(()=>{});
   }
 }
 
@@ -5511,6 +5539,7 @@ async function gcalSync(pullOnly=false){
     catch(e){ toast('Conecte ao Google primeiro.'); return; }
   }
   ensureGcalCalendar();
+  await gcalProcessDeleteQueue();
   const calId=document.getElementById('gcalCalendarSelect')?.value||localStorage.getItem(GCAL_CAL_KEY)||'primary';
   localStorage.setItem(GCAL_CAL_KEY,calId);
   const tz=localStorage.getItem(GCAL_TZ_KEY)||'America/Fortaleza';
