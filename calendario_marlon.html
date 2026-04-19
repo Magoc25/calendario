@@ -5349,6 +5349,8 @@ function mgcToGcal(ev){
     if(ev.until)rule+=`;UNTIL=${ev.until.replace(/-/g,'')}T235959Z`;
     obj.recurrence=[rule];
   }
+  // Store MGC metadata so we can read back on import
+  obj.extendedProperties={private:{mgcCalendarId:ev.calendarId||'default',mgcId:ev.id}};
   return obj;
 }
 
@@ -5373,7 +5375,7 @@ function gcalToMgc(gcEv){
     start:startTime,
     end:endTime,
     color:'#4285f4',
-    calendarId:'default',
+    calendarId:gcEv.extendedProperties?.private?.mgcCalendarId||'default',
     category:''
   };
   return ev;
@@ -5397,7 +5399,8 @@ async function gcalSync(pullOnly=false){
       timeMax:tMax.toISOString(),
       singleEvents:'true',
       maxResults:'500',
-      orderBy:'startTime'
+      orderBy:'startTime',
+      fields:'items(id,summary,description,location,start,end,updated,status,recurringEventId,extendedProperties)'
     });
     const resp=await fetch(`${GCAL_API}/calendars/${encodeURIComponent(calId)}/events?${params}`,{
       headers:{Authorization:`Bearer ${gcalToken}`}
@@ -5428,9 +5431,14 @@ async function gcalSync(pullOnly=false){
     const localByGcalId={};
     events.forEach(ev=>{if(ev.gcalId)localByGcalId[ev.gcalId]=ev;});
 
+    // Build set of local gcalIds for recurring base event lookup
+    const localGcalIds=new Set(events.map(ev=>ev.gcalId).filter(Boolean));
+
     // Process Google events → local
     for(const gcEv of gcalEvents){
       if(gcEv.status==='cancelled')continue;
+      // Skip instances of recurring series that already exist locally
+      if(gcEv.recurringEventId&&localGcalIds.has(gcEv.recurringEventId))continue;
       const local=localByGcalId[gcEv.id];
       if(!local){
         // No gcalId match — check by title+date to avoid duplicates
