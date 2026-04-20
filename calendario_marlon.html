@@ -5470,6 +5470,42 @@ function gcalSilentRefresh(){
   });
 }
 
+function gcalIsMobile(){
+  return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+}
+
+function gcalAuthViaRedirect(clientId,email){
+  const redirectUri=window.location.href.split('#')[0].split('?')[0];
+  const params=new URLSearchParams({
+    client_id:clientId,
+    redirect_uri:redirectUri,
+    response_type:'token',
+    scope:GCAL_SCOPE,
+    prompt:'select_account'
+  });
+  if(email) params.set('login_hint',email);
+  localStorage.setItem('cal_gcal_redirect_pending','1');
+  window.location.href='https://accounts.google.com/o/oauth2/v2/auth?'+params.toString();
+}
+
+function gcalHandleRedirectReturn(){
+  const hash=window.location.hash;
+  if(!hash||!hash.includes('access_token=')) return false;
+  const params=new URLSearchParams(hash.substring(1));
+  const token=params.get('access_token');
+  const expiresIn=parseInt(params.get('expires_in')||'3599');
+  if(!token) return false;
+  history.replaceState(null,'',window.location.pathname+window.location.search);
+  localStorage.removeItem('cal_gcal_redirect_pending');
+  gcalToken=token;
+  gcalTokenExpiry=Date.now()+(expiresIn-60)*1000;
+  localStorage.setItem(GCAL_TOKEN_KEY,JSON.stringify({access_token:gcalToken,expiry:gcalTokenExpiry}));
+  updateGcalBtn();
+  toast('✓ Conectado ao Google Agenda!');
+  setTimeout(()=>gcalSync(false).catch(()=>{}),2000);
+  return true;
+}
+
 function gcalInitClient(clientId){
   if(!window.google?.accounts?.oauth2){
     toast('Biblioteca Google ainda carregando, tente novamente em 2s.');return;
@@ -5752,16 +5788,20 @@ document.getElementById('gcalLoginBtn').addEventListener('click',()=>{
   else localStorage.removeItem('cal_gcal_email');
   const r=document.getElementById('gcalConfigResult');
   r.style.display='block';r.style.background='#fff8e1';r.style.color='#92400e';
-  r.textContent='🔄 Inicializando cliente Google...';
-  gcalInitClient(clientId);
-  setTimeout(()=>{
-    if(gcalTokenClient){
-      r.textContent='🔑 Abrindo login do Google...';
-      gcalTokenClient.requestAccessToken();
-    } else {
-      r.textContent='⚠️ Biblioteca Google ainda carregando. Aguarde 3 segundos e tente novamente.';
-    }
-  },800);
+  r.textContent='🔄 Iniciando login do Google...';
+  if(gcalIsMobile()){
+    gcalAuthViaRedirect(clientId,gcalEmail);
+  } else {
+    gcalInitClient(clientId);
+    setTimeout(()=>{
+      if(gcalTokenClient){
+        r.textContent='🔑 Abrindo login do Google...';
+        gcalTokenClient.requestAccessToken();
+      } else {
+        r.textContent='⚠️ Biblioteca Google ainda carregando. Aguarde 3 segundos e tente novamente.';
+      }
+    },800);
+  }
 });
 
 document.getElementById('gcalClearBtn').addEventListener('click',()=>{
@@ -5853,6 +5893,7 @@ document.getElementById('gcalDedupeDeleteBtn').addEventListener('click',()=>{
 
 // Auto-init client if Client ID already saved
 window.addEventListener('load',()=>{
+  gcalHandleRedirectReturn();
   const clientId=localStorage.getItem(GCAL_CLIENT_ID_KEY);
   if(clientId&&window.google?.accounts?.oauth2){
     gcalInitClient(clientId);
