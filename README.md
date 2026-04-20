@@ -249,6 +249,7 @@ Depois de configurar o GitHub Pages e acessar a URL pelo celular:
 | Auto-sync ao abrir o app e a cada 30 minutos |
 | Mover evento no MGC atualiza o Google em segundos |
 | Basta conectar em um dispositivo — os demais recebem via Supabase |
+| Alertas dos eventos funcionam sem o app aberto, mesmo com a tela bloqueada |
 
 > ⚠️ Este nível exige a configuração mais trabalhosa (Google Cloud Console), mas é feita **uma única vez**, em um único dispositivo. Veja o passo a passo completo em [Configurar Google Calendar](#configurar-google-calendar).
 
