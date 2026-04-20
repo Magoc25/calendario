@@ -6186,7 +6186,9 @@ async function registerSW(){
 // Send scheduled alerts to SW so it fires them even when app is minimized/closed
 function syncAlertsToSW(){
   const sw=getActiveSW();
-  if(!sw||!events.length)return;
+  if(!sw)return;
+  if(!isNotifEnabled()){sw.postMessage({type:'CLEAR_ALL_ALERTS'});return;}
+  if(!events.length)return;
   const now=Date.now(),td=todayDs();
   const tom=new Date();tom.setDate(tom.getDate()+1);
   const tomStr=ds(tom.getFullYear(),tom.getMonth(),tom.getDate());
@@ -6217,9 +6219,13 @@ registerSW();
 // Re-sync when app becomes visible (user returns to app after minimizing)
 document.addEventListener('visibilitychange',()=>{
   if(document.visibilityState==='visible'){
-    scheduleAlerts();             // restart JS timers
-    setTimeout(syncAlertsToSW,300); // re-send to SW
-    getActiveSW()?.postMessage({type:'PING'}); // check missed alerts
+    if(isNotifEnabled()){
+      scheduleAlerts();
+      setTimeout(syncAlertsToSW,300);
+      getActiveSW()?.postMessage({type:'PING'});
+    } else {
+      getActiveSW()?.postMessage({type:'CLEAR_ALL_ALERTS'});
+    }
   }
 });
 
