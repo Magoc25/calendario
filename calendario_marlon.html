@@ -5476,6 +5476,7 @@ function gcalIsMobile(){
 
 function gcalAuthViaRedirect(clientId,email){
   const redirectUri=window.location.href.split('#')[0].split('?')[0];
+  if(!confirm('Redirect URI usado:\n\n'+redirectUri+'\n\nEsta URL está cadastrada no Cloud Console?')){return;}
   const params=new URLSearchParams({
     client_id:clientId,
     redirect_uri:redirectUri,
