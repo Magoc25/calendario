@@ -2,8 +2,8 @@ name: Supabase Keep-Alive
 
 on:
   schedule:
-    # Roda todo dia às 08:00 UTC (05:00 horário de Brasília)
-    - cron: '0 8 * * *'
+    - cron: '0 8 * * *'   # 05:00 horário de Brasília
+    - cron: '0 20 * * *'  # 17:00 horário de Brasília
   workflow_dispatch: # permite rodar manualmente se necessário
 
 jobs:
