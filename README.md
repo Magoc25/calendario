@@ -252,6 +252,32 @@ Depois de configurar o GitHub Pages e acessar a URL pelo celular:
 
 > ⚠️ Este nível exige a configuração mais trabalhosa (Google Cloud Console), mas é feita **uma única vez**, em um único dispositivo. Veja o passo a passo completo em [Configurar Google Calendar](#configurar-google-calendar).
 
+#### 🔄 Como usar o Google Agenda no dia a dia
+
+> ⚠️ **Regra fundamental:** se você usa sincronização com Google Agenda, **não use o arquivo local** (`calendario_marlon.html` aberto direto no PC). Use sempre o **link do GitHub Pages** ou o **app no celular**. O Google bloqueia autenticação OAuth em arquivos locais (`file://`).
+
+**Comportamento por plataforma:**
+
+| Plataforma | Quando sincroniza com Google | Observação |
+|---|---|---|
+| Link GitHub (desktop) | Ao carregar/atualizar a página + a cada 30 min | Pode pedir login novamente após longa inatividade |
+| App mobile (celular) | Sempre ao abrir o app | Feche e reabra para forçar atualização |
+| Arquivo local | ❌ Nunca | Google bloqueia OAuth em `file://` |
+
+**O que fazer após cada ação:**
+
+| Ação | Desktop (link GitHub) | Mobile (app) |
+|---|---|---|
+| Criar / editar / excluir evento | Aguardar até 30 min ou atualizar a página | Fechar e reabrir o app |
+| Ver eventos novos vindos do Google | Atualizar a página | Fechar e reabrir o app |
+| Mover evento (drag & drop) | Sincroniza automaticamente em segundos | Sincroniza automaticamente em segundos |
+
+**O que acontece automaticamente (sem ação necessária):**
+- Sincronização a cada 30 min com o app aberto (desktop e mobile)
+- Drag & drop sincroniza com o Google em segundos
+- Ao reabrir o app no celular, a sincronização ocorre imediatamente
+- Apenas **um dispositivo** precisa ter o Google conectado — os outros recebem os eventos via Supabase
+
 ---
 
 ## 🔧 Guias de Configuração
