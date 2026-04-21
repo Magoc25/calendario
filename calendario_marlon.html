@@ -5059,13 +5059,9 @@ function _renderNotesGrid(search){
       const touch=e.touches[0];
       _noteDragGhost.style.left=(touch.clientX-_noteDragGhost.offsetWidth/2)+'px';
       _noteDragGhost.style.top=(touch.clientY-50)+'px';
-      let found=null;
-      document.querySelectorAll('.note-card[data-note-id]').forEach(c=>{
-        const r=c.getBoundingClientRect();
-        if(touch.clientX>=r.left&&touch.clientX<=r.right&&touch.clientY>=r.top&&touch.clientY<=r.bottom){
-          if(c.dataset.noteId!==_noteDragId)found=c;
-        }
-      });
+      // elementsFromPoint retorna todos os elementos na posição (ghost incluído mas filtramos)
+      const els=(document.elementsFromPoint||document.msElementsFromPoint)?.call(document,touch.clientX,touch.clientY)||[];
+      const found=els.find(el=>el.classList?.contains('note-card')&&el.dataset?.noteId&&el.dataset.noteId!==_noteDragId)||null;
       document.querySelectorAll('.note-drag-over').forEach(c=>c.classList.remove('note-drag-over'));
       if(found){found.classList.add('note-drag-over');_noteDragTarget=found.dataset.noteId;}
       else{_noteDragTarget=null;}
