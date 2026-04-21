@@ -4439,7 +4439,7 @@ function addQuickTask(title){
 /* ═══════ TOP 3 FOCUS ═══════ */
 let top3Data={};
 try{top3Data=JSON.parse(localStorage.getItem('cal_top3')||'{}');}catch(e){}
-function saveTop3(){localStorage.setItem('cal_top3',JSON.stringify(top3Data));}
+function saveTop3(){localStorage.setItem('cal_top3',JSON.stringify(top3Data));localStorage.setItem('cal_local_ts',new Date().toISOString());if(sbClient){clearTimeout(_cloudSaveTimer);_cloudSaveTimer=setTimeout(()=>syncToCloud(true),1500);}}
 function getTop3(){return top3Data[todayDs()]||[{text:'',done:false},{text:'',done:false},{text:'',done:false}];}
 
 /* ═══════ TODAY VIEW ═══════ */
