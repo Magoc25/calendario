@@ -4603,9 +4603,17 @@ function renderToday(){
         color:item.dataset.dragColor
       };
       e.dataTransfer.effectAllowed='copy';
+      e.dataTransfer.setData('text/plain',item.dataset.dragText||'');
+      // Firefox: overflow:auto no container bloqueia drop — remove durante drag
+      const tc=document.getElementById('todayCard');
+      if(tc)tc.style.overflowY='visible';
       setTimeout(()=>item.classList.add('dragging'),0);
     });
-    item.addEventListener('dragend',()=>item.classList.remove('dragging'));
+    item.addEventListener('dragend',()=>{
+      item.classList.remove('dragging');
+      const tc=document.getElementById('todayCard');
+      if(tc)tc.style.overflowY=_isMobile?'visible':'auto';
+    });
   });
 
   // ── DRAG & DROP — Top 3 drop zones ──
