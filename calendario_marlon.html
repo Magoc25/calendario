@@ -4437,6 +4437,7 @@ function addQuickTask(title){
 }
 
 /* ═══════ TOP 3 FOCUS ═══════ */
+let _todayDragPayload=null;
 let top3Data={};
 try{top3Data=JSON.parse(localStorage.getItem('cal_top3')||'{}');}catch(e){}
 function saveTop3(){localStorage.setItem('cal_top3',JSON.stringify(top3Data));localStorage.setItem('cal_local_ts',new Date().toISOString());if(sbClient){clearTimeout(_cloudSaveTimer);_cloudSaveTimer=setTimeout(()=>syncToCloud(true),1500);}}
@@ -4593,10 +4594,10 @@ function renderToday(){
   </div>`;
 
   // ── DRAG & DROP — draggable items ──
-  let _dragPayload=null;
+  _todayDragPayload=null;
   document.querySelectorAll('.tv-draggable').forEach(item=>{
     item.addEventListener('dragstart',e=>{
-      _dragPayload={
+      _todayDragPayload={
         type:item.dataset.dragType,
         text:item.dataset.dragText,
         id:item.dataset.dragId,
@@ -4619,13 +4620,13 @@ function renderToday(){
     });
     zone.addEventListener('drop',e=>{
       e.preventDefault();zone.classList.remove('drag-over-top3');
-      if(!_dragPayload)return;
+      if(!_todayDragPayload)return;
       const slot=parseInt(zone.dataset.top3slot);
       const cur3=getTop3();
-      cur3[slot]={text:_dragPayload.text,done:false,srcType:_dragPayload.type,srcId:_dragPayload.id,srcColor:_dragPayload.color};
+      cur3[slot]={text:_todayDragPayload.text,done:false,srcType:_todayDragPayload.type,srcId:_todayDragPayload.id,srcColor:_todayDragPayload.color};
       top3Data[todayDs()]=cur3;saveTop3();renderToday();
-      toast(`Prioridade ${slot+1} definida: ${_dragPayload.text}`);
-      _dragPayload=null;
+      toast(`Prioridade ${slot+1} definida: ${_todayDragPayload.text}`);
+      _todayDragPayload=null;
     });
   });
 
