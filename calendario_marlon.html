@@ -4879,7 +4879,7 @@ function renderReviewView(){
 }
 
 /* ═══════ STANDALONE NOTES ═══════ */
-let _noteDragId=null,_noteDragGhost=null,_noteDragTimer=null,_noteDragTarget=null;
+let _noteDragId=null,_noteDragGhost=null,_noteDragTimer=null,_noteDragTarget=null,_noteTouchX=0,_noteTouchY=0;
 let standaloneNotes=[];
 try{standaloneNotes=JSON.parse(localStorage.getItem('cal_standalone_notes')||'[]');}catch(e){}
 
@@ -5027,6 +5027,7 @@ function _renderNotesGrid(search){
     card.addEventListener('touchstart',e=>{
       if(_noteDragTimer)clearTimeout(_noteDragTimer);
       const touch=e.touches[0];
+      _noteTouchX=touch.clientX;_noteTouchY=touch.clientY;
       _noteDragTimer=setTimeout(()=>{
         _noteDragTimer=null;
         _noteDragId=card.dataset.noteId;
@@ -5048,7 +5049,11 @@ function _renderNotesGrid(search){
       document.querySelectorAll('.note-dragging,.note-drag-over').forEach(c=>c.classList.remove('note-dragging','note-drag-over'));
     };
     document.addEventListener('touchmove',e=>{
-      if(_noteDragTimer){clearTimeout(_noteDragTimer);_noteDragTimer=null;return;}
+      if(_noteDragTimer){
+        const t=e.touches[0],dx=t.clientX-_noteTouchX,dy=t.clientY-_noteTouchY;
+        if(Math.sqrt(dx*dx+dy*dy)>10){clearTimeout(_noteDragTimer);_noteDragTimer=null;}
+        return;
+      }
       if(!_noteDragId||!_noteDragGhost)return;
       e.preventDefault();
       const touch=e.touches[0];
