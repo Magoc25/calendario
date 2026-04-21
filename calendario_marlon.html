@@ -5034,6 +5034,7 @@ function _renderNotesGrid(search){
         _noteDragGhost=card.cloneNode(true);
         _noteDragGhost.style.cssText=`position:fixed;z-index:9999;width:${card.offsetWidth}px;opacity:.85;pointer-events:none;transform:scale(1.03) rotate(0.8deg);box-shadow:0 10px 30px rgba(0,0,0,.3);border-radius:14px;left:${touch.clientX-card.offsetWidth/2}px;top:${touch.clientY-card.offsetHeight/2}px;`;
         document.body.appendChild(_noteDragGhost);
+        document.body.style.overscrollBehavior='none';
         card.classList.add('note-dragging');
         if(navigator.vibrate)navigator.vibrate(30);
       },{passive:false});
@@ -5046,6 +5047,7 @@ function _renderNotesGrid(search){
     const _noteCleanup=()=>{
       if(_noteDragTimer){clearTimeout(_noteDragTimer);_noteDragTimer=null;}
       if(_noteDragGhost){_noteDragGhost.remove();_noteDragGhost=null;}
+      document.body.style.overscrollBehavior='';
       document.querySelectorAll('.note-dragging,.note-drag-over').forEach(c=>c.classList.remove('note-dragging','note-drag-over'));
     };
     document.addEventListener('touchmove',e=>{
@@ -5054,8 +5056,9 @@ function _renderNotesGrid(search){
         if(Math.sqrt(dx*dx+dy*dy)>10){clearTimeout(_noteDragTimer);_noteDragTimer=null;}
         return;
       }
-      if(!_noteDragId||!_noteDragGhost)return;
+      if(!_noteDragId)return;
       e.preventDefault();
+      if(!_noteDragGhost)return;
       const touch=e.touches[0];
       _noteDragGhost.style.left=(touch.clientX-_noteDragGhost.offsetWidth/2)+'px';
       _noteDragGhost.style.top=(touch.clientY-50)+'px';
@@ -5082,11 +5085,12 @@ function _renderNotesGrid(search){
       _renderNotesGrid(document.getElementById('nvSearch')?.value||'');
     },{passive:true});
     document.addEventListener('touchcancel',()=>{
-      if(_noteDragTimer){clearTimeout(_noteDragTimer);_noteDragTimer=null;}
-      if(_noteDragGhost){_noteDragGhost.remove();_noteDragGhost=null;}
-      document.querySelectorAll('.note-dragging,.note-drag-over').forEach(c=>c.classList.remove('note-dragging','note-drag-over'));
+      _noteCleanup();
       _noteDragId=null;_noteDragTarget=null;
     },{passive:true});
+    document.addEventListener('visibilitychange',()=>{
+      if(document.hidden&&_noteDragId){_noteCleanup();_noteDragId=null;_noteDragTarget=null;}
+    });
   }
   grid.querySelectorAll('[data-note-pin]').forEach(btn=>{
     btn.addEventListener('click',e=>{e.stopPropagation();
