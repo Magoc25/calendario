@@ -4879,7 +4879,7 @@ function renderReviewView(){
 }
 
 /* ═══════ STANDALONE NOTES ═══════ */
-let _noteDragId=null;
+let _noteDragId=null,_noteDragGhost=null,_noteDragTimer=null,_noteDragTarget=null;
 let standaloneNotes=[];
 try{standaloneNotes=JSON.parse(localStorage.getItem('cal_standalone_notes')||'[]');}catch(e){}
 
@@ -5014,8 +5014,7 @@ function _renderNotesGrid(search){
       card.classList.remove('note-drag-over');
       if(!_noteDragId||card.dataset.noteId===_noteDragId)return;
       const dragIdx=standaloneNotes.findIndex(n=>n.id===_noteDragId);
-      const targetIdx=standaloneNotes.findIndex(n=>n.id===card.dataset.noteId);
-      if(dragIdx===-1||targetIdx===-1)return;
+      if(dragIdx===-1)return;
       const [dragged]=standaloneNotes.splice(dragIdx,1);
       const newTargetIdx=standaloneNotes.findIndex(n=>n.id===card.dataset.noteId);
       standaloneNotes.splice(newTargetIdx,0,dragged);
@@ -5023,6 +5022,63 @@ function _renderNotesGrid(search){
       saveStandaloneNotes();
       _renderNotesGrid(document.getElementById('nvSearch')?.value||'');
     });
+
+    // ── Touch drag (mobile) ──
+    const _noteCleanupTouch=()=>{
+      if(_noteDragTimer){clearTimeout(_noteDragTimer);_noteDragTimer=null;}
+      if(_noteDragGhost){_noteDragGhost.remove();_noteDragGhost=null;}
+      grid.querySelectorAll('.note-dragging,.note-drag-over').forEach(c=>c.classList.remove('note-dragging','note-drag-over'));
+    };
+    card.addEventListener('touchstart',e=>{
+      const touch=e.touches[0];
+      _noteDragTimer=setTimeout(()=>{
+        _noteDragTimer=null;
+        _noteDragId=card.dataset.noteId;
+        _noteDragGhost=card.cloneNode(true);
+        _noteDragGhost.style.cssText=`position:fixed;z-index:9999;width:${card.offsetWidth}px;opacity:.8;pointer-events:none;transform:scale(1.04) rotate(1deg);box-shadow:0 10px 30px rgba(0,0,0,.3);border-radius:14px;left:${touch.clientX-card.offsetWidth/2}px;top:${touch.clientY-50}px;`;
+        document.body.appendChild(_noteDragGhost);
+        card.classList.add('note-dragging');
+        if(navigator.vibrate)navigator.vibrate(40);
+      },400);
+    },{passive:true});
+
+    card.addEventListener('touchmove',e=>{
+      if(_noteDragTimer){clearTimeout(_noteDragTimer);_noteDragTimer=null;return;}
+      if(!_noteDragId||!_noteDragGhost)return;
+      e.preventDefault();
+      const touch=e.touches[0];
+      _noteDragGhost.style.left=(touch.clientX-_noteDragGhost.offsetWidth/2)+'px';
+      _noteDragGhost.style.top=(touch.clientY-50)+'px';
+      _noteDragGhost.style.display='none';
+      const el=document.elementFromPoint(touch.clientX,touch.clientY);
+      _noteDragGhost.style.display='';
+      const target=el?.closest('.note-card');
+      grid.querySelectorAll('.note-drag-over').forEach(c=>c.classList.remove('note-drag-over'));
+      if(target&&target.dataset.noteId!==_noteDragId){
+        target.classList.add('note-drag-over');
+        _noteDragTarget=target.dataset.noteId;
+      }else{_noteDragTarget=null;}
+    },{passive:false});
+
+    card.addEventListener('touchend',()=>{
+      if(_noteDragTimer){clearTimeout(_noteDragTimer);_noteDragTimer=null;return;}
+      if(!_noteDragId)return;
+      const dragId=_noteDragId,targetId=_noteDragTarget;
+      _noteCleanupTouch();
+      _noteDragId=null;_noteDragTarget=null;
+      if(!targetId)return;
+      const dragIdx=standaloneNotes.findIndex(n=>n.id===dragId);
+      if(dragIdx===-1)return;
+      const [dragged]=standaloneNotes.splice(dragIdx,1);
+      const newTargetIdx=standaloneNotes.findIndex(n=>n.id===targetId);
+      standaloneNotes.splice(newTargetIdx,0,dragged);
+      saveStandaloneNotes();
+      _renderNotesGrid(document.getElementById('nvSearch')?.value||'');
+    },{passive:true});
+
+    card.addEventListener('touchcancel',()=>{
+      _noteCleanupTouch();_noteDragId=null;_noteDragTarget=null;
+    },{passive:true});
   });
   grid.querySelectorAll('[data-note-pin]').forEach(btn=>{
     btn.addEventListener('click',e=>{e.stopPropagation();
