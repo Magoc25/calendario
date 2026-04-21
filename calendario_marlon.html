@@ -4610,6 +4610,10 @@ function renderToday(){
 
   // ── DRAG & DROP — Top 3 drop zones ──
   document.querySelectorAll('[data-top3slot]').forEach(zone=>{
+    zone.addEventListener('dragenter',e=>{
+      e.preventDefault();e.dataTransfer.dropEffect='copy';
+      zone.classList.add('drag-over-top3');
+    });
     zone.addEventListener('dragover',e=>{
       e.preventDefault();e.dataTransfer.dropEffect='copy';
       zone.classList.add('drag-over-top3');
