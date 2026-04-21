@@ -864,7 +864,7 @@ body.comfortable .upcoming-ev{padding:10px 13px;margin-bottom:7px}
 .note-card-drag-handle{font-size:12px;color:var(--hint);cursor:grab;opacity:0;transition:opacity .15s;flex-shrink:0;line-height:1;padding:0 2px}
 .note-card:hover .note-card-drag-handle{opacity:1}
 .note-card.note-dragging{opacity:.35;transform:scale(.97)}
-.note-card.note-drag-over{outline:2px dashed var(--accent);outline-offset:2px;transform:translateY(-2px)}
+.note-card.note-drag-over{box-shadow:inset 0 0 0 2px var(--accent),0 4px 20px var(--accent-light)!important;transform:translateY(-3px)}
 /* Note edit modal */
 .note-edit-modal{width:680px;max-width:calc(100vw - 20px);max-height:92vh;display:flex;flex-direction:column}
 .ne-header{display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-shrink:0}
@@ -5049,14 +5049,18 @@ function _renderNotesGrid(search){
       const touch=e.touches[0];
       _noteDragGhost.style.left=(touch.clientX-_noteDragGhost.offsetWidth/2)+'px';
       _noteDragGhost.style.top=(touch.clientY-50)+'px';
-      _noteDragGhost.style.display='none';
-      const el=document.elementFromPoint(touch.clientX,touch.clientY);
-      _noteDragGhost.style.display='';
-      const target=el?.closest('.note-card');
+      // Detecta card-alvo por bounding rect (mais confiável no mobile)
+      let found=null;
+      grid.querySelectorAll('.note-card').forEach(c=>{
+        const r=c.getBoundingClientRect();
+        if(touch.clientX>=r.left&&touch.clientX<=r.right&&touch.clientY>=r.top&&touch.clientY<=r.bottom){
+          if(c.dataset.noteId!==_noteDragId)found=c.dataset.noteId;
+        }
+      });
       grid.querySelectorAll('.note-drag-over').forEach(c=>c.classList.remove('note-drag-over'));
-      if(target&&target.dataset.noteId!==_noteDragId){
-        target.classList.add('note-drag-over');
-        _noteDragTarget=target.dataset.noteId;
+      if(found){
+        grid.querySelector(`[data-note-id="${found}"]`)?.classList.add('note-drag-over');
+        _noteDragTarget=found;
       }else{_noteDragTarget=null;}
     },{passive:false});
 
