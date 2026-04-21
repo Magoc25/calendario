@@ -729,6 +729,38 @@ body.comfortable .upcoming-ev{padding:10px 13px;margin-bottom:7px}
 .rv-color-dot:hover{transform:scale(1.15)}
 .rv-color-dot.sel{border-color:var(--text)}
 
+/* ── Routines Dashboard ── */
+.rv-dash{border-top:1px solid var(--border);margin-top:18px;padding-top:16px}
+.rv-dash-title{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px}
+.rv-dash-section{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin:14px 0 8px}
+.rv-filter-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+.rv-filter-chip{padding:4px 11px;border-radius:12px;border:1.5px solid var(--border);font-size:10px;font-weight:600;cursor:pointer;background:var(--surface);color:var(--muted);transition:all .15s;white-space:nowrap}
+.rv-filter-chip.sel{border-color:var(--accent);color:var(--accent);background:var(--accent-light)}
+.rv-metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px}
+.rv-metric-card{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 8px;text-align:center}
+.rv-metric-val{font-size:19px;font-weight:700;line-height:1.15}
+.rv-metric-lbl{font-size:9px;color:var(--muted);margin-top:3px;line-height:1.3}
+.rv-heatmap-wrap{overflow-x:auto;padding-bottom:4px}
+.rv-hm-months{display:flex;margin-bottom:3px;padding-left:16px}
+.rv-hm-month-lbl{font-size:9px;color:var(--muted);flex-shrink:0}
+.rv-heatmap-inner{display:flex;gap:0;align-items:flex-start}
+.rv-hm-dow{display:flex;flex-direction:column;gap:2px;margin-right:4px;flex-shrink:0}
+.rv-hm-dow-lbl{font-size:8px;color:var(--muted);height:11px;line-height:11px;text-align:right;width:12px}
+.rv-hm-cols{display:flex;gap:2px}
+.rv-hm-col{display:flex;flex-direction:column;gap:2px}
+.rv-hm-cell{width:11px;height:11px;border-radius:2px;cursor:default}
+.rv-bars{display:flex;flex-direction:column;gap:9px}
+.rv-bar-row{display:flex;align-items:center;gap:8px}
+.rv-bar-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.rv-bar-name{font-size:10px;color:var(--text);min-width:70px;max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex-shrink:0}
+.rv-bar-track{flex:1;height:6px;background:var(--border);border-radius:3px;overflow:hidden;min-width:40px}
+.rv-bar-fill{height:100%;border-radius:3px;transition:width .5s ease}
+.rv-bar-pct{font-size:10px;color:var(--muted);width:30px;text-align:right;flex-shrink:0}
+@media(max-width:768px){
+  .rv-metrics{grid-template-columns:repeat(2,1fr)}
+  .rv-hm-cell{width:10px;height:10px}
+}
+
 /* ── Review view ── */
 .rew-wrap{padding:18px 20px;display:grid;grid-template-columns:2fr 1fr;gap:16px}
 .rew-main{}
@@ -4308,7 +4340,166 @@ function setRoutineCheck(dateStr,routineId,done){
 
 /* ── Routines view ── */
 let rvEditId=null,rvSelectedColor=ROUTINE_COLORS[0],rvSelectedDays=new Set([1,2,3,4,5]);
-let rvFormOpen=false;
+let rvFormOpen=false,_rvDashFilter=null;
+
+function _rvDue(r,ds){
+  const dow=new Date(ds+'T12:00:00').getDay();
+  if(r.freq==='daily')return true;
+  return !!(r.days&&r.days.includes(dow));
+}
+function _rvStreak(routineId){
+  const today=todayDs();let streak=0,skippedToday=false;
+  for(let i=0;i<366;i++){
+    const d=new Date();d.setDate(d.getDate()-i);
+    const ds=d.toISOString().slice(0,10);
+    const checks=getRoutineChecks(ds);
+    if(routineId){
+      const r=routines.find(x=>x.id===routineId);if(!r)break;
+      if(!_rvDue(r,ds))continue;
+      if(checks.includes(routineId)){streak++;}
+      else if(ds===today&&!skippedToday){skippedToday=true;continue;}
+      else break;
+    }else{
+      const due=routines.filter(r=>_rvDue(r,ds));if(!due.length)continue;
+      const allDone=due.every(r=>checks.includes(r.id));
+      if(allDone){streak++;}
+      else if(ds===today&&!skippedToday){skippedToday=true;continue;}
+      else break;
+    }
+  }
+  return streak;
+}
+function _rvBestStreak(routineId){
+  let best=0,cur=0;
+  for(let i=365;i>=0;i--){
+    const d=new Date();d.setDate(d.getDate()-i);
+    const ds=d.toISOString().slice(0,10);
+    const checks=getRoutineChecks(ds);
+    if(routineId){
+      const r=routines.find(x=>x.id===routineId);if(!r)continue;
+      if(!_rvDue(r,ds))continue;
+      if(checks.includes(routineId)){cur++;best=Math.max(best,cur);}else cur=0;
+    }else{
+      const due=routines.filter(r=>_rvDue(r,ds));if(!due.length)continue;
+      if(due.every(r=>checks.includes(r.id))){cur++;best=Math.max(best,cur);}else cur=0;
+    }
+  }
+  return best;
+}
+function _rvPct(routineId,days){
+  let due=0,done=0;
+  for(let i=0;i<days;i++){
+    const d=new Date();d.setDate(d.getDate()-i);
+    const ds=d.toISOString().slice(0,10);
+    const checks=getRoutineChecks(ds);
+    if(routineId){
+      const r=routines.find(x=>x.id===routineId);if(!r)continue;
+      if(!_rvDue(r,ds))continue;
+      due++;if(checks.includes(routineId))done++;
+    }else{
+      const dueR=routines.filter(r=>_rvDue(r,ds));
+      due+=dueR.length;done+=dueR.filter(r=>checks.includes(r.id)).length;
+    }
+  }
+  return due===0?null:Math.round(done/due*100);
+}
+function _rvHeatmapDays(routineId){
+  const N=91,res=[],today=new Date();
+  for(let i=N-1;i>=0;i--){
+    const d=new Date(today);d.setDate(d.getDate()-i);
+    const ds=d.toISOString().slice(0,10);
+    const checks=getRoutineChecks(ds);
+    if(routineId){
+      const r=routines.find(x=>x.id===routineId);
+      const due=r?_rvDue(r,ds):false;
+      res.push({ds,value:due?(checks.includes(routineId)?1:0):null});
+    }else{
+      const dueR=routines.filter(r=>_rvDue(r,ds));
+      res.push({ds,value:dueR.length?dueR.filter(r=>checks.includes(r.id)).length/dueR.length:null});
+    }
+  }
+  return res;
+}
+
+function renderRvDashboard(filterId){
+  const el=document.getElementById('rvDashboard');
+  if(!el||!routines.length){if(el)el.innerHTML='';return;}
+  const rt=filterId?routines.find(x=>x.id===filterId):null;
+  const accent=getComputedStyle(document.documentElement).getPropertyValue('--accent').trim()||'#3b5bdb';
+  const color=rt?(rt.color||accent):accent;
+  const streak=_rvStreak(filterId);
+  const best=_rvBestStreak(filterId);
+  const wPct=_rvPct(filterId,7);
+  const mPct=_rvPct(filterId,30);
+  const days=_rvHeatmapDays(filterId);
+  // Pad start to Sunday
+  const firstDow=new Date(days[0].ds+'T12:00:00').getDay();
+  const padded=[...Array(firstDow).fill(null),...days];
+  const weeks=[];
+  for(let i=0;i<padded.length;i+=7)weeks.push(padded.slice(i,i+7));
+  // Month labels per column
+  const monthNames=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  const cellW=12; // cell 11px + gap 2px — approx width per column
+  const monthLabels=weeks.map(w=>{
+    const real=w.filter(Boolean);
+    const ms=real.find(d=>d.ds.slice(8)==='01');
+    return ms?monthNames[new Date(ms.ds+'T12:00:00').getMonth()]:'';
+  });
+  // Heatmap HTML
+  const DOW_LABELS=['D','S','T','Q','Q','S','S'];
+  const heatmapCols=weeks.map(week=>`
+    <div class="rv-hm-col">
+      ${[0,1,2,3,4,5,6].map(i=>{
+        const cell=week[i];
+        if(!cell)return`<div class="rv-hm-cell" style="background:transparent"></div>`;
+        if(cell.value===null)return`<div class="rv-hm-cell" style="background:var(--surface2)" title="${cell.ds}"></div>`;
+        if(cell.value===0)return`<div class="rv-hm-cell" style="background:var(--border)" title="${cell.ds}: não feito"></div>`;
+        const op=cell.value>=1?1:cell.value>=.6?.72:.42;
+        const pct=Math.round(cell.value*100);
+        return`<div class="rv-hm-cell" style="background:${color};opacity:${op}" title="${cell.ds}: ${pct}%"></div>`;
+      }).join('')}
+    </div>`).join('');
+  // Bars (only Todas)
+  const barsHtml=!filterId?`
+    <div class="rv-dash-section">Por rotina — últimos 30 dias</div>
+    <div class="rv-bars">
+      ${routines.map(r=>{const p=_rvPct(r.id,30)??0;return`
+        <div class="rv-bar-row">
+          <span class="rv-bar-dot" style="background:${r.color||accent}"></span>
+          <span class="rv-bar-name" title="${r.title}">${r.title}</span>
+          <div class="rv-bar-track"><div class="rv-bar-fill" style="width:${p}%;background:${r.color||accent}"></div></div>
+          <span class="rv-bar-pct">${_rvPct(r.id,30)===null?'—':p+'%'}</span>
+        </div>`;}).join('')}
+    </div>`:'';
+  el.innerHTML=`
+    <div class="rv-dash">
+      <div class="rv-dash-title">📊 Progresso</div>
+      <div class="rv-filter-row">
+        <span class="rv-filter-chip${!filterId?' sel':''}" data-rv-filter="">Todas</span>
+        ${routines.map(r=>`<span class="rv-filter-chip${filterId===r.id?' sel':''}" data-rv-filter="${r.id}"
+          style="${filterId===r.id?`border-color:${r.color||accent};color:${r.color||accent};background:${r.color||accent}22`:''}">${r.title}</span>`).join('')}
+      </div>
+      <div class="rv-metrics">
+        <div class="rv-metric-card"><div class="rv-metric-val" style="color:${color}">🔥 ${streak}</div><div class="rv-metric-lbl">Sequência atual</div></div>
+        <div class="rv-metric-card"><div class="rv-metric-val" style="color:${color}">${wPct===null?'—':wPct+'%'}</div><div class="rv-metric-lbl">Esta semana</div></div>
+        <div class="rv-metric-card"><div class="rv-metric-val" style="color:${color}">${mPct===null?'—':mPct+'%'}</div><div class="rv-metric-lbl">Este mês</div></div>
+        <div class="rv-metric-card"><div class="rv-metric-val" style="color:${color}">🏆 ${best}</div><div class="rv-metric-lbl">Melhor sequência</div></div>
+      </div>
+      <div class="rv-dash-section">Frequência — últimos 3 meses</div>
+      <div class="rv-heatmap-wrap">
+        <div class="rv-hm-months" style="padding-left:16px">${monthLabels.map((m,i)=>`<div class="rv-hm-month-lbl" style="width:${cellW}px">${m}</div>`).join('')}</div>
+        <div class="rv-heatmap-inner">
+          <div class="rv-hm-dow">${DOW_LABELS.map(l=>`<div class="rv-hm-dow-lbl">${l}</div>`).join('')}</div>
+          <div class="rv-hm-cols">${heatmapCols}</div>
+        </div>
+      </div>
+      ${barsHtml}
+    </div>`;
+  el.querySelectorAll('[data-rv-filter]').forEach(chip=>chip.addEventListener('click',()=>{
+    _rvDashFilter=chip.dataset.rvFilter||null;
+    renderRvDashboard(_rvDashFilter);
+  }));
+}
 
 function renderRoutinesView(){
   const el=document.getElementById('routinesContent');
@@ -4365,6 +4556,7 @@ function renderRoutinesView(){
           </div>`;
         }).join('')
       }
+      <div id="rvDashboard"></div>
     </div>`;
 
   document.getElementById('rvAddBtn').addEventListener('click',()=>openRvForm(null));
@@ -4374,6 +4566,7 @@ function renderRoutinesView(){
     routines=routines.filter(r=>r.id!==b.dataset.del);saveRoutines();renderRoutinesView();
   }));
   if(rvFormOpen)openRvForm(rvEditId,true);
+  renderRvDashboard(_rvDashFilter);
 }
 
 function openRvForm(id,keepOpen=false){
