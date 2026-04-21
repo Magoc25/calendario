@@ -4616,6 +4616,7 @@ function renderToday(){
     zone.addEventListener('dragover',e=>{
       e.preventDefault();e.dataTransfer.dropEffect='copy';
       zone.classList.add('drag-over-top3');
+      console.log('[TOP3] dragover zone:', zone.dataset.top3slot);
     });
     zone.addEventListener('dragleave',e=>{
       if(!zone.contains(e.relatedTarget))zone.classList.remove('drag-over-top3');
