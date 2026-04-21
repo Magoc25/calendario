@@ -5069,9 +5069,16 @@ function _renderNotesGrid(search){
       if(found){found.classList.add('note-drag-over');_noteDragTarget=found.dataset.noteId;}
       else{_noteDragTarget=null;}
     },{passive:false});
-    document.addEventListener('touchend',()=>{
+    document.addEventListener('touchend',e=>{
       if(_noteDragTimer){clearTimeout(_noteDragTimer);_noteDragTimer=null;return;}
       if(!_noteDragId)return;
+      // Refaz detecção na posição exata onde o dedo foi levantado
+      const tc=e.changedTouches[0];
+      if(tc){
+        const els=(document.elementsFromPoint||document.msElementsFromPoint)?.call(document,tc.clientX,tc.clientY)||[];
+        const found=els.find(el=>el.classList?.contains('note-card')&&el.dataset?.noteId&&el.dataset.noteId!==_noteDragId)||null;
+        if(found)_noteDragTarget=found.dataset.noteId;
+      }
       const dragId=_noteDragId,targetId=_noteDragTarget;
       _noteCleanup();
       _noteDragId=null;_noteDragTarget=null;
