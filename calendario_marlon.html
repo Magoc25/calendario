@@ -4609,7 +4609,7 @@ function renderToday(){
       console.log('[TOP3] dragstart payload:', _todayDragPayload);
       setTimeout(()=>item.classList.add('dragging'),0);
     });
-    item.addEventListener('dragend',()=>item.classList.remove('dragging'));
+    item.addEventListener('dragend',e=>{item.classList.remove('dragging');console.log('[TOP3] dragend, dropEffect:', e.dataTransfer.dropEffect);});
   });
 
   // ── DRAG & DROP — Top 3 drop zones ──
