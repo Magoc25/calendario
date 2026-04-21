@@ -861,8 +861,9 @@ body.comfortable .upcoming-ev{padding:10px 13px;margin-bottom:7px}
 .note-card-btn{background:rgba(0,0,0,.06);border:none;cursor:pointer;font-size:12px;padding:3px 5px;border-radius:6px;line-height:1;transition:background .12s}
 .note-card-btn:hover{background:rgba(0,0,0,.14)}
 .note-card-pin-badge{font-size:9px;font-weight:700;padding:2px 6px;border-radius:10px;background:rgba(0,0,0,.1);color:var(--text);letter-spacing:.03em;flex-shrink:0}
-.note-card-drag-handle{font-size:12px;color:var(--hint);cursor:grab;opacity:0;transition:opacity .15s;flex-shrink:0;line-height:1;padding:0 2px}
+.note-card-drag-handle{font-size:13px;color:var(--hint);cursor:grab;opacity:0;transition:opacity .15s;flex-shrink:0;display:flex;align-items:center;justify-content:center;min-width:44px;min-height:44px;margin:-8px 0 -8px -8px;border-radius:8px 0 0 0;touch-action:none}
 .note-card:hover .note-card-drag-handle{opacity:1}
+@media(pointer:coarse){.note-card-drag-handle{opacity:.4}}
 .note-card.note-dragging{opacity:.35;transform:scale(.97)}
 .note-card.note-drag-over{box-shadow:inset 0 0 0 2px var(--accent),0 4px 20px var(--accent-light)!important;transform:translateY(-3px)}
 /* Note edit modal */
@@ -5023,21 +5024,20 @@ function _renderNotesGrid(search){
       _renderNotesGrid(document.getElementById('nvSearch')?.value||'');
     });
 
-    // ── Touch drag (mobile) — inicia com long press ──
-    card.addEventListener('touchstart',e=>{
-      if(_noteDragTimer)clearTimeout(_noteDragTimer);
-      const touch=e.touches[0];
-      _noteTouchX=touch.clientX;_noteTouchY=touch.clientY;
-      _noteDragTimer=setTimeout(()=>{
-        _noteDragTimer=null;
+    // ── Touch drag (mobile) — inicia ao tocar no handle ⠿ ──
+    const handle=card.querySelector('.note-card-drag-handle');
+    if(handle){
+      handle.addEventListener('touchstart',e=>{
+        e.preventDefault();
+        const touch=e.touches[0];
         _noteDragId=card.dataset.noteId;
         _noteDragGhost=card.cloneNode(true);
-        _noteDragGhost.style.cssText=`position:fixed;z-index:9999;width:${card.offsetWidth}px;opacity:.8;pointer-events:none;transform:scale(1.04) rotate(1deg);box-shadow:0 10px 30px rgba(0,0,0,.3);border-radius:14px;left:${touch.clientX-card.offsetWidth/2}px;top:${touch.clientY-50}px;`;
+        _noteDragGhost.style.cssText=`position:fixed;z-index:9999;width:${card.offsetWidth}px;opacity:.85;pointer-events:none;transform:scale(1.03) rotate(0.8deg);box-shadow:0 10px 30px rgba(0,0,0,.3);border-radius:14px;left:${touch.clientX-card.offsetWidth/2}px;top:${touch.clientY-card.offsetHeight/2}px;`;
         document.body.appendChild(_noteDragGhost);
         card.classList.add('note-dragging');
-        if(navigator.vibrate)navigator.vibrate(40);
-      },400);
-    },{passive:true});
+        if(navigator.vibrate)navigator.vibrate(30);
+      },{passive:false});
+    }
   });
 
   // ── Touch drag listeners únicos no document (mobile) ──
