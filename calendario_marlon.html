@@ -4617,8 +4617,8 @@ function renderToday(){
     document.addEventListener('dragover',e=>{
       if(!_todayDragPayload)return;
       e.preventDefault();
+      e.dataTransfer.dropEffect='copy';
       const zone=e.target.closest('[data-top3slot]');
-      e.dataTransfer.dropEffect=zone?'copy':'none';
       document.querySelectorAll('[data-top3slot]').forEach(z=>z.classList.toggle('drag-over-top3',z===zone));
     });
     document.addEventListener('drop',e=>{
