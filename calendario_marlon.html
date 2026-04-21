@@ -4612,21 +4612,20 @@ function renderToday(){
     item.addEventListener('dragend',e=>{item.classList.remove('dragging');console.log('[TOP3] dragend, dropEffect:', e.dataTransfer.dropEffect);});
   });
 
-  // ── DRAG & DROP — Top 3 drop zones ──
-  console.log('[TOP3] zones encontradas:', document.querySelectorAll('[data-top3slot]').length);
-  document.querySelectorAll('[data-top3slot]').forEach(zone=>{
-    zone.addEventListener('dragover',e=>{
-      e.preventDefault();e.dataTransfer.dropEffect='copy';
-      zone.classList.add('drag-over-top3');
-      console.log('[TOP3] dragover zone:', zone.dataset.top3slot);
-    });
-    zone.addEventListener('dragleave',e=>{
-      if(!zone.contains(e.relatedTarget))zone.classList.remove('drag-over-top3');
-    });
-    zone.addEventListener('drop',e=>{
-      e.preventDefault();zone.classList.remove('drag-over-top3');
-      console.log('[TOP3] drop fired, payload:', _todayDragPayload);
+  // ── DRAG & DROP — Top 3 drop zones (via document para compatibilidade Firefox) ──
+  if(!window._top3DragListenersAdded){
+    window._top3DragListenersAdded=true;
+    document.addEventListener('dragover',e=>{
       if(!_todayDragPayload)return;
+      const zone=e.target.closest('[data-top3slot]');
+      if(zone){e.preventDefault();e.dataTransfer.dropEffect='copy';}
+    });
+    document.addEventListener('drop',e=>{
+      if(!_todayDragPayload)return;
+      const zone=e.target.closest('[data-top3slot]');
+      if(!zone)return;
+      e.preventDefault();
+      document.querySelectorAll('[data-top3slot]').forEach(z=>z.classList.remove('drag-over-top3'));
       const slot=parseInt(zone.dataset.top3slot);
       const cur3=getTop3();
       cur3[slot]={text:_todayDragPayload.text,done:false,srcType:_todayDragPayload.type,srcId:_todayDragPayload.id,srcColor:_todayDragPayload.color};
@@ -4634,7 +4633,13 @@ function renderToday(){
       toast(`Prioridade ${slot+1} definida: ${_todayDragPayload.text}`);
       _todayDragPayload=null;
     });
-  });
+    document.addEventListener('dragenter',e=>{
+      if(!_todayDragPayload)return;
+      const zone=e.target.closest('[data-top3slot]');
+      document.querySelectorAll('[data-top3slot]').forEach(z=>z.classList.remove('drag-over-top3'));
+      if(zone)zone.classList.add('drag-over-top3');
+    });
+  }
 
   // ── Auto-scroll durante drag no mobile ──
   // Quando o usuário arrasta perto da borda superior/inferior,
