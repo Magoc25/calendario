@@ -4612,6 +4612,7 @@ function renderToday(){
   });
 
   // ── DRAG & DROP — Top 3 drop zones ──
+  console.log('[TOP3] zones encontradas:', document.querySelectorAll('[data-top3slot]').length);
   document.querySelectorAll('[data-top3slot]').forEach(zone=>{
     zone.addEventListener('dragover',e=>{
       e.preventDefault();e.dataTransfer.dropEffect='copy';
