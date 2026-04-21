@@ -5023,13 +5023,9 @@ function _renderNotesGrid(search){
       _renderNotesGrid(document.getElementById('nvSearch')?.value||'');
     });
 
-    // ── Touch drag (mobile) ──
-    const _noteCleanupTouch=()=>{
-      if(_noteDragTimer){clearTimeout(_noteDragTimer);_noteDragTimer=null;}
-      if(_noteDragGhost){_noteDragGhost.remove();_noteDragGhost=null;}
-      grid.querySelectorAll('.note-dragging,.note-drag-over').forEach(c=>c.classList.remove('note-dragging','note-drag-over'));
-    };
+    // ── Touch drag (mobile) — inicia com long press ──
     card.addEventListener('touchstart',e=>{
+      if(_noteDragTimer)clearTimeout(_noteDragTimer);
       const touch=e.touches[0];
       _noteDragTimer=setTimeout(()=>{
         _noteDragTimer=null;
@@ -5041,34 +5037,39 @@ function _renderNotesGrid(search){
         if(navigator.vibrate)navigator.vibrate(40);
       },400);
     },{passive:true});
+  });
 
-    card.addEventListener('touchmove',e=>{
+  // ── Touch drag listeners únicos no document (mobile) ──
+  if(!window._noteTouchListenersAdded){
+    window._noteTouchListenersAdded=true;
+    const _noteCleanup=()=>{
+      if(_noteDragTimer){clearTimeout(_noteDragTimer);_noteDragTimer=null;}
+      if(_noteDragGhost){_noteDragGhost.remove();_noteDragGhost=null;}
+      document.querySelectorAll('.note-dragging,.note-drag-over').forEach(c=>c.classList.remove('note-dragging','note-drag-over'));
+    };
+    document.addEventListener('touchmove',e=>{
       if(_noteDragTimer){clearTimeout(_noteDragTimer);_noteDragTimer=null;return;}
       if(!_noteDragId||!_noteDragGhost)return;
       e.preventDefault();
       const touch=e.touches[0];
       _noteDragGhost.style.left=(touch.clientX-_noteDragGhost.offsetWidth/2)+'px';
       _noteDragGhost.style.top=(touch.clientY-50)+'px';
-      // Detecta card-alvo por bounding rect (mais confiável no mobile)
       let found=null;
-      grid.querySelectorAll('.note-card').forEach(c=>{
+      document.querySelectorAll('.note-card[data-note-id]').forEach(c=>{
         const r=c.getBoundingClientRect();
         if(touch.clientX>=r.left&&touch.clientX<=r.right&&touch.clientY>=r.top&&touch.clientY<=r.bottom){
-          if(c.dataset.noteId!==_noteDragId)found=c.dataset.noteId;
+          if(c.dataset.noteId!==_noteDragId)found=c;
         }
       });
-      grid.querySelectorAll('.note-drag-over').forEach(c=>c.classList.remove('note-drag-over'));
-      if(found){
-        grid.querySelector(`[data-note-id="${found}"]`)?.classList.add('note-drag-over');
-        _noteDragTarget=found;
-      }else{_noteDragTarget=null;}
+      document.querySelectorAll('.note-drag-over').forEach(c=>c.classList.remove('note-drag-over'));
+      if(found){found.classList.add('note-drag-over');_noteDragTarget=found.dataset.noteId;}
+      else{_noteDragTarget=null;}
     },{passive:false});
-
-    card.addEventListener('touchend',()=>{
+    document.addEventListener('touchend',()=>{
       if(_noteDragTimer){clearTimeout(_noteDragTimer);_noteDragTimer=null;return;}
       if(!_noteDragId)return;
       const dragId=_noteDragId,targetId=_noteDragTarget;
-      _noteCleanupTouch();
+      _noteCleanup();
       _noteDragId=null;_noteDragTarget=null;
       if(!targetId)return;
       const dragIdx=standaloneNotes.findIndex(n=>n.id===dragId);
@@ -5079,11 +5080,13 @@ function _renderNotesGrid(search){
       saveStandaloneNotes();
       _renderNotesGrid(document.getElementById('nvSearch')?.value||'');
     },{passive:true});
-
-    card.addEventListener('touchcancel',()=>{
-      _noteCleanupTouch();_noteDragId=null;_noteDragTarget=null;
+    document.addEventListener('touchcancel',()=>{
+      if(_noteDragTimer){clearTimeout(_noteDragTimer);_noteDragTimer=null;}
+      if(_noteDragGhost){_noteDragGhost.remove();_noteDragGhost=null;}
+      document.querySelectorAll('.note-dragging,.note-drag-over').forEach(c=>c.classList.remove('note-dragging','note-drag-over'));
+      _noteDragId=null;_noteDragTarget=null;
     },{passive:true});
-  });
+  }
   grid.querySelectorAll('[data-note-pin]').forEach(btn=>{
     btn.addEventListener('click',e=>{e.stopPropagation();
       const n=standaloneNotes.find(x=>x.id===btn.dataset.notePin);
