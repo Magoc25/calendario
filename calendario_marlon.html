@@ -631,7 +631,6 @@ body.comfortable .upcoming-ev{padding:10px 13px;margin-bottom:7px}
 /* Top 3 */
 .top3-item{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:var(--radius-sm);background:var(--surface);border:1.5px solid var(--border);margin-bottom:6px;transition:all .15s;position:relative;min-height:38px}
 .top3-item.drop-zone{border-style:dashed;border-color:var(--accent);background:var(--accent-light);cursor:copy}
-.top3-item.drop-zone *{pointer-events:none}
 .top3-item.drag-over-top3{border-color:var(--accent);background:var(--accent-light);transform:scale(1.01);box-shadow:0 2px 10px rgba(59,91,219,.18)}
 .top3-item.done{opacity:.55}
 .top3-num{width:22px;height:22px;border-radius:50%;background:var(--accent);color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
@@ -4606,38 +4605,34 @@ function renderToday(){
       };
       e.dataTransfer.effectAllowed='copy';
       e.dataTransfer.setData('text/plain', item.dataset.dragText||'');
-      console.log('[TOP3] dragstart payload:', _todayDragPayload);
       setTimeout(()=>item.classList.add('dragging'),0);
     });
-    item.addEventListener('dragend',e=>{item.classList.remove('dragging');console.log('[TOP3] dragend, dropEffect:', e.dataTransfer.dropEffect);});
+    item.addEventListener('dragend',()=>item.classList.remove('dragging'));
   });
 
-  // ── DRAG & DROP — Top 3 drop zones (via document para compatibilidade Firefox) ──
+  // ── DRAG & DROP — Top 3 drop zones ──
   if(!window._top3DragListenersAdded){
     window._top3DragListenersAdded=true;
+    // Aceita drop em qualquer lugar quando payload ativo (Firefox exige preventDefault em todo dragover)
     document.addEventListener('dragover',e=>{
       if(!_todayDragPayload)return;
+      e.preventDefault();
       const zone=e.target.closest('[data-top3slot]');
-      if(zone){e.preventDefault();e.dataTransfer.dropEffect='copy';}
+      e.dataTransfer.dropEffect=zone?'copy':'none';
+      document.querySelectorAll('[data-top3slot]').forEach(z=>z.classList.toggle('drag-over-top3',z===zone));
     });
     document.addEventListener('drop',e=>{
       if(!_todayDragPayload)return;
       const zone=e.target.closest('[data-top3slot]');
+      document.querySelectorAll('[data-top3slot]').forEach(z=>z.classList.remove('drag-over-top3'));
       if(!zone)return;
       e.preventDefault();
-      document.querySelectorAll('[data-top3slot]').forEach(z=>z.classList.remove('drag-over-top3'));
       const slot=parseInt(zone.dataset.top3slot);
       const cur3=getTop3();
       cur3[slot]={text:_todayDragPayload.text,done:false,srcType:_todayDragPayload.type,srcId:_todayDragPayload.id,srcColor:_todayDragPayload.color};
       top3Data[todayDs()]=cur3;saveTop3();renderToday();
       toast(`Prioridade ${slot+1} definida: ${_todayDragPayload.text}`);
       _todayDragPayload=null;
-    });
-    document.addEventListener('dragenter',e=>{
-      if(!_todayDragPayload)return;
-      const zone=e.target.closest('[data-top3slot]');
-      document.querySelectorAll('[data-top3slot]').forEach(z=>z.classList.remove('drag-over-top3'));
-      if(zone)zone.classList.add('drag-over-top3');
     });
   }
 
