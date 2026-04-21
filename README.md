@@ -475,6 +475,18 @@ Na primeira sincronização, eventos recorrentes podem gerar cópias. Para remov
 
 ---
 
+## 🗂️ Estrutura dos arquivos
+
+| Arquivo | Função | Cenário |
+|---|---|---|
+| `calendario_marlon.html` | Arquivo principal do app — interface, lógica e estilos | Todos |
+| `sw.js` | Service Worker — cache offline, alertas e notificações em segundo plano | Todos |
+| `manifest.json` | Define o app como PWA: nome, ícones e modo de exibição ao instalar no celular | Cenários 2, 3 e 4 |
+| `icon-192.png` / `icon-512.png` | Ícones do app usados na tela inicial do celular e em notificações | Cenários 2, 3 e 4 |
+| `.github/workflows/keep-alive.yml` | Ping diário no Supabase para manter o banco ativo (configure com suas próprias chaves) | Cenários 2, 3 e 4 |
+
+---
+
 ## 🔒 Segurança — Perguntas frequentes
 
 ### "Meus eventos ficam expostos no GitHub?"
