@@ -106,8 +106,8 @@ Quando quiser sincronizar entre computadores ou acessar pelo celular, basta conf
 ```
 
 **Passos:**
-1. Baixe `calendario_marlon.html`
-2. Abra no Chrome ou Edge
+1. Baixe `calendario_marlon.html` e `sw.js` para a mesma pasta
+2. Abra o `calendario_marlon.html` no Chrome, Edge ou Safari
 3. Pronto — use normalmente
 
 **Backup:** clique em 💾 Backup → Exportar JSON regularmente e guarde o arquivo.
