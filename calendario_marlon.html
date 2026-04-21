@@ -4437,7 +4437,6 @@ function addQuickTask(title){
 }
 
 /* ═══════ TOP 3 FOCUS ═══════ */
-let _todayDragPayload=null;
 let top3Data={};
 try{top3Data=JSON.parse(localStorage.getItem('cal_top3')||'{}');}catch(e){}
 function saveTop3(){localStorage.setItem('cal_top3',JSON.stringify(top3Data));localStorage.setItem('cal_local_ts',new Date().toISOString());if(sbClient){clearTimeout(_cloudSaveTimer);_cloudSaveTimer=setTimeout(()=>syncToCloud(true),1500);}}
@@ -4594,47 +4593,41 @@ function renderToday(){
   </div>`;
 
   // ── DRAG & DROP — draggable items ──
-  _todayDragPayload=null;
+  let _dragPayload=null;
   document.querySelectorAll('.tv-draggable').forEach(item=>{
     item.addEventListener('dragstart',e=>{
-      _todayDragPayload={
+      _dragPayload={
         type:item.dataset.dragType,
         text:item.dataset.dragText,
         id:item.dataset.dragId,
         color:item.dataset.dragColor
       };
       e.dataTransfer.effectAllowed='copy';
-      e.dataTransfer.setData('text/plain', item.dataset.dragText||'');
       setTimeout(()=>item.classList.add('dragging'),0);
     });
     item.addEventListener('dragend',()=>item.classList.remove('dragging'));
   });
 
   // ── DRAG & DROP — Top 3 drop zones ──
-  if(!window._top3DragListenersAdded){
-    window._top3DragListenersAdded=true;
-    // Aceita drop em qualquer lugar quando payload ativo (Firefox exige preventDefault em todo dragover)
-    document.addEventListener('dragover',e=>{
-      if(!_todayDragPayload)return;
-      e.preventDefault();
-      e.dataTransfer.dropEffect='copy';
-      const zone=e.target.closest('[data-top3slot]');
-      document.querySelectorAll('[data-top3slot]').forEach(z=>z.classList.toggle('drag-over-top3',z===zone));
+  document.querySelectorAll('[data-top3slot]').forEach(zone=>{
+    zone.addEventListener('dragover',e=>{
+      e.preventDefault();e.dataTransfer.dropEffect='copy';
+      zone.classList.add('drag-over-top3');
     });
-    document.addEventListener('drop',e=>{
-      if(!_todayDragPayload)return;
-      const zone=e.target.closest('[data-top3slot]');
-      document.querySelectorAll('[data-top3slot]').forEach(z=>z.classList.remove('drag-over-top3'));
-      if(!zone)return;
-      e.preventDefault();
+    zone.addEventListener('dragleave',e=>{
+      if(!zone.contains(e.relatedTarget))zone.classList.remove('drag-over-top3');
+    });
+    zone.addEventListener('drop',e=>{
+      e.preventDefault();zone.classList.remove('drag-over-top3');
+      if(!_dragPayload)return;
       const slot=parseInt(zone.dataset.top3slot);
       const cur3=getTop3();
-      cur3[slot]={text:_todayDragPayload.text,done:false,srcType:_todayDragPayload.type,srcId:_todayDragPayload.id,srcColor:_todayDragPayload.color};
+      cur3[slot]={text:_dragPayload.text,done:false,srcType:_dragPayload.type,srcId:_dragPayload.id,srcColor:_dragPayload.color};
       top3Data[todayDs()]=cur3;saveTop3();renderToday();
-      toast(`Prioridade ${slot+1} definida: ${_todayDragPayload.text}`);
-      _todayDragPayload=null;
+      toast(`Prioridade ${slot+1} definida: ${_dragPayload.text}`);
+      _dragPayload=null;
     });
-  }
+  });
 
   // ── Auto-scroll durante drag no mobile ──
   // Quando o usuário arrasta perto da borda superior/inferior,
