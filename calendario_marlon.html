@@ -6263,6 +6263,38 @@ document.getElementById('deleteBtn').addEventListener('click',_patchedSyncAlerts
     localStorage.setItem(CACHE_KEY,JSON.stringify({v,ts:Date.now()}));
   }catch(e){/* offline — mantém valor hardcoded */}
 })();
+
+/* ── Verificação de nova versão via Supabase ── */
+(async()=>{
+  if(!revClient)return;
+  const LOCAL_VERSION='2.1.0';
+  const CACHE_KEY='mgc_update_check';
+  const CACHE_TTL=24*60*60*1000; // 24 horas
+  const cached=JSON.parse(localStorage.getItem(CACHE_KEY)||'null');
+  if(cached&&Date.now()-cached.ts<CACHE_TTL)return;
+  try{
+    const{data,error}=await revClient.from('app_config').select('value').eq('key','version').single();
+    if(error||!data)return;
+    localStorage.setItem(CACHE_KEY,JSON.stringify({ts:Date.now()}));
+    const remote=data.value.replace(/^v/,'');
+    const parse=v=>v.split('.').map(Number);
+    const [ra,rb,rc]=parse(remote);
+    const [la,lb,lc]=parse(LOCAL_VERSION);
+    const isNewer=ra>la||(ra===la&&rb>lb)||(ra===la&&rb===lb&&rc>lc);
+    if(!isNewer)return;
+    // Exibe banner
+    const banner=document.createElement('div');
+    banner.id='updateBanner';
+    banner.style.cssText='position:fixed;top:0;left:0;right:0;z-index:9999;background:#1a73e8;color:#fff;display:flex;align-items:center;justify-content:space-between;padding:10px 16px;font-size:14px;gap:12px;';
+    banner.innerHTML=`
+      <span>🆕 Nova versão disponível (v${remote}) — recarregue o app para atualizar.</span>
+      <div style="display:flex;gap:8px;flex-shrink:0">
+        <button onclick="location.reload(true)" style="background:#fff;color:#1a73e8;border:none;border-radius:6px;padding:4px 12px;cursor:pointer;font-weight:600">Recarregar</button>
+        <button onclick="document.getElementById('updateBanner').remove()" style="background:transparent;color:#fff;border:none;font-size:18px;cursor:pointer;line-height:1">✕</button>
+      </div>`;
+    document.body.prepend(banner);
+  }catch(e){}
+})();
 </script>
 </body>
 </html>
