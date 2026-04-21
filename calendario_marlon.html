@@ -4293,12 +4293,27 @@ window.addEventListener('resize',()=>{
 
   function onVVResize(){
     if(!isMobile())return;
-    const m=modal();
-    if(!m)return;
-    const h=window.visualViewport.height+'px';
-    // setProperty garante override mesmo sobre regras sem !important
-    m.style.setProperty('height', h);
-    m.style.setProperty('max-height', h);
+    const m=modal(),ol=document.getElementById('overlay');
+    if(!m||!ol)return;
+    const vv=window.visualViewport;
+    const keyboardOpen=vv.height<window.innerHeight*0.8;
+    if(keyboardOpen){
+      // Modal ocupa exatamente a área visível acima do teclado
+      m.style.setProperty('height',vv.height+'px');
+      m.style.setProperty('max-height',vv.height+'px');
+      // Alinha ao topo da área visível (não ao centro da tela cheia)
+      ol.style.setProperty('align-items','flex-start');
+      ol.style.setProperty('padding-top','0');
+      ol.style.setProperty('padding-bottom','0');
+      // Scroll para o campo focado dentro do modal
+      setTimeout(()=>{
+        const active=document.activeElement;
+        if(active&&m.contains(active))active.scrollIntoView({block:'nearest',behavior:'smooth'});
+      },120);
+    }else{
+      m.style.removeProperty('height');m.style.removeProperty('max-height');
+      ol.style.removeProperty('align-items');ol.style.removeProperty('padding-top');ol.style.removeProperty('padding-bottom');
+    }
   }
 
   function attachVV(){
@@ -4309,8 +4324,9 @@ window.addEventListener('resize',()=>{
 
   function detachVV(){
     window.visualViewport.removeEventListener('resize', onVVResize);
-    const m=modal();
+    const m=modal(),ol=document.getElementById('overlay');
     if(m){m.style.removeProperty('height');m.style.removeProperty('max-height');}
+    if(ol){ol.style.removeProperty('align-items');ol.style.removeProperty('padding-top');ol.style.removeProperty('padding-bottom');}
   }
 
   // Expõe para openNew / openEdit / closeModal usarem
