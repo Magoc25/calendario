@@ -5015,10 +5015,10 @@ function _renderNotesGrid(search){
       card.classList.remove('note-drag-over');
       if(!_noteDragId||card.dataset.noteId===_noteDragId)return;
       const dragIdx=standaloneNotes.findIndex(n=>n.id===_noteDragId);
-      if(dragIdx===-1)return;
+      const targetIdx=standaloneNotes.findIndex(n=>n.id===card.dataset.noteId);
+      if(dragIdx===-1||targetIdx===-1)return;
       const [dragged]=standaloneNotes.splice(dragIdx,1);
-      const newTargetIdx=standaloneNotes.findIndex(n=>n.id===card.dataset.noteId);
-      standaloneNotes.splice(newTargetIdx,0,dragged);
+      standaloneNotes.splice(targetIdx,0,dragged);
       _noteDragId=null;
       saveStandaloneNotes();
       _renderNotesGrid(document.getElementById('nvSearch')?.value||'');
@@ -5074,10 +5074,10 @@ function _renderNotesGrid(search){
       _noteDragId=null;_noteDragTarget=null;
       if(!targetId)return;
       const dragIdx=standaloneNotes.findIndex(n=>n.id===dragId);
-      if(dragIdx===-1)return;
+      const targetIdx=standaloneNotes.findIndex(n=>n.id===targetId);
+      if(dragIdx===-1||targetIdx===-1)return;
       const [dragged]=standaloneNotes.splice(dragIdx,1);
-      const newTargetIdx=standaloneNotes.findIndex(n=>n.id===targetId);
-      standaloneNotes.splice(newTargetIdx,0,dragged);
+      standaloneNotes.splice(targetIdx,0,dragged);
       saveStandaloneNotes();
       _renderNotesGrid(document.getElementById('nvSearch')?.value||'');
     },{passive:true});
