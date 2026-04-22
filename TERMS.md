@@ -121,10 +121,8 @@ O desenvolvedor reserva-se o direito de modificar estes termos a qualquer moment
 - Dúvidas podem ser encaminhadas através das *Issues* do repositório no GitHub.
 
 ---
-
 **© 2026 MGC Dev — Marlon Gomes da Costa**  
 *Desenvolvedor independente — projeto pessoal, sem vínculo institucional*
-
 ---
 
 > *"Software bom é aquele que serve as pessoas, não o contrário."*
