@@ -1029,11 +1029,11 @@ body.comfortable .upcoming-ev{padding:10px 13px;margin-bottom:7px}
 .mms-close:active{background:var(--border);}
 
 /* ── Mobile Day Sheet (preview flutuante ao clicar no dia na aba Mês) ── */
-.mds-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}
+.mds-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px)}
 .mds-overlay.open{display:block}
-.mds-sheet{position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-radius:20px 20px 0 0;z-index:201;transform:translateY(100%);transition:transform .32s cubic-bezier(.32,1,.56,1);max-height:72vh;display:flex;flex-direction:column;box-shadow:0 -8px 40px rgba(0,0,0,.28);padding-bottom:env(safe-area-inset-bottom)}
-.mds-sheet.open{transform:translateY(0)}
-.mds-handle{width:40px;height:4px;border-radius:2px;background:var(--border);margin:12px auto 0;flex-shrink:0}
+.mds-sheet{position:fixed;bottom:20px;left:14px;right:14px;background:var(--surface);border-radius:22px;z-index:201;transform:translateY(24px) scale(.97);opacity:0;transition:transform .3s cubic-bezier(.32,1,.56,1),opacity .25s ease;max-height:74vh;display:flex;flex-direction:column;box-shadow:0 24px 60px rgba(0,0,0,.35),0 8px 24px rgba(0,0,0,.2);pointer-events:none}
+.mds-sheet.open{transform:translateY(0) scale(1);opacity:1;pointer-events:all}
+.mds-handle{width:36px;height:4px;border-radius:2px;background:var(--border);margin:12px auto 0;flex-shrink:0}
 .mds-header{padding:14px 18px 10px;border-bottom:1px solid var(--border);flex-shrink:0}
 .mds-date-label{font-size:17px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:8px}
 .mds-today-badge{font-size:9px;font-weight:700;background:var(--accent);color:#fff;border-radius:10px;padding:2px 8px;flex-shrink:0}
