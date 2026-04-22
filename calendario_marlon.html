@@ -4308,7 +4308,7 @@ window.addEventListener('resize',()=>{
       // Scroll para o campo focado dentro do modal
       setTimeout(()=>{
         const active=document.activeElement;
-        if(active&&m.contains(active))active.scrollIntoView({block:'nearest',behavior:'smooth'});
+        if(active&&m.contains(active))active.scrollIntoView({block:'center',behavior:'smooth'});
       },120);
     }else{
       m.style.removeProperty('height');m.style.removeProperty('max-height');
