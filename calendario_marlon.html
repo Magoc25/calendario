@@ -4110,11 +4110,11 @@ document.getElementById('ctxMove').addEventListener('click',()=>{
 });
 
 document.getElementById('ctxEdit').addEventListener('click',()=>{
-  closeCtxMenu();
+  closeCtxMenu();closeMobileDaySheet();
   if(ctxEvId)openEdit(ctxEvId,ctxEvDate);
 });
 document.getElementById('ctxNotes').addEventListener('click',()=>{
-  closeCtxMenu();
+  closeCtxMenu();closeMobileDaySheet();
   if(ctxEvId)openNotes(ctxEvId);
 });
 document.getElementById('ctxSkip').addEventListener('click',()=>{
