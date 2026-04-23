@@ -792,6 +792,15 @@ body.comfortable .upcoming-ev{padding:10px 13px;margin-bottom:7px}
 .rew-hist-item{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border);font-size:10.5px;color:var(--muted)}
 .rew-hist-date{font-weight:600;color:var(--text);min-width:80px}
 .rew-hist-stars{flex-shrink:0}
+.rew-streak-card{background:linear-gradient(135deg,#fff3bf,var(--surface2));border:1px solid #f59f00;border-radius:var(--radius-sm);padding:10px 12px;margin-bottom:8px;text-align:center}
+.rew-streak-num{font-size:24px;font-weight:700;color:#e67700;line-height:1}
+.rew-streak-label{font-size:10px;color:var(--muted);margin-top:2px}
+.rew-mood-section{margin-top:14px;margin-bottom:14px}
+.rew-mood-title{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:7px}
+.rew-mood-chart{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px}
+.tv-intention{background:var(--accent-light);border:1.5px solid var(--accent);border-radius:var(--radius);padding:11px 14px;margin-bottom:10px}
+.tv-intention-label{font-size:10px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px}
+.tv-intention-text{font-size:12px;color:var(--text);line-height:1.6}
 
 @media(max-width:768px){
   .tv-wrap{grid-template-columns:1fr;padding:12px 12px 72px}
@@ -4810,6 +4819,11 @@ function renderToday(){
   // Quick tasks
   const qtasks=getTodayTasks();
 
+  // Yesterday's intention for today
+  const yest=new Date();yest.setDate(yest.getDate()-1);
+  const yestKey=`${yest.getFullYear()}-${String(yest.getMonth()+1).padStart(2,'0')}-${String(yest.getDate()).padStart(2,'0')}`;
+  const intentionToday=(reviews[yestKey]?.tomorrow||'').trim();
+
   // Progress
   const totalItems=todayRouts.length+qtasks.length+todayEvs.length;
   const doneItems=checks.length+qtasks.filter(x=>x.done).length+todayEvs.filter(ev=>isDoneOn(ev,td)).length;
@@ -4829,6 +4843,8 @@ function renderToday(){
       </div>
       <div class="tv-greeting">${greeting}! 👋</div>
     </div>
+
+    ${intentionToday?`<div class="tv-intention"><div class="tv-intention-label">💡 Intenção para hoje</div><div class="tv-intention-text">${intentionToday.replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>')}</div></div>`:''}
 
     <!-- Top 3 DROP ZONES -->
     <div class="tv-panel">
@@ -5090,6 +5106,43 @@ function saveReviews(){
 }
 let reviewDate=todayDs();
 
+function _rewStreak(){
+  let streak=0;
+  const td=todayDs();
+  for(let i=0;i<365;i++){
+    const d=new Date();d.setDate(d.getDate()-i);
+    const dk=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    const r=reviews[dk];
+    const filled=r&&(r.rating>0||(r.wentWell||'').trim()||(r.toImprove||'').trim()||(r.tomorrow||'').trim());
+    if(dk===td&&!filled)continue;
+    if(filled)streak++;
+    else break;
+  }
+  return streak;
+}
+
+function _rewMoodChartHTML(){
+  const N=30,pts=[];
+  for(let i=N-1;i>=0;i--){
+    const d=new Date();d.setDate(d.getDate()-i);
+    const dk=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    pts.push({rating:reviews[dk]?.rating||0});
+  }
+  if(!pts.some(p=>p.rating>0))return '<div style="font-size:10px;color:var(--muted);text-align:center;padding:8px 0">Sem avaliações nos últimos 30 dias.</div>';
+  const W=200,H=56,pad=8,xStep=(W-pad*2)/(N-1),yScale=(H-pad*2)/4;
+  const coords=pts.map((p,i)=>p.rating?{x:pad+i*xStep,y:H-pad-(p.rating-1)*yScale,r:p.rating}:null).filter(Boolean);
+  const poly=coords.map(c=>`${c.x.toFixed(1)},${c.y.toFixed(1)}`).join(' ');
+  const area=`M${coords[0].x.toFixed(1)},${H-pad} L${coords.map(c=>`${c.x.toFixed(1)},${c.y.toFixed(1)}`).join(' L')} L${coords[coords.length-1].x.toFixed(1)},${H-pad} Z`;
+  const em=['😞','😐','🙂','😊','🤩'];
+  return `<svg width="100%" viewBox="0 0 ${W} ${H}" style="overflow:visible;display:block">
+    <defs><linearGradient id="mgGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--accent)" stop-opacity=".25"/><stop offset="100%" stop-color="var(--accent)" stop-opacity="0"/></linearGradient></defs>
+    <path d="${area}" fill="url(#mgGrad)"/>
+    <polyline points="${poly}" fill="none" stroke="var(--accent)" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/>
+    ${coords.map(c=>`<circle cx="${c.x.toFixed(1)}" cy="${c.y.toFixed(1)}" r="2.5" fill="var(--accent)"><title>${em[c.r-1]}</title></circle>`).join('')}
+  </svg>
+  <div style="display:flex;justify-content:space-between;font-size:9px;color:var(--muted);margin-top:4px"><span>30d atrás</span><span>hoje</span></div>`;
+}
+
 function renderReviewView(){
   const el=document.getElementById('reviewContent');
   const rev=reviews[reviewDate]||{wentWell:'',toImprove:'',rating:0};
@@ -5143,6 +5196,7 @@ function renderReviewView(){
     </div>
 
     <div class="rew-side">
+      ${(()=>{const s=_rewStreak();return`<div class="rew-streak-card"><div class="rew-streak-num">🔥 ${s}</div><div class="rew-streak-label">dia${s!==1?'s':''} consecutivo${s!==1?'s':''} de revisão</div></div>`;})()}
       <div class="rew-metric-card">
         <div class="rew-metric-num">${pct}%</div>
         <div class="rew-metric-label">Taxa de conclusão de eventos</div>
@@ -5161,6 +5215,11 @@ function renderReviewView(){
       <div class="rew-metric-card">
         <div class="rew-metric-num">${dayEvs.length}</div>
         <div class="rew-metric-label">Eventos agendados</div>
+      </div>
+
+      <div class="rew-mood-section">
+        <div class="rew-mood-title">📈 Humor — últimos 30 dias</div>
+        <div class="rew-mood-chart">${_rewMoodChartHTML()}</div>
       </div>
 
       <div class="rew-history">
