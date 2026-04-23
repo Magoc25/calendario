@@ -1043,6 +1043,14 @@ body.comfortable .upcoming-ev{padding:10px 13px;margin-bottom:7px}
 .mds-sheet{position:fixed;bottom:20px;left:14px;right:14px;background:var(--surface);border-radius:22px;z-index:201;transform:translateY(24px) scale(.97);opacity:0;transition:transform .3s cubic-bezier(.32,1,.56,1),opacity .25s ease;max-height:74vh;display:flex;flex-direction:column;box-shadow:0 24px 60px rgba(0,0,0,.35),0 8px 24px rgba(0,0,0,.2);pointer-events:none}
 .mds-sheet.open{transform:translateY(0) scale(1);opacity:1;pointer-events:all}
 .mds-handle{width:36px;height:4px;border-radius:2px;background:var(--border);margin:12px auto 0;flex-shrink:0}
+@media(min-width:769px){
+  .mds-sheet{bottom:auto;left:50%;right:auto;top:50%;width:500px;max-width:calc(100vw - 48px);transform:translate(-50%,-50%) scale(.95);max-height:82vh}
+  .mds-sheet.open{transform:translate(-50%,-50%) scale(1)}
+  .mds-handle{display:none}
+  .mds-event:hover{background:var(--surface2)}
+  .mds-open-btn{font-size:12px;padding:10px}
+  .mds-add-btn{font-size:12px;padding:10px 12px}
+}
 .mds-header{padding:14px 18px 10px;border-bottom:1px solid var(--border);flex-shrink:0}
 .mds-date-label{font-size:17px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:8px}
 .mds-today-badge{font-size:9px;font-weight:700;background:var(--accent);color:#fff;border-radius:10px;padding:2px 8px;flex-shrink:0}
@@ -2686,13 +2694,7 @@ function renderMonth(){
       // Mobile: ignora e abre o painel do dia (toque na grade é impreciso)
       if(pill&&window.innerWidth>768){openEdit(pill.dataset.id,pill.dataset.date);return;}
       const d=el.dataset.date;
-      if(window.innerWidth<=768){
-        openMobileDaySheet(d);
-      }else{
-        selectedDay=d;renderDayPanel(d);
-        grid.querySelectorAll('.day').forEach(x=>x.classList.remove('selected-day'));
-        el.classList.add('selected-day');
-      }
+      openMobileDaySheet(d);
     });
 
     el.addEventListener('dragover',e=>{
@@ -4147,7 +4149,7 @@ document.getElementById('ctxDelete').addEventListener('click',()=>{
   deleteEventById(ctxEvId);
 });
 document.addEventListener('keydown',e=>{
-  if(e.key==='Escape')closeCtxMenu();
+  if(e.key==='Escape'){closeCtxMenu();if(_mdsDate)closeMobileDaySheet();}
 });
 
 /* ═══════ PDF VISUAL EXPORT ═══════ */
@@ -4350,8 +4352,9 @@ function openMobileDaySheet(dateStr){
   const evMap=buildEvMap(dateStr,dateStr);
   const evs=evMap[dateStr]||[];
   const body=document.getElementById('mdsBody');
+  const isDesktop=window.innerWidth>768;
   if(!evs.length){
-    body.innerHTML='<div class="mds-empty">Nenhum evento agendado.<br><small>Toque em "+ Evento" para adicionar.</small></div>';
+    body.innerHTML=`<div class="mds-empty">Nenhum evento agendado.<br><small>${isDesktop?'Clique em':'Toque em'} "+ Evento" para adicionar.</small></div>`;
   }else{
     body.innerHTML=evs.map(ev=>{
       const done=isDoneOn(ev,dateStr);
@@ -4366,8 +4369,13 @@ function openMobileDaySheet(dateStr){
       </div>`;
     }).join('');
     body.querySelectorAll('.mds-event').forEach(el=>{
-      el.addEventListener('click',()=>_mdsGoToDay());
-      addLongPress(el,el.dataset.id,el.dataset.date);
+      if(isDesktop){
+        el.addEventListener('click',()=>{closeMobileDaySheet();openEdit(el.dataset.id,el.dataset.date);});
+        el.addEventListener('contextmenu',e=>{e.preventDefault();e.stopPropagation();openCtxMenu(e,el.dataset.id,el.dataset.date);});
+      }else{
+        el.addEventListener('click',()=>_mdsGoToDay());
+        addLongPress(el,el.dataset.id,el.dataset.date);
+      }
     });
   }
   document.getElementById('mdsAddBtn').onclick=()=>{closeMobileDaySheet();openNew(dateStr);};
