@@ -2777,6 +2777,7 @@ function renderDayPanel(dateStr){
       if(e.target.closest('[data-notes-id]')){openNotes(e.target.closest('[data-notes-id]').dataset.notesId);return;}
       openEdit(el.dataset.id,el.dataset.date);
     });
+    el.addEventListener('contextmenu',e=>{e.preventDefault();e.stopPropagation();openCtxMenu(e,el.dataset.id,el.dataset.date);});
     addLongPress(el,el.dataset.id,el.dataset.date);
   });
   body.querySelectorAll('.dp-ev-check').forEach(c=>{
