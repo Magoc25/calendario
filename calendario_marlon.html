@@ -4496,7 +4496,7 @@ function _rvStreak(routineId){
   const today=todayDs();let streak=0,skippedToday=false;
   for(let i=0;i<366;i++){
     const d=new Date();d.setDate(d.getDate()-i);
-    const ds=d.toISOString().slice(0,10);
+    const ds=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
     const checks=getRoutineChecks(ds);
     if(routineId){
       const r=routines.find(x=>x.id===routineId);if(!r)break;
@@ -4518,7 +4518,7 @@ function _rvBestStreak(routineId){
   let best=0,cur=0;
   for(let i=365;i>=0;i--){
     const d=new Date();d.setDate(d.getDate()-i);
-    const ds=d.toISOString().slice(0,10);
+    const ds=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
     const checks=getRoutineChecks(ds);
     if(routineId){
       const r=routines.find(x=>x.id===routineId);if(!r)continue;
@@ -4535,7 +4535,7 @@ function _rvPct(routineId,days){
   let due=0,done=0;
   for(let i=0;i<days;i++){
     const d=new Date();d.setDate(d.getDate()-i);
-    const ds=d.toISOString().slice(0,10);
+    const ds=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
     const checks=getRoutineChecks(ds);
     if(routineId){
       const r=routines.find(x=>x.id===routineId);if(!r)continue;
@@ -4552,7 +4552,7 @@ function _rvHeatmapDays(routineId){
   const N=91,res=[],today=new Date();
   for(let i=N-1;i>=0;i--){
     const d=new Date(today);d.setDate(d.getDate()-i);
-    const ds=d.toISOString().slice(0,10);
+    const ds=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
     const checks=getRoutineChecks(ds);
     if(routineId){
       const r=routines.find(x=>x.id===routineId);
