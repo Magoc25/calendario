@@ -4819,11 +4819,6 @@ function renderToday(){
   // Quick tasks
   const qtasks=getTodayTasks();
 
-  // Yesterday's intention for today
-  const yest=new Date();yest.setDate(yest.getDate()-1);
-  const yestKey=`${yest.getFullYear()}-${String(yest.getMonth()+1).padStart(2,'0')}-${String(yest.getDate()).padStart(2,'0')}`;
-  const intentionToday=(reviews[yestKey]?.tomorrow||'').trim();
-
   // Progress
   const totalItems=todayRouts.length+qtasks.length+todayEvs.length;
   const doneItems=checks.length+qtasks.filter(x=>x.done).length+todayEvs.filter(ev=>isDoneOn(ev,td)).length;
@@ -4843,8 +4838,6 @@ function renderToday(){
       </div>
       <div class="tv-greeting">${greeting}! 👋</div>
     </div>
-
-    ${intentionToday?`<div class="tv-intention"><div class="tv-intention-label">💡 Intenção para hoje</div><div class="tv-intention-text">${intentionToday.replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>')}</div></div>`:''}
 
     <!-- Top 3 DROP ZONES -->
     <div class="tv-panel">
