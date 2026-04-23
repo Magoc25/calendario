@@ -5191,8 +5191,12 @@ function renderReviewView(){
     <div class="rew-side">
       ${(()=>{const s=_rewStreak();return`<div class="rew-streak-card"><div class="rew-streak-num">🔥 ${s}</div><div class="rew-streak-label">dia${s!==1?'s':''} consecutivo${s!==1?'s':''} de revisão</div></div>`;})()}
       <div class="rew-metric-card">
-        <div class="rew-metric-num">${pct}%</div>
-        <div class="rew-metric-label">Taxa de conclusão de eventos</div>
+        <div style="display:flex;align-items:baseline;justify-content:center;gap:8px">
+          <div class="rew-metric-num">${dayEvs.length}</div>
+          <div class="rew-metric-num" style="font-size:16px;color:var(--muted)">·</div>
+          <div class="rew-metric-num">${pct}%</div>
+        </div>
+        <div class="rew-metric-label">evento${dayEvs.length!==1?'s':''} agendado${dayEvs.length!==1?'s':''} · taxa de conclusão</div>
         <div class="rew-progress-bar"><div class="rew-progress-fill" style="width:${pct}%"></div></div>
       </div>
       <div class="rew-metric-card">
@@ -5204,10 +5208,6 @@ function renderReviewView(){
       <div class="rew-metric-card">
         <div class="rew-metric-num">${qtDone}/${qtasks.length}</div>
         <div class="rew-metric-label">Tarefas do dia</div>
-      </div>
-      <div class="rew-metric-card">
-        <div class="rew-metric-num">${dayEvs.length}</div>
-        <div class="rew-metric-label">Eventos agendados</div>
       </div>
 
       <div class="rew-mood-section">
