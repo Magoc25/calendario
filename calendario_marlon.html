@@ -2444,11 +2444,12 @@ const DOM={
 
 // Cache de buildEvMap — invalidado a cada save() para evitar recomputação desnecessária
 let _evMapCache={};
-const invalidateEvMapCache=()=>{_evMapCache={};};
+let _allTagsCache=null;
+const invalidateEvMapCache=()=>{_evMapCache={};_allTagsCache=null;};
 const save=()=>{invalidateEvMapCache();localStorage.setItem('cal_marlon_v8',JSON.stringify(events));localStorage.setItem('cal_local_ts',new Date().toISOString());if(sbClient){clearTimeout(_cloudSaveTimer);_cloudSaveTimer=setTimeout(()=>syncToCloud(true),1500);}};
 let _gcalDragSyncTimer=null;
 function gcalSyncAfterDrag(){clearTimeout(_gcalDragSyncTimer);_gcalDragSyncTimer=setTimeout(()=>{if(typeof gcalIsConnected==='function'&&gcalIsConnected())gcalSync(false).catch(()=>{});},3000);}
-const saveCatColors=()=>{localStorage.setItem('cal_catcolors',JSON.stringify(categoryColors));localStorage.setItem('cal_local_ts',new Date().toISOString());if(sbClient){clearTimeout(_cloudSaveTimer2);_cloudSaveTimer2=setTimeout(()=>syncToCloud(true),1500);}};
+const saveCatColors=()=>{localStorage.setItem('cal_catcolors',JSON.stringify(categoryColors));localStorage.setItem('cal_local_ts',new Date().toISOString());if(sbClient){clearTimeout(_cloudSaveTimerColors);_cloudSaveTimerColors=setTimeout(()=>syncToCloud(true),1500);}};
 const todayDs=()=>{const t=new Date();return ds(t.getFullYear(),t.getMonth(),t.getDate())};
 const toast=msg=>{const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2400)};
 let _toastUndoTimer=null;
@@ -2536,7 +2537,7 @@ function countdownDays(dateStr){
 }
 
 /* ═══════ TAG SYSTEM ═══════ */
-function getAllTags(){const s=new Set();events.forEach(ev=>(ev.tags||[]).forEach(t=>s.add(t)));return [...s].sort();}
+function getAllTags(){if(_allTagsCache)return _allTagsCache;const s=new Set();events.forEach(ev=>(ev.tags||[]).forEach(t=>s.add(t)));_allTagsCache=[...s].sort();return _allTagsCache;}
 function updateTagBar(){
   const tags=getAllTags();
   if(!tags.length){DOM.tagBar.style.display='none';return;}
@@ -3726,9 +3727,28 @@ function gcalMarkDeleted(gcalId){
     const ids=gcalGetDeletedIds();
     ids.add(gcalId);
     localStorage.setItem(GCAL_DELETED_IDS_KEY,JSON.stringify([...ids]));
+    // Registra timestamp para limpeza automática após 30 dias
+    const ts=JSON.parse(localStorage.getItem('cal_gcal_deleted_ts')||'{}');
+    ts[gcalId]=Date.now();
+    localStorage.setItem('cal_gcal_deleted_ts',JSON.stringify(ts));
     // Também na fila para apagar no Google
     const q=JSON.parse(localStorage.getItem(GCAL_DELETE_QUEUE_KEY)||'[]');
     if(!q.includes(gcalId)){q.push(gcalId);localStorage.setItem(GCAL_DELETE_QUEUE_KEY,JSON.stringify(q));}
+  }catch(e){}
+}
+
+// Remove IDs de deleção com mais de 30 dias (evento já processado pelo sync)
+function gcalPurgeOldDeletedIds(){
+  try{
+    const ts=JSON.parse(localStorage.getItem('cal_gcal_deleted_ts')||'{}');
+    const cutoff=Date.now()-30*24*60*60*1000;
+    const expired=Object.keys(ts).filter(id=>ts[id]<cutoff);
+    if(!expired.length)return;
+    expired.forEach(id=>delete ts[id]);
+    localStorage.setItem('cal_gcal_deleted_ts',JSON.stringify(ts));
+    const ids=gcalGetDeletedIds();
+    expired.forEach(id=>ids.delete(id));
+    localStorage.setItem(GCAL_DELETED_IDS_KEY,JSON.stringify([...ids]));
   }catch(e){}
 }
 
@@ -5850,7 +5870,7 @@ async function syncFromCloud(silent=false){
 
 // Patch save() to also push to cloud (debounced)
 let _cloudSaveTimer=null;
-let _cloudSaveTimer2=null;
+let _cloudSaveTimerColors=null;
 const _localSave=()=>localStorage.setItem('cal_marlon_v8',JSON.stringify(events));
 function _scheduleSbSync(){
   if(sbClient){clearTimeout(_cloudSaveTimer);_cloudSaveTimer=setTimeout(()=>syncToCloud(true),1500);}
@@ -6144,6 +6164,7 @@ async function gcalSync(pullOnly=false){
     try{ await gcalSilentRefresh(); }
     catch(e){ toast('Conecte ao Google primeiro.'); return; }
   }
+  gcalPurgeOldDeletedIds();
   ensureGcalCalendar();
   await gcalProcessDeleteQueue();
   const calId=document.getElementById('gcalCalendarSelect')?.value||localStorage.getItem(GCAL_CAL_KEY)||'primary';

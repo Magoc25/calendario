@@ -6,7 +6,7 @@
    3. Periodic Background Sync (Android Chrome)
 ═══════════════════════════════════════════════════════ */
 
-const CACHE_NAME = 'cal-mgc-v54';
+const CACHE_NAME = 'cal-mgc-v55';
 const DB_NAME = 'cal-mgc-sw';
 const DB_VERSION = 1;
 const STORE_ALERTS = 'pending_alerts';
@@ -15,6 +15,10 @@ const STORE_FIRED  = 'fired_alerts';
 // Ícones de categoria — populados pelo app via postMessage (STORE_ALERTS)
 // Fallback hardcoded caso o SW dispare antes do app enviar os ícones
 let catIcons = { 'Aula':'📚','Reunião':'👥','Rotina':'🔄','Pessoal':'👤','CPA':'📋' };
+
+// Throttle para checkAndFireAlerts via fetch (evita checar a cada request)
+let _lastFetchCheck = 0;
+const FETCH_CHECK_INTERVAL = 30000; // 30s
 
 // ── Install: skip waiting immediately ──────────────────
 self.addEventListener('install', event => {
@@ -32,8 +36,12 @@ self.addEventListener('activate', event => {
 
 // ── Fetch: serve from cache when offline + check alerts ──
 self.addEventListener('fetch', event => {
-  // Every fetch wakes the SW — use it to check pending alerts
-  checkAndFireAlerts('fetch').catch(()=>{});
+  // Every fetch wakes the SW — throttle alert check to once per 30s
+  const now = Date.now();
+  if (now - _lastFetchCheck >= FETCH_CHECK_INTERVAL) {
+    _lastFetchCheck = now;
+    checkAndFireAlerts('fetch').catch(()=>{});
+  }
 
   // Only cache same-origin GET requests
   if (event.request.method !== 'GET') return;
