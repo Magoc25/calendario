@@ -2337,7 +2337,7 @@ let editingCalId=null,selectedCalColor='#3b5bdb';
 try{
   const stored=JSON.parse(localStorage.getItem('cal_calendars')||'null');
   if(stored&&stored.length)calendars=stored;
-}catch(e){}
+}catch(e){console.error('[MGC] Falha ao carregar calendários:',e);}
 function saveCalendars(){localStorage.setItem('cal_calendars',JSON.stringify(calendars));localStorage.setItem('cal_local_ts',new Date().toISOString());if(sbClient){clearTimeout(_cloudSaveTimer);_cloudSaveTimer=setTimeout(()=>syncToCloud(true),1500);}}
 function getCal(id){return calendars.find(c=>c.id===id)||calendars[0];}
 function getCalColor(ev){
@@ -2417,12 +2417,13 @@ document.getElementById('calDeleteBtn').addEventListener('click',()=>{
   render();toast('Calendário excluído.');
 });
 
-try{events=JSON.parse(localStorage.getItem('cal_marlon_v8')||'[]')}catch(e){}
-try{categoryColors=JSON.parse(localStorage.getItem('cal_catcolors')||'{}')}catch(e){}
+try{events=JSON.parse(localStorage.getItem('cal_marlon_v8')||'[]')}catch(e){console.error('[MGC] Falha ao carregar eventos:',e);toast('⚠️ Erro ao carregar eventos — verifique o armazenamento local.');}
+try{categoryColors=JSON.parse(localStorage.getItem('cal_catcolors')||'{}')}catch(e){console.error('[MGC] Falha ao carregar cores de categorias:',e);}
 
 const pad=n=>String(n).padStart(2,'0');
 const ds=(y,m,d)=>`${y}-${pad(m+1)}-${pad(d)}`;
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2);
+const esc=s=>String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 const save=()=>{localStorage.setItem('cal_marlon_v8',JSON.stringify(events));localStorage.setItem('cal_local_ts',new Date().toISOString());if(sbClient){clearTimeout(_cloudSaveTimer);_cloudSaveTimer=setTimeout(()=>syncToCloud(true),1500);}};
 let _gcalDragSyncTimer=null;
 function gcalSyncAfterDrag(){clearTimeout(_gcalDragSyncTimer);_gcalDragSyncTimer=setTimeout(()=>{if(typeof gcalIsConnected==='function'&&gcalIsConnected())gcalSync(false).catch(()=>{});},3000);}
@@ -2518,7 +2519,7 @@ function updateTagBar(){
   if(!tags.length){bar.style.display='none';return;}
   bar.style.display='flex';
   const chips=document.getElementById('tagChips');
-  chips.innerHTML=tags.map(t=>`<span class="tag-chip-filter${activeTagFilter===t?' active':''}" data-tag="${t}">${t}</span>`).join('');
+  chips.innerHTML=tags.map(t=>`<span class="tag-chip-filter${activeTagFilter===t?' active':''}" data-tag="${esc(t)}">${esc(t)}</span>`).join('');
   document.querySelectorAll('.tag-chip-filter').forEach(c=>{
     c.addEventListener('click',()=>{activeTagFilter=c.dataset.tag;document.querySelectorAll('.tag-chip-filter').forEach(x=>x.classList.toggle('active',x.dataset.tag===activeTagFilter));render();});
   });
@@ -2586,10 +2587,10 @@ function makePill(ev,dateStr,forWeek=false){
   if(forWeek){
     const doneClass=done?' done-pill':'';
     const titleStyle=done?'text-decoration:line-through;opacity:.6':'';
-    return `<div class="week-ev ${base}${rotina?' is-rotina':''}${doneClass}" data-id="${ev.id}" data-date="${dateStr}" style="border-left-color:${bc};background:${bc}18${done?';opacity:.55':''};display:flex;align-items:flex-start;gap:3px;overflow:hidden;padding-top:2px" title="${ev.title}${ev.start?' · '+ev.start:''}${ev.end?' – '+ev.end:''}${done?' ✓ Concluído':''}">
+    return `<div class="week-ev ${base}${rotina?' is-rotina':''}${doneClass}" data-id="${ev.id}" data-date="${dateStr}" style="border-left-color:${bc};background:${bc}18${done?';opacity:.55':''};display:flex;align-items:flex-start;gap:3px;overflow:hidden;padding-top:2px" title="${esc(ev.title)}${ev.start?' · '+ev.start:''}${ev.end?' – '+ev.end:''}${done?' ✓ Concluído':''}">
       <span class="ev-check${done?' checked':''}" data-check-id="${ev.id}" data-check-date="${dateStr}" style="width:9px;height:9px;flex-shrink:0;border-radius:2px;border:1.5px solid ${bc};display:inline-flex;align-items:center;justify-content:center;font-size:6px;cursor:pointer;background:${done?bc:'transparent'};color:#fff"></span>
       <span class="week-ev-time" style="${done?'opacity:.5':''}">${ev.start||''}</span>
-      <span class="week-ev-title" style="${titleStyle}">${icon?icon+' ':''}${ev.title}${recurIcon}</span>
+      <span class="week-ev-title" style="${titleStyle}">${icon?icon+' ':''}${esc(ev.title)}${recurIcon}</span>
       <div class="week-ev-resize" data-resize-id="${ev.id}" data-resize-date="${dateStr}" style="position:absolute;bottom:0;left:0;right:0;height:6px"></div>
     </div>`;
   }
@@ -2603,10 +2604,10 @@ function makePill(ev,dateStr,forWeek=false){
   }
   const timeStr=ev.start?`<span class="ev-time">${ev.start}</span>`:'';
   const noteIcon=hasNotes(ev.id)?`<span style="font-size:8px;flex-shrink:0" title="Tem notas">📝</span>`:'';
-  return `<div class="ev-pill ${base}${done?' done-pill':''}${rotina?' is-rotina':''}${mdClass}" data-id="${ev.id}" data-date="${dateStr}" style="border-left-color:${bc};--pill-ev-color:${bc}" draggable="true" title="${ev.title}${ev.category?' ['+ev.category+']':''}${hasNotes(ev.id)?' · tem notas':''}">
+  return `<div class="ev-pill ${base}${done?' done-pill':''}${rotina?' is-rotina':''}${mdClass}" data-id="${ev.id}" data-date="${dateStr}" style="border-left-color:${bc};--pill-ev-color:${bc}" draggable="true" title="${esc(ev.title)}${ev.category?' ['+esc(ev.category)+']':''}${hasNotes(ev.id)?' · tem notas':''}">
     <span class="ev-check${done?' checked':''}" data-check-id="${ev.id}" data-check-date="${dateStr}"></span>
     ${timeStr}${icon?`<span class="ev-cat-icon">${icon}</span>`:''}
-    <span class="ev-title-text">${ev.title}${recurIcon}</span>
+    <span class="ev-title-text">${esc(ev.title)}${recurIcon}</span>
     ${noteIcon}${cdLabel}
   </div>`;
 }
@@ -2772,9 +2773,9 @@ function renderDayPanel(dateStr){
             <span class="dp-ev-check${done?' checked':''}" data-check-id="${ev.id}" data-check-date="${dateStr}">${done?'✓':''}</span>
           </div>
         </div>
-        <div class="dp-ev-title">${ev.title}</div>
-        ${ev.category?`<div class="dp-ev-cat">${ev.category}${ev.rrule?' · recorrente':''}</div>`:''}
-        ${ev.location?`<div class="dp-ev-loc">📍 ${ev.location}</div>`:''}
+        <div class="dp-ev-title">${esc(ev.title)}</div>
+        ${ev.category?`<div class="dp-ev-cat">${esc(ev.category)}${ev.rrule?' · recorrente':''}</div>`:''}
+        ${ev.location?`<div class="dp-ev-loc">📍 ${esc(ev.location)}</div>`:''}
         ${tagsHtml}
       </div>`;
     });
@@ -3045,10 +3046,10 @@ function renderUpcoming(){
       html+=`<div class="upcoming-ev${done?' done-upcoming':''}" data-id="${ev.id}" data-date="${dStr}" style="border-left-color:${bc}">
         <div class="up-time-col"><div class="up-time">${ev.start||'—'}</div><div class="up-end">${ev.end||''}</div></div>
         <div class="up-body">
-          <div class="up-title">${CAT_ICONS[ev.category]||''} ${ev.title}${ev.rrule?' ↻':''}</div>
+          <div class="up-title">${CAT_ICONS[ev.category]||''} ${esc(ev.title)}${ev.rrule?' ↻':''}</div>
           <div class="up-meta">
-            ${ev.category?`<span>${ev.category}</span>`:''}
-            ${ev.location?`<span>📍 ${ev.location}</span>`:''}
+            ${ev.category?`<span>${esc(ev.category)}</span>`:''}
+            ${ev.location?`<span>📍 ${esc(ev.location)}</span>`:''}
             ${tags}
           </div>
         </div>
@@ -3101,7 +3102,7 @@ function renderTodayPreview(){
   const preview=document.getElementById('todayPreview');
   const d=new Date();
   preview.innerHTML=`<h5>${d.getDate()} de ${MONTHS[d.getMonth()]}</h5>${evs.length?
-    evs.map(ev=>`<div class="tp-ev"><span class="tp-dot" style="background:${ev.color||'#3b5bdb'}"></span><span class="tp-time">${ev.start||'—'}</span><span class="tp-name">${ev.title}</span></div>`).join(''):
+    evs.map(ev=>`<div class="tp-ev"><span class="tp-dot" style="background:${ev.color||'#3b5bdb'}"></span><span class="tp-time">${ev.start||'—'}</span><span class="tp-name">${esc(ev.title)}</span></div>`).join(''):
     '<div class="tp-empty">Sem eventos hoje</div>'}`;
 }
 
@@ -3328,17 +3329,17 @@ function showNotifCard(ev,dateStr,alertMin){
   const c=document.getElementById('notifContainer');
   const card=document.createElement('div');
   card.className='notif-card';card.style.borderLeftColor=ev.color||'var(--accent)';
-  const tl=ev.start?`às ${ev.start}`:'',cat=ev.category?` · ${ev.category}`:'';
+  const tl=ev.start?`às ${ev.start}`:'',cat=ev.category?` · ${esc(ev.category)}`:'';
   card.innerHTML=`
     <div class="notif-header">
       <span class="notif-icon">${CAT_ICONS[ev.category]||'🔔'}</span>
       <div class="notif-info">
-        <div class="notif-title">${ev.title}</div>
+        <div class="notif-title">${esc(ev.title)}</div>
         <div class="notif-meta">${tl}${cat}</div>
       </div>
       <button class="notif-dismiss">✕</button>
     </div>
-    ${ev.location?`<div class="notif-loc">📍 ${ev.location}</div>`:''}
+    ${ev.location?`<div class="notif-loc">📍 ${esc(ev.location)}</div>`:''}
     <div class="notif-snooze">
       <button class="snooze-btn" data-s="30">+30 min</button>
       <button class="snooze-btn" data-s="60">+1 h</button>
@@ -3463,7 +3464,7 @@ document.getElementById('searchInput').addEventListener('input',function(){
   if(!q){res.classList.remove('open');return;}
   const matches=events.filter(ev=>ev.title.toLowerCase().includes(q)||(ev.category||'').toLowerCase().includes(q)||(ev.location||'').toLowerCase().includes(q)||(ev.tags||[]).some(t=>t.toLowerCase().includes(q)));
   if(!matches.length){res.innerHTML='<div class="search-item"><span style="color:var(--muted)">Nenhum resultado</span></div>';res.classList.add('open');return;}
-  res.innerHTML=matches.slice(0,8).map(e=>`<div class="search-item" data-id="${e.id}"><strong style="color:var(--text)">${CAT_ICONS[e.category]||''} ${e.title}</strong><span style="display:block;font-size:10px;color:var(--muted)">${e.date}${e.start?' '+e.start:''}${e.category?' · '+e.category:''}${(e.tags||[]).length?' · '+(e.tags||[]).join(' '):''}</span></div>`).join('');
+  res.innerHTML=matches.slice(0,8).map(e=>`<div class="search-item" data-id="${e.id}"><strong style="color:var(--text)">${CAT_ICONS[e.category]||''} ${esc(e.title)}</strong><span style="display:block;font-size:10px;color:var(--muted)">${e.date}${e.start?' '+e.start:''}${e.category?' · '+esc(e.category):''}${(e.tags||[]).length?' · '+(e.tags||[]).map(t=>esc(t)).join(' '):''}</span></div>`).join('');
   res.classList.add('open');
   res.querySelectorAll('.search-item[data-id]').forEach(item=>{
     item.addEventListener('click',()=>{const ev=events.find(e=>e.id===item.dataset.id);if(ev){cur=new Date(ev.date+'T12:00:00');render();openEdit(ev.id,ev.date);}res.classList.remove('open');document.getElementById('searchInput').value='';});
@@ -3915,7 +3916,7 @@ document.getElementById('exportIcsBtn').addEventListener('click',()=>{
 /* ═══════ NOTES SYSTEM ═══════ */
 let notesEvId=null,notesAutoSaveTimer=null;
 let notesStore={};
-try{notesStore=JSON.parse(localStorage.getItem('cal_notes')||'{}')}catch(e){}
+try{notesStore=JSON.parse(localStorage.getItem('cal_notes')||'{}')}catch(e){console.error('[MGC] Falha ao carregar notas de eventos:',e);}
 function saveNotes(){localStorage.setItem('cal_notes',JSON.stringify(notesStore));localStorage.setItem('cal_local_ts',new Date().toISOString());if(sbClient){clearTimeout(_cloudSaveTimer);_cloudSaveTimer=setTimeout(()=>syncToCloud(true),1500);}}
 
 function openNotes(evId){
@@ -4467,7 +4468,7 @@ document.getElementById('sidebarOverlay').addEventListener('click',()=>{
 
 /* ═══════ ROUTINES SYSTEM ═══════ */
 let routines=[];
-try{routines=JSON.parse(localStorage.getItem('cal_routines')||'[]');}catch(e){}
+try{routines=JSON.parse(localStorage.getItem('cal_routines')||'[]');}catch(e){console.error('[MGC] Falha ao carregar rotinas:',e);toast('⚠️ Erro ao carregar rotinas — verifique o armazenamento local.');}
 function saveRoutines(){
   localStorage.setItem('cal_routines',JSON.stringify(routines));
   localStorage.setItem('cal_local_ts',new Date().toISOString());
@@ -4780,7 +4781,7 @@ function openRvForm(id,keepOpen=false){
 
 /* ═══════ QUICK TASKS (today's tasks - lightweight) ═══════ */
 let quickTasks=[];
-try{quickTasks=JSON.parse(localStorage.getItem('cal_qtasks')||'[]');}catch(e){}
+try{quickTasks=JSON.parse(localStorage.getItem('cal_qtasks')||'[]');}catch(e){console.error('[MGC] Falha ao carregar tarefas:',e);}
 function saveQuickTasks(){
   localStorage.setItem('cal_qtasks',JSON.stringify(quickTasks));
   localStorage.setItem('cal_local_ts',new Date().toISOString());
@@ -4800,7 +4801,7 @@ function addQuickTask(title){
 
 /* ═══════ TOP 3 FOCUS ═══════ */
 let top3Data={};
-try{top3Data=JSON.parse(localStorage.getItem('cal_top3')||'{}');}catch(e){}
+try{top3Data=JSON.parse(localStorage.getItem('cal_top3')||'{}');}catch(e){console.error('[MGC] Falha ao carregar Top 3:',e);}
 function saveTop3(){localStorage.setItem('cal_top3',JSON.stringify(top3Data));localStorage.setItem('cal_local_ts',new Date().toISOString());if(sbClient){clearTimeout(_cloudSaveTimer);_cloudSaveTimer=setTimeout(()=>syncToCloud(true),1500);}}
 function getTop3(){return top3Data[todayDs()]||[{text:'',done:false},{text:'',done:false},{text:'',done:false}];}
 
@@ -4894,15 +4895,15 @@ function renderToday(){
       ${todayEvs.length===0?'<div style="font-size:11px;color:var(--muted);padding:4px 0 6px">Nenhum evento agendado.</div>':
         todayEvs.map(ev=>{const evDone=isDoneOn(ev,td);return`
           <div class="tv-ev-item tv-draggable${evDone?' done':''}" draggable="true"
-               data-drag-type="event" data-drag-text="${ev.title.replace(/"/g,'&quot;')}"
+               data-drag-type="event" data-drag-text="${esc(ev.title)}"
                data-drag-id="${ev.id}" data-drag-color="${getCalColor(ev)}">
             <span class="tv-drag-handle">⠿</span>
             <div class="tv-ev-check${evDone?' done':''}" data-evcheck="${ev.id}" data-evdate="${td}">${evDone?'✓':''}</div>
             <div class="tv-ev-time">${ev.start||'—'}</div>
             <div class="tv-ev-dot" style="background:${getCalColor(ev)}"></div>
             <div class="tv-ev-body">
-              <div class="tv-ev-title">${ev.title}</div>
-              <div class="tv-ev-cat">${ev.category||''}${ev.location?' · 📍'+ev.location:''}</div>
+              <div class="tv-ev-title">${esc(ev.title)}</div>
+              <div class="tv-ev-cat">${esc(ev.category||'')}${ev.location?' · 📍'+esc(ev.location):''}</div>
             </div>
           </div>`}).join('')}
       <button class="qt-add-btn" style="margin-top:8px;font-size:10px" onclick="openNew('${td}')">+ Novo evento hoje</button>
@@ -4915,7 +4916,7 @@ function renderToday(){
       ${todayRouts.length===0?`<div style="font-size:11px;color:var(--muted);padding:4px 0 6px">Nenhuma rotina para hoje. <a style="color:var(--accent);cursor:pointer" onclick="document.getElementById('btnRoutines').click()">Criar rotinas →</a></div>`:
         todayRouts.map(r=>`
           <div class="tr-item tv-draggable" draggable="true"
-               data-drag-type="routine" data-drag-text="${r.title.replace(/"/g,'&quot;')}"
+               data-drag-type="routine" data-drag-text="${esc(r.title)}"
                data-drag-id="${r.id}" data-drag-color="${r.color||'var(--accent)'}">
             <span class="tv-drag-handle">⠿</span>
             <div class="tr-check${checks.includes(r.id)?' done':''}" data-rcheck="${r.id}"
@@ -4938,7 +4939,7 @@ function renderToday(){
         ${qtasks.length===0?'<div style="font-size:11px;color:var(--muted);margin-bottom:6px">Nenhuma tarefa ainda.</div>':
           qtasks.map(t=>`
             <div class="qt-item tv-draggable" draggable="true"
-                 data-drag-type="task" data-drag-text="${t.title.replace(/"/g,'&quot;')}"
+                 data-drag-type="task" data-drag-text="${esc(t.title)}"
                  data-drag-id="${t.id}" data-drag-color="var(--accent)">
               <span class="tv-drag-handle">⠿</span>
               <div class="qt-check${t.done?' done':''}" data-qtcheck="${t.id}">${t.done?'✓':''}</div>
@@ -5099,7 +5100,7 @@ function renderToday(){
 
 /* ═══════ REVIEW VIEW ═══════ */
 let reviews={};
-try{reviews=JSON.parse(localStorage.getItem('cal_reviews')||'{}');}catch(e){}
+try{reviews=JSON.parse(localStorage.getItem('cal_reviews')||'{}');}catch(e){console.error('[MGC] Falha ao carregar revisões:',e);}
 function saveReviews(){
   localStorage.setItem('cal_reviews',JSON.stringify(reviews));
   localStorage.setItem('cal_local_ts',new Date().toISOString());
@@ -5284,7 +5285,7 @@ function renderReviewView(){
 /* ═══════ STANDALONE NOTES ═══════ */
 let _noteDragId=null,_noteDragGhost=null,_noteDragTimer=null,_noteDragTarget=null,_noteTouchX=0,_noteTouchY=0;
 let standaloneNotes=[];
-try{standaloneNotes=JSON.parse(localStorage.getItem('cal_standalone_notes')||'[]');}catch(e){}
+try{standaloneNotes=JSON.parse(localStorage.getItem('cal_standalone_notes')||'[]');}catch(e){console.error('[MGC] Falha ao carregar notas:',e);toast('⚠️ Erro ao carregar notas — verifique o armazenamento local.');}
 
 function saveStandaloneNotes(){
   localStorage.setItem('cal_standalone_notes',JSON.stringify(standaloneNotes));
@@ -5910,9 +5911,9 @@ const GCAL_API='https://www.googleapis.com/calendar/v3';
 
 let gcalToken=null,gcalTokenExpiry=0,gcalTokenClient=null;
 
-// Restore token from localStorage if still valid
+// Restore token from sessionStorage if still valid (não persiste após fechar o browser)
 try{
-  const stored=JSON.parse(localStorage.getItem(GCAL_TOKEN_KEY)||'null');
+  const stored=JSON.parse(sessionStorage.getItem(GCAL_TOKEN_KEY)||'null');
   if(stored&&stored.expiry>Date.now()){gcalToken=stored.access_token;gcalTokenExpiry=stored.expiry;}
 }catch(e){}
 
@@ -5974,7 +5975,7 @@ async function gcalLoadCalendars(){
 function gcalHandleError(err){
   if(err&&(err.code===401||err.status==='UNAUTHENTICATED')){
     gcalToken=null;gcalTokenExpiry=0;
-    localStorage.removeItem(GCAL_TOKEN_KEY);
+    sessionStorage.removeItem(GCAL_TOKEN_KEY);
     updateGcalBtn();
     // Try silent refresh before asking user to reconnect
     gcalSilentRefresh().catch(()=>{
@@ -6000,7 +6001,7 @@ function gcalSilentRefresh(){
       if(resp.error){reject(resp.error);return;}
       gcalToken=resp.access_token;
       gcalTokenExpiry=Date.now()+(resp.expires_in-60)*1000;
-      localStorage.setItem(GCAL_TOKEN_KEY,JSON.stringify({access_token:gcalToken,expiry:gcalTokenExpiry}));
+      sessionStorage.setItem(GCAL_TOKEN_KEY,JSON.stringify({access_token:gcalToken,expiry:gcalTokenExpiry}));
       updateGcalBtn();
       resolve();
     };
@@ -6027,7 +6028,7 @@ function gcalInitClient(clientId){
       }
       gcalToken=resp.access_token;
       gcalTokenExpiry=Date.now()+(resp.expires_in-60)*1000;
-      localStorage.setItem(GCAL_TOKEN_KEY,JSON.stringify({access_token:gcalToken,expiry:gcalTokenExpiry}));
+      sessionStorage.setItem(GCAL_TOKEN_KEY,JSON.stringify({access_token:gcalToken,expiry:gcalTokenExpiry}));
       updateGcalBtn();
       toast('✓ Conectado ao Google Agenda!');
       gcalShowPanel();
@@ -6305,7 +6306,7 @@ document.getElementById('gcalLoginBtn').addEventListener('click',()=>{
 
 document.getElementById('gcalClearBtn').addEventListener('click',()=>{
   localStorage.removeItem(GCAL_CLIENT_ID_KEY);
-  localStorage.removeItem(GCAL_TOKEN_KEY);
+  sessionStorage.removeItem(GCAL_TOKEN_KEY);
   localStorage.removeItem(GCAL_TZ_KEY);
   localStorage.removeItem('cal_gcal_email');
   gcalToken=null;gcalTokenExpiry=0;gcalTokenClient=null;
@@ -6317,7 +6318,7 @@ document.getElementById('gcalClearBtn').addEventListener('click',()=>{
 document.getElementById('gcalDisconnectBtn').addEventListener('click',()=>{
   if(!confirm('Desconectar do Google Agenda? Os eventos já sincronizados ficam salvos localmente.'))return;
   gcalToken=null;gcalTokenExpiry=0;
-  localStorage.removeItem(GCAL_TOKEN_KEY);
+  sessionStorage.removeItem(GCAL_TOKEN_KEY);
   updateGcalBtn();
   document.getElementById('gcalOverlay').classList.remove('open');
   toast('Desconectado do Google Agenda.');
