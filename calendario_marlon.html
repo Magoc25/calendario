@@ -3933,8 +3933,8 @@ document.getElementById('importIcsFile').addEventListener('change',function(){
 /* ═══════ JSON BACKUP ═══════ */
 document.getElementById('exportJsonBtn').addEventListener('click',()=>{
   const data={version:5,theme:currentTheme,categoryColors,notes:notesStore,
-    AppState.routines,AppState.quickTasks,AppState.reviews,top3:AppState.top3Data,
-    exportedAt:new Date().toISOString(),AppState.events};
+    routines:AppState.routines,quickTasks:AppState.quickTasks,reviews:AppState.reviews,top3:AppState.top3Data,
+    exportedAt:new Date().toISOString(),events:AppState.events};
   const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
   const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`backup-calendario-${new Date().toISOString().slice(0,10)}.json`;a.click();URL.revokeObjectURL(url);
   document.getElementById('backupPopup').classList.remove('open');toast('Backup exportado!');
@@ -3944,7 +3944,7 @@ document.getElementById('importFile').addEventListener('change',function(){
   const file=this.files[0];if(!file)return;
   const reader=new FileReader();
   reader.onload=e=>{
-    try{const data=JSON.parse(e.target.result);const imp=Array.isArray(data)?data:(data.AppState.events||[]);
+    try{const data=JSON.parse(e.target.result);const imp=Array.isArray(data)?data:(data.events||[]);
       if(!imp.length){toast('Arquivo vazio ou inválido.');return;}
       if(confirm(`Importar ${imp.length} evento(s)? Os dados atuais serão substituídos.`)){
         AppState.events=imp;if(data.categoryColors)categoryColors=data.categoryColors;
