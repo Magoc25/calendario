@@ -671,7 +671,7 @@ body.comfortable .upcoming-ev{padding:10px 13px;margin-bottom:7px}
 .qt-add-input:focus{border-color:var(--accent)}
 .qt-add-btn{background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);padding:4px 10px;font-size:11px;cursor:pointer;font-weight:600}
 
-/* Today events list */
+/* Today AppState.events list */
 .tv-ev-item{display:flex;align-items:flex-start;gap:8px;padding:7px 0;border-bottom:1px solid var(--border)}
 .tv-ev-item:last-child{border-bottom:none}
 .tv-ev-item.done{opacity:.5}
@@ -684,7 +684,7 @@ body.comfortable .upcoming-ev{padding:10px 13px;margin-bottom:7px}
 .tv-ev-title{font-size:11px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .tv-ev-cat{font-size:10px;color:var(--muted)}
 
-/* Today routines */
+/* Today AppState.routines */
 .tr-item{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)}
 .tr-item:last-child{border-bottom:none}
 .tr-check{width:18px;height:18px;border-radius:50%;border:2px solid var(--border);cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:9px;transition:all .2s}
@@ -1511,7 +1511,7 @@ body.comfortable .upcoming-ev{padding:10px 13px;margin-bottom:7px}
   .day{min-height:58px;}
   .day-num{font-size:11px;}
 
-  /* ── Day panel: bigger touch targets for events ── */
+  /* ── Day panel: bigger touch targets for AppState.events ── */
   .dp-ev{padding:10px 10px 10px 12px;margin-bottom:7px;}
   .dp-ev-title{font-size:13px;}
   .dp-ev-check{width:22px;height:22px;font-size:13px;}
@@ -2312,17 +2312,25 @@ const RRULE_CLS={DAILY:'ev-daily',WEEKLY:'ev-weekly',BIWEEKLY:'ev-biweekly',MONT
 const RRULE_FREQ={DAILY:'DAILY',WEEKLY:'WEEKLY',BIWEEKLY:'WEEKLY',MONTHLY:'MONTHLY',YEARLY:'YEARLY'};
 const CAT_ICONS={'Aula':'📚','Reunião':'👥','CPA':'📋','NAPNE':'♿','Pesquisa':'🔬','Extensão':'🌱','TCC':'🎓','Viagem':'✈️','Saúde':'🏥','Rotina':'🔄','Pessoal':'👤'};
 
-// ─── Estado de UI ────────────────────────────────────
+// ─── Estado de UI + Dados persistidos ────────────────
 const AppState={
+  // UI state
   cur:new Date(),
   sidebarYear:new Date().getFullYear(),
   selectedDay:null,
   viewMode:'today',
   navDir:1,
   lastNavDir:1,
+  // Dados persistidos (carregados do localStorage no boot)
+  events:[],
+  routines:[],
+  quickTasks:[],
+  top3Data:{},
+  reviews:{},
+  standaloneNotes:[],
 };
 // ─────────────────────────────────────────────────────
-let events=[],editingId=null,editingDate=null,selectedColor='#3b5bdb',isDone=false;
+let editingId=null,editingDate=null,selectedColor='#3b5bdb',isDone=false;
 let selectedCustomDays=new Set(),currentTags=[],activeTagFilter='';
 let categoryColors={};
 
@@ -2418,14 +2426,14 @@ document.getElementById('calSaveBtn').addEventListener('click',()=>{
 document.getElementById('calDeleteBtn').addEventListener('click',()=>{
   if(!editingCalId||editingCalId==='default')return;
   if(!confirm('Excluir este calendário? Os eventos serão movidos para Geral.'))return;
-  events.forEach(ev=>{if(ev.calendarId===editingCalId)ev.calendarId='default';});
+  AppState.events.forEach(ev=>{if(ev.calendarId===editingCalId)ev.calendarId='default';});
   calendars=calendars.filter(c=>c.id!==editingCalId);
   save();saveCalendars();renderCalendarList();populateCalendarSelect();
   document.getElementById('calOverlay').classList.remove('open');
   render();toast('Calendário excluído.');
 });
 
-try{events=JSON.parse(localStorage.getItem('cal_marlon_v8')||'[]')}catch(e){console.error('[MGC] Falha ao carregar eventos:',e);toast('⚠️ Erro ao carregar eventos — verifique o armazenamento local.');}
+try{AppState.events=JSON.parse(localStorage.getItem('cal_marlon_v8')||'[]')}catch(e){console.error('[MGC] Falha ao carregar eventos:',e);toast('⚠️ Erro ao carregar eventos — verifique o armazenamento local.');}
 try{categoryColors=JSON.parse(localStorage.getItem('cal_catcolors')||'{}')}catch(e){console.error('[MGC] Falha ao carregar cores de categorias:',e);}
 
 const pad=n=>String(n).padStart(2,'0');
@@ -2454,7 +2462,7 @@ const DOM={
 let _evMapCache={};
 let _allTagsCache=null;
 const invalidateEvMapCache=()=>{_evMapCache={};_allTagsCache=null;};
-const save=()=>{invalidateEvMapCache();localStorage.setItem('cal_marlon_v8',JSON.stringify(events));localStorage.setItem('cal_local_ts',new Date().toISOString());if(sbClient){clearTimeout(_cloudSaveTimer);_cloudSaveTimer=setTimeout(()=>syncToCloud(true),1500);}};
+const save=()=>{invalidateEvMapCache();localStorage.setItem('cal_marlon_v8',JSON.stringify(AppState.events));localStorage.setItem('cal_local_ts',new Date().toISOString());if(sbClient){clearTimeout(_cloudSaveTimer);_cloudSaveTimer=setTimeout(()=>syncToCloud(true),1500);}};
 let _gcalDragSyncTimer=null;
 function gcalSyncAfterDrag(){clearTimeout(_gcalDragSyncTimer);_gcalDragSyncTimer=setTimeout(()=>{if(typeof gcalIsConnected==='function'&&gcalIsConnected())gcalSync(false).catch(()=>{});},3000);}
 const saveCatColors=()=>{localStorage.setItem('cal_catcolors',JSON.stringify(categoryColors));localStorage.setItem('cal_local_ts',new Date().toISOString());if(sbClient){clearTimeout(_cloudSaveTimerColors);_cloudSaveTimerColors=setTimeout(()=>syncToCloud(true),1500);}};
@@ -2508,7 +2516,7 @@ function getOccurrences(ev,rs,re){
 
 function filterEvents(){
   const vis=visibleCalIds();
-  let evs=events.filter(ev=>vis.has(ev.calendarId||'default'));
+  let evs=AppState.events.filter(ev=>vis.has(ev.calendarId||'default'));
   if(activeTagFilter)evs=evs.filter(ev=>(ev.tags||[]).includes(activeTagFilter));
   return evs;
 }
@@ -2529,7 +2537,7 @@ function buildEvMap(rs,re){
 
 function isDoneOn(ev,date){return !ev.rrule?!!ev.done:(ev.doneInstances||[]).includes(date);}
 function toggleDone(evId,date){
-  const ev=events.find(e=>e.id===evId);if(!ev)return;
+  const ev=AppState.events.find(e=>e.id===evId);if(!ev)return;
   if(!ev.rrule){ev.done=!ev.done;toast(ev.done?'Concluído ✓':'Pendente');}
   else{if(!ev.doneInstances)ev.doneInstances=[];const i=ev.doneInstances.indexOf(date);if(i>-1){ev.doneInstances.splice(i,1);toast('Pendente');}else{ev.doneInstances.push(date);toast('Concluído ✓');}}
   save();render();if(AppState.selectedDay)renderDayPanel(AppState.selectedDay);
@@ -2545,7 +2553,7 @@ function countdownDays(dateStr){
 }
 
 /* ═══════ TAG SYSTEM ═══════ */
-function getAllTags(){if(_allTagsCache)return _allTagsCache;const s=new Set();events.forEach(ev=>(ev.tags||[]).forEach(t=>s.add(t)));_allTagsCache=[...s].sort();return _allTagsCache;}
+function getAllTags(){if(_allTagsCache)return _allTagsCache;const s=new Set();AppState.events.forEach(ev=>(ev.tags||[]).forEach(t=>s.add(t)));_allTagsCache=[...s].sort();return _allTagsCache;}
 function updateTagBar(){
   const tags=getAllTags();
   if(!tags.length){DOM.tagBar.style.display='none';return;}
@@ -2563,7 +2571,7 @@ function detectConflicts(newEv){
   const [nh,nm]=newEv.start.split(':').map(Number);
   const [neh,nem]=newEv.end.split(':').map(Number);
   const ns=nh*60+nm,ne=neh*60+nem;
-  events.filter(ev=>ev.id!==newEv.id).forEach(ev=>{
+  AppState.events.filter(ev=>ev.id!==newEv.id).forEach(ev=>{
     if(!ev.start||!ev.end)return;
     const occs=getOccurrences(ev,newEv.date,newEv.dateEnd||newEv.date);
     if(!occs.includes(newEv.date))return;
@@ -2747,7 +2755,7 @@ function renderMonth(){
       _dragId=null;
       const nd=el.dataset.date;
       if(!id||!nd)return;
-      const ev=events.find(x=>x.id===id);
+      const ev=AppState.events.find(x=>x.id===id);
       if(!ev){toast('Evento não encontrado.');return;}
       if(ev.date===nd&&(!ev.dateEnd||ev.dateEnd===nd))return; // dropped on same day
       const diff=ev.dateEnd&&ev.dateEnd!==ev.date
@@ -2999,7 +3007,7 @@ function renderWeek(){
       setTimeout(()=>{document.getElementById('evStart').value=`${pad(h)}:00`;document.getElementById('evEnd').value=`${pad(h+1)}:00`;},60);
     });
   });
-  // Context menu on week events
+  // Context menu on week AppState.events
   body.querySelectorAll('.week-ev').forEach(el=>{
     el.addEventListener('contextmenu',e=>{e.preventDefault();e.stopPropagation();openCtxMenu(e,el.dataset.id,el.dataset.date);});
     addLongPress(el,el.dataset.id,el.dataset.date);
@@ -3023,7 +3031,7 @@ function renderWeek(){
         const timeEl=pill.querySelector('.week-ev-time');
         if(timeEl)timeEl.textContent=timeEl.textContent.split(' – ')[0]+' – '+newEnd;
         // Update height visually
-        const ev=events.find(x=>x.id===evId);
+        const ev=AppState.events.find(x=>x.id===evId);
         if(ev&&ev.start){const[sh,sm]=ev.start.split(':').map(Number);const newH=Math.max((h*60+m-(sh*60+sm))/60*HOUR_H,22);pill.style.height=newH+'px';}
       }
       function onUp(e){
@@ -3035,7 +3043,7 @@ function renderWeek(){
         const roundedMins=Math.round(totalMins/15)*15;
         const h=Math.floor(roundedMins/60),m=roundedMins%60;
         const newEnd=`${pad(Math.max(WEEK_START_H,Math.min(WEEK_END_H,h)))}:${pad(m)}`;
-        const ev=events.find(x=>x.id===evId);
+        const ev=AppState.events.find(x=>x.id===evId);
         if(ev){const[sh,sm]=ev.start.split(':').map(Number);if(h*60+m>sh*60+sm){ev.end=newEnd;save();render();toast('Duração atualizada!');}}
       }
       document.addEventListener('mousemove',onMove);
@@ -3169,7 +3177,7 @@ function render(){
   else if(AppState.viewMode==='review')renderReviewView();
   else if(AppState.viewMode==='notes')renderNotesView();
   renderSidebar();updateProgress();renderTodayPreview();updateTagBar();
-  const n=events.length;DOM.evCount.textContent=`${n} evento${n!==1?'s':''}`;
+  const n=AppState.events.length;DOM.evCount.textContent=`${n} evento${n!==1?'s':''}`;
   syncBottomNav();
 }
 
@@ -3410,7 +3418,7 @@ function _doSchedule(){
   const tomStr=ds(tom.getFullYear(),tom.getMonth(),tom.getDate());
 
   [td,tomStr].forEach(dStr=>{
-    events.forEach(ev=>{
+    AppState.events.forEach(ev=>{
       if(ev.alert===''||ev.alert==null||!ev.start)return;
       if(!getOccurrences(ev,dStr,dStr).includes(dStr))return;
       const alertMin=parseInt(ev.alert)||0;
@@ -3443,7 +3451,7 @@ function rescheduleAlerts(){
   scheduleAlerts();
 }
 
-// Re-schedule every 5 min (catches new events added, new days, snoozed items)
+// Re-schedule every 5 min (catches new AppState.events added, new days, snoozed items)
 setInterval(scheduleAlerts,300000);
 // Also reschedule when tab becomes visible again (browser may have throttled timers)
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')scheduleAlerts();});
@@ -3490,12 +3498,12 @@ document.getElementById('notifBtn').addEventListener('click',async()=>{
 document.getElementById('searchInput').addEventListener('input',function(){
   const q=this.value.trim().toLowerCase(),res=document.getElementById('searchResults');
   if(!q){res.classList.remove('open');return;}
-  const matches=events.filter(ev=>ev.title.toLowerCase().includes(q)||(ev.category||'').toLowerCase().includes(q)||(ev.location||'').toLowerCase().includes(q)||(ev.tags||[]).some(t=>t.toLowerCase().includes(q)));
+  const matches=AppState.events.filter(ev=>ev.title.toLowerCase().includes(q)||(ev.category||'').toLowerCase().includes(q)||(ev.location||'').toLowerCase().includes(q)||(ev.tags||[]).some(t=>t.toLowerCase().includes(q)));
   if(!matches.length){res.innerHTML='<div class="search-item"><span style="color:var(--muted)">Nenhum resultado</span></div>';res.classList.add('open');return;}
   res.innerHTML=matches.slice(0,8).map(e=>`<div class="search-item" data-id="${e.id}"><strong style="color:var(--text)">${CAT_ICONS[e.category]||''} ${esc(e.title)}</strong><span style="display:block;font-size:10px;color:var(--muted)">${e.date}${e.start?' '+e.start:''}${e.category?' · '+esc(e.category):''}${(e.tags||[]).length?' · '+(e.tags||[]).map(t=>esc(t)).join(' '):''}</span></div>`).join('');
   res.classList.add('open');
   res.querySelectorAll('.search-item[data-id]').forEach(item=>{
-    item.addEventListener('click',()=>{const ev=events.find(e=>e.id===item.dataset.id);if(ev){AppState.cur=new Date(ev.date+'T12:00:00');render();openEdit(ev.id,ev.date);}res.classList.remove('open');document.getElementById('searchInput').value='';});
+    item.addEventListener('click',()=>{const ev=AppState.events.find(e=>e.id===item.dataset.id);if(ev){AppState.cur=new Date(ev.date+'T12:00:00');render();openEdit(ev.id,ev.date);}res.classList.remove('open');document.getElementById('searchInput').value='';});
   });
 });
 document.addEventListener('click',e=>{if(!e.target.closest('.search-wrap'))document.getElementById('searchResults').classList.remove('open');});
@@ -3638,7 +3646,7 @@ function openNew(date){
 }
 
 function openEdit(id,dateCtx){
-  const ev=events.find(e=>e.id===id);if(!ev)return;
+  const ev=AppState.events.find(e=>e.id===id);if(!ev)return;
   editingId=id;editingDate=dateCtx||ev.date;
   document.getElementById('modalTitle').textContent='Editar evento';
   document.getElementById('deleteBtn').style.display='';
@@ -3688,17 +3696,17 @@ document.getElementById('saveBtn').addEventListener('click',()=>{
   if(rrule){
     ev.rrule=rrule;if(until)ev.until=until;
     if(rrule==='CUSTOM'){ev.customDays=[...selectedCustomDays];ev.customInterval=parseInt(document.getElementById('customInterval').value)||1;}
-    if(editingId){const old=events.find(e=>e.id===editingId);if(old)ev.doneInstances=old.doneInstances||[];}
+    if(editingId){const old=AppState.events.find(e=>e.id===editingId);if(old)ev.doneInstances=old.doneInstances||[];}
     if(!ev.doneInstances)ev.doneInstances=[];
     if(isDone&&editingDate&&!ev.doneInstances.includes(editingDate))ev.doneInstances.push(editingDate);
     else if(!isDone&&editingDate)ev.doneInstances=(ev.doneInstances||[]).filter(d=>d!==editingDate);
   } else ev.done=isDone;
   ev.localUpdatedAt=new Date().toISOString();
   if(editingId){
-    const old=events.find(e=>e.id===editingId);
+    const old=AppState.events.find(e=>e.id===editingId);
     if(old){ev.gcalId=old.gcalId;ev.gcalUpdated=old.gcalUpdated;} // preserve gcal link
-    const i=events.findIndex(e=>e.id===editingId);if(i>-1)events[i]=ev;
-  }else events.push(ev);
+    const i=AppState.events.findIndex(e=>e.id===editingId);if(i>-1)AppState.events[i]=ev;
+  }else AppState.events.push(ev);
   save();closeModal();render();if(AppState.selectedDay)renderDayPanel(AppState.selectedDay);
   rescheduleAlerts();
   toast(editingId?'Evento atualizado!':'Evento salvo!');
@@ -3767,7 +3775,7 @@ async function gcalProcessDeleteQueue(){
     const remaining=[];
     for(const gcalId of q){
       try{
-        const res=await fetch(`${GCAL_API}/calendars/${encodeURIComponent(calId)}/events/${encodeURIComponent(gcalId)}`,{
+        const res=await fetch(`${GCAL_API}/calendars/${encodeURIComponent(calId)}/AppState.events/${encodeURIComponent(gcalId)}`,{
           method:'DELETE',
           headers:{Authorization:`Bearer ${gcalToken}`}
         });
@@ -3782,13 +3790,13 @@ async function gcalProcessDeleteQueue(){
 }
 
 function deleteEventById(id){
-  const ev=events.find(e=>e.id===id);
-  events=events.filter(e=>e.id!==id);
+  const ev=AppState.events.find(e=>e.id===id);
+  AppState.events=AppState.events.filter(e=>e.id!==id);
   save();render();if(AppState.selectedDay)renderDayPanel(AppState.selectedDay);
   if(ev?.gcalId)gcalMarkDeleted(ev.gcalId);
   toastUndo('Evento excluído.',()=>{
     if(ev){
-      events.push(ev);
+      AppState.events.push(ev);
       if(ev.gcalId)gcalUnmarkDeleted(ev.gcalId);
       save();render();if(AppState.selectedDay)renderDayPanel(AppState.selectedDay);
     }
@@ -3856,7 +3864,7 @@ document.addEventListener('click',()=>{document.getElementById('backupPopup').cl
 function buildIcs(){
   const stamp=new Date().toISOString().replace(/[-:]/g,'').split('.')[0]+'Z';
   let ics='BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Calendário Marlon//PT\r\nCALSCALE:GREGORIAN\r\nMETHOD:PUBLISH\r\n';
-  events.forEach(e=>{
+  AppState.events.forEach(e=>{
     const ds2=e.date.replace(/-/g,''),ts=(e.start||'08:00').replace(':',''),te=(e.end||'09:00').replace(':','');
     ics+=`BEGIN:VEVENT\r\nUID:${e.id}@cal-marlon\r\nDTSTAMP:${stamp}\r\nDTSTART:${ds2}T${ts}00\r\nDTEND:${ds2}T${te}00\r\nSUMMARY:${e.title}\r\n`;
     if(e.category)ics+=`CATEGORIES:${e.category}\r\n`;if(e.location)ics+=`LOCATION:${e.location}\r\n`;if(e.desc)ics+=`DESCRIPTION:${e.desc}\r\n`;
@@ -3916,7 +3924,7 @@ document.getElementById('importIcsFile').addEventListener('change',function(){
     });
     if(!imported.length){toast('Nenhum evento encontrado no arquivo .ics');return;}
     if(confirm(`Importar ${imported.length} evento(s) do arquivo .ics? Serão adicionados aos existentes.`)){
-      events.push(...imported);save();render();toast(`${imported.length} eventos importados do .ics!`);
+      AppState.events.push(...imported);save();render();toast(`${imported.length} eventos importados do .ics!`);
     }
   };
   reader.readAsText(file);this.value='';
@@ -3925,8 +3933,8 @@ document.getElementById('importIcsFile').addEventListener('change',function(){
 /* ═══════ JSON BACKUP ═══════ */
 document.getElementById('exportJsonBtn').addEventListener('click',()=>{
   const data={version:5,theme:currentTheme,categoryColors,notes:notesStore,
-    routines,quickTasks,reviews,top3:top3Data,
-    exportedAt:new Date().toISOString(),events};
+    AppState.routines,AppState.quickTasks,AppState.reviews,top3:AppState.top3Data,
+    exportedAt:new Date().toISOString(),AppState.events};
   const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
   const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`backup-calendario-${new Date().toISOString().slice(0,10)}.json`;a.click();URL.revokeObjectURL(url);
   document.getElementById('backupPopup').classList.remove('open');toast('Backup exportado!');
@@ -3936,10 +3944,10 @@ document.getElementById('importFile').addEventListener('change',function(){
   const file=this.files[0];if(!file)return;
   const reader=new FileReader();
   reader.onload=e=>{
-    try{const data=JSON.parse(e.target.result);const imp=Array.isArray(data)?data:(data.events||[]);
+    try{const data=JSON.parse(e.target.result);const imp=Array.isArray(data)?data:(data.AppState.events||[]);
       if(!imp.length){toast('Arquivo vazio ou inválido.');return;}
       if(confirm(`Importar ${imp.length} evento(s)? Os dados atuais serão substituídos.`)){
-        events=imp;if(data.categoryColors)categoryColors=data.categoryColors;
+        AppState.events=imp;if(data.categoryColors)categoryColors=data.categoryColors;
         if(data.notes)notesStore=data.notes;
         save();saveCatColors();if(data.theme)applyTheme(data.theme);render();toast(`${imp.length} eventos importados!`);
       }
@@ -3948,15 +3956,15 @@ document.getElementById('importFile').addEventListener('change',function(){
   reader.readAsText(file);this.value='';
 });
 document.getElementById('exportIcsBtn').addEventListener('click',()=>{
-  if(!events.length){toast('Nenhum evento para exportar.');document.getElementById('backupPopup').classList.remove('open');return;}
+  if(!AppState.events.length){toast('Nenhum evento para exportar.');document.getElementById('backupPopup').classList.remove('open');return;}
   const blob=new Blob([buildIcs()],{type:'text/calendar;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='calendario-marlon.ics';a.click();URL.revokeObjectURL(url);
-  document.getElementById('backupPopup').classList.remove('open');toast(`${events.length} evento(s) exportados!`);
+  document.getElementById('backupPopup').classList.remove('open');toast(`${AppState.events.length} evento(s) exportados!`);
 });
 
 document.getElementById('exportIcsBtn').addEventListener('click',()=>{
-  if(!events.length){toast('Nenhum evento para exportar.');document.getElementById('backupPopup').classList.remove('open');return;}
+  if(!AppState.events.length){toast('Nenhum evento para exportar.');document.getElementById('backupPopup').classList.remove('open');return;}
   const blob=new Blob([buildIcs()],{type:'text/calendar;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='calendario-marlon.ics';a.click();URL.revokeObjectURL(url);
-  document.getElementById('backupPopup').classList.remove('open');toast(`${events.length} evento(s) exportados!`);
+  document.getElementById('backupPopup').classList.remove('open');toast(`${AppState.events.length} evento(s) exportados!`);
 });
 
 /* ═══════ BACKUP MOBILE MODAL ═══════ */
@@ -3990,7 +3998,7 @@ try{notesStore=JSON.parse(localStorage.getItem('cal_notes')||'{}')}catch(e){cons
 function saveNotes(){localStorage.setItem('cal_notes',JSON.stringify(notesStore));localStorage.setItem('cal_local_ts',new Date().toISOString());if(sbClient){clearTimeout(_cloudSaveTimer);_cloudSaveTimer=setTimeout(()=>syncToCloud(true),1500);}}
 
 function openNotes(evId){
-  const ev=events.find(e=>e.id===evId);if(!ev)return;
+  const ev=AppState.events.find(e=>e.id===evId);if(!ev)return;
   notesEvId=evId;
   // Badge color from calendar
   const cal=getCal(ev.calendarId);
@@ -4126,7 +4134,7 @@ function closeCtxMenu(){
 }
 function openCtxMenu(e,evId,evDate){
   ctxEvId=evId;ctxEvDate=evDate;
-  const ev=events.find(x=>x.id===evId);
+  const ev=AppState.events.find(x=>x.id===evId);
   const menu=document.getElementById('ctxMenu');
   document.getElementById('ctxSkip').style.display=ev&&ev.rrule?'flex':'none';
   const hasN=hasNotes(evId);
@@ -4147,14 +4155,14 @@ function exitMoveMode(){
 
 function moveEventToDate(evId,fromDate,toDate){
   if(fromDate===toDate){exitMoveMode();return;}
-  const ev=events.find(e=>e.id===evId);
+  const ev=AppState.events.find(e=>e.id===evId);
   if(!ev)return;
   if(ev.rrule){
     // Recorrente: pula a ocorrência original e cria cópia no destino
     if(!ev.skipped)ev.skipped=[];
     if(!ev.skipped.includes(fromDate))ev.skipped.push(fromDate);
     const copy={...ev,id:'ev_'+Date.now(),date:toDate,dateEnd:toDate,rrule:'',until:'',skipped:[]};
-    events.push(copy);
+    AppState.events.push(copy);
   }else{
     // Calcula duração multi-dia se houver
     const dur=ev.dateEnd&&ev.dateEnd!==ev.date
@@ -4203,7 +4211,7 @@ document.getElementById('ctxNotes').addEventListener('click',()=>{
 document.getElementById('ctxSkip').addEventListener('click',()=>{
   closeCtxMenu();
   if(!ctxEvId||!ctxEvDate)return;
-  const ev=events.find(x=>x.id===ctxEvId);
+  const ev=AppState.events.find(x=>x.id===ctxEvId);
   if(!ev||!ev.rrule)return;
   if(!ev.skipped)ev.skipped=[];
   if(!ev.skipped.includes(ctxEvDate)){
@@ -4537,10 +4545,9 @@ document.getElementById('sidebarOverlay').addEventListener('click',()=>{
 });
 
 /* ═══════ ROUTINES SYSTEM ═══════ */
-let routines=[];
-try{routines=JSON.parse(localStorage.getItem('cal_routines')||'[]');}catch(e){console.error('[MGC] Falha ao carregar rotinas:',e);toast('⚠️ Erro ao carregar rotinas — verifique o armazenamento local.');}
+try{AppState.routines=JSON.parse(localStorage.getItem('cal_routines')||'[]');}catch(e){console.error('[MGC] Falha ao carregar rotinas:',e);toast('⚠️ Erro ao carregar rotinas — verifique o armazenamento local.');}
 function saveRoutines(){
-  localStorage.setItem('cal_routines',JSON.stringify(routines));
+  localStorage.setItem('cal_routines',JSON.stringify(AppState.routines));
   localStorage.setItem('cal_local_ts',new Date().toISOString());
   if(sbClient){clearTimeout(_cloudSaveTimer);_cloudSaveTimer=setTimeout(()=>syncToCloud(true),1500);}
 }
@@ -4550,7 +4557,7 @@ const DOW_SHORT=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
 
 function getRoutinesForToday(){
   const dow=new Date().getDay();
-  return routines.filter(r=>{
+  return AppState.routines.filter(r=>{
     if(r.freq==='daily')return true;
     if(r.freq==='weekly')return r.days&&r.days.includes(dow);
     if(r.freq==='custom')return r.days&&r.days.includes(dow);
@@ -4587,13 +4594,13 @@ function _rvStreak(routineId){
     const ds=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
     const checks=getRoutineChecks(ds);
     if(routineId){
-      const r=routines.find(x=>x.id===routineId);if(!r)break;
+      const r=AppState.routines.find(x=>x.id===routineId);if(!r)break;
       if(!_rvDue(r,ds))continue;
       if(checks.includes(routineId)){streak++;}
       else if(ds===today&&!skippedToday){skippedToday=true;continue;}
       else break;
     }else{
-      const due=routines.filter(r=>_rvDue(r,ds));if(!due.length)continue;
+      const due=AppState.routines.filter(r=>_rvDue(r,ds));if(!due.length)continue;
       const allDone=due.every(r=>checks.includes(r.id));
       if(allDone){streak++;}
       else if(ds===today&&!skippedToday){skippedToday=true;continue;}
@@ -4609,11 +4616,11 @@ function _rvBestStreak(routineId){
     const ds=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
     const checks=getRoutineChecks(ds);
     if(routineId){
-      const r=routines.find(x=>x.id===routineId);if(!r)continue;
+      const r=AppState.routines.find(x=>x.id===routineId);if(!r)continue;
       if(!_rvDue(r,ds))continue;
       if(checks.includes(routineId)){cnt++;best=Math.max(best,cnt);}else cnt=0;
     }else{
-      const due=routines.filter(r=>_rvDue(r,ds));if(!due.length)continue;
+      const due=AppState.routines.filter(r=>_rvDue(r,ds));if(!due.length)continue;
       if(due.every(r=>checks.includes(r.id))){cnt++;best=Math.max(best,cnt);}else cnt=0;
     }
   }
@@ -4626,11 +4633,11 @@ function _rvPct(routineId,days){
     const ds=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
     const checks=getRoutineChecks(ds);
     if(routineId){
-      const r=routines.find(x=>x.id===routineId);if(!r)continue;
+      const r=AppState.routines.find(x=>x.id===routineId);if(!r)continue;
       if(!_rvDue(r,ds))continue;
       due++;if(checks.includes(routineId))done++;
     }else{
-      const dueR=routines.filter(r=>_rvDue(r,ds));
+      const dueR=AppState.routines.filter(r=>_rvDue(r,ds));
       due+=dueR.length;done+=dueR.filter(r=>checks.includes(r.id)).length;
     }
   }
@@ -4643,11 +4650,11 @@ function _rvHeatmapDays(routineId){
     const ds=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
     const checks=getRoutineChecks(ds);
     if(routineId){
-      const r=routines.find(x=>x.id===routineId);
+      const r=AppState.routines.find(x=>x.id===routineId);
       const due=r?_rvDue(r,ds):false;
       res.push({ds,value:due?(checks.includes(routineId)?1:0):null});
     }else{
-      const dueR=routines.filter(r=>_rvDue(r,ds));
+      const dueR=AppState.routines.filter(r=>_rvDue(r,ds));
       res.push({ds,value:dueR.length?dueR.filter(r=>checks.includes(r.id)).length/dueR.length:null});
     }
   }
@@ -4656,8 +4663,8 @@ function _rvHeatmapDays(routineId){
 
 function renderRvDashboard(filterId){
   const el=document.getElementById('rvDashboard');
-  if(!el||!routines.length){if(el)el.innerHTML='';return;}
-  const rt=filterId?routines.find(x=>x.id===filterId):null;
+  if(!el||!AppState.routines.length){if(el)el.innerHTML='';return;}
+  const rt=filterId?AppState.routines.find(x=>x.id===filterId):null;
   const accent=getComputedStyle(document.documentElement).getPropertyValue('--accent').trim()||'#3b5bdb';
   const color=rt?(rt.color||accent):accent;
   const streak=_rvStreak(filterId);
@@ -4696,7 +4703,7 @@ function renderRvDashboard(filterId){
   const barsHtml=!filterId?`
     <div class="rv-dash-section">Por rotina — últimos 30 dias</div>
     <div class="rv-bars">
-      ${routines.map(r=>{const p=_rvPct(r.id,30)??0;return`
+      ${AppState.routines.map(r=>{const p=_rvPct(r.id,30)??0;return`
         <div class="rv-bar-row">
           <span class="rv-bar-dot" style="background:${r.color||accent}"></span>
           <span class="rv-bar-name" title="${r.title}">${r.title}</span>
@@ -4709,7 +4716,7 @@ function renderRvDashboard(filterId){
       <div class="rv-dash-title">📊 Progresso</div>
       <div class="rv-filter-row">
         <span class="rv-filter-chip${!filterId?' sel':''}" data-rv-filter="">Todas</span>
-        ${routines.map(r=>`<span class="rv-filter-chip${filterId===r.id?' sel':''}" data-rv-filter="${r.id}"
+        ${AppState.routines.map(r=>`<span class="rv-filter-chip${filterId===r.id?' sel':''}" data-rv-filter="${r.id}"
           style="${filterId===r.id?`border-color:${r.color||accent};color:${r.color||accent};background:${r.color||accent}22`:''}">${r.title}</span>`).join('')}
       </div>
       <div class="rv-metrics">
@@ -4772,8 +4779,8 @@ function renderRoutinesView(){
           </div>
         </div>
       </div>
-      ${routines.length===0?'<div class="rv-empty">Nenhuma rotina ainda.<br>Crie rotinas para acompanhar hábitos e compromissos recorrentes.</div>':
-        routines.map(r=>{
+      ${AppState.routines.length===0?'<div class="rv-empty">Nenhuma rotina ainda.<br>Crie rotinas para acompanhar hábitos e compromissos recorrentes.</div>':
+        AppState.routines.map(r=>{
           const daysLabel=r.freq==='daily'?'Todos os dias':r.freq==='weekly'?'Dias úteis':(r.days||[]).map(d=>DOW_SHORT[d]).join(', ');
           const todayDone=checks.includes(r.id);
           return `<div class="routine-card" data-rid="${r.id}">
@@ -4796,9 +4803,9 @@ function renderRoutinesView(){
   document.querySelectorAll('[data-edit]').forEach(b=>b.addEventListener('click',()=>openRvForm(b.dataset.edit)));
   document.querySelectorAll('[data-del]').forEach(b=>b.addEventListener('click',()=>{
     if(!confirm('Excluir esta rotina?'))return;
-    const delR=routines.find(r=>r.id===b.dataset.del);
-    routines=routines.filter(r=>r.id!==b.dataset.del);saveRoutines();renderRoutinesView();
-    toastUndo('Rotina excluída.',()=>{if(delR){routines.push(delR);saveRoutines();renderRoutinesView();}});
+    const delR=AppState.routines.find(r=>r.id===b.dataset.del);
+    AppState.routines=AppState.routines.filter(r=>r.id!==b.dataset.del);saveRoutines();renderRoutinesView();
+    toastUndo('Rotina excluída.',()=>{if(delR){AppState.routines.push(delR);saveRoutines();renderRoutinesView();}});
   }));
   if(rvFormOpen)openRvForm(rvEditId,true);
   renderRvDashboard(_rvDashFilter);
@@ -4810,7 +4817,7 @@ function openRvForm(id,keepOpen=false){
   form.style.display='';
   document.getElementById('rvFormTitle').textContent=id?'Editar rotina':'Nova rotina';
   if(id){
-    const r=routines.find(x=>x.id===id);if(!r)return;
+    const r=AppState.routines.find(x=>x.id===id);if(!r)return;
     document.getElementById('rvName').value=r.title;
     document.getElementById('rvTime').value=r.time||'07:00';
     document.getElementById('rvFreq').value=r.freq||'weekly';
@@ -4843,37 +4850,35 @@ function openRvForm(id,keepOpen=false){
       days:[...rvSelectedDays].sort(),
       color:rvSelectedColor
     };
-    if(rvEditId){const i=routines.findIndex(x=>x.id===rvEditId);if(i>-1)routines[i]=r;}
-    else routines.push(r);
+    if(rvEditId){const i=AppState.routines.findIndex(x=>x.id===rvEditId);if(i>-1)AppState.routines[i]=r;}
+    else AppState.routines.push(r);
     saveRoutines();rvFormOpen=false;rvEditId=null;renderRoutinesView();toast(rvEditId?'Rotina atualizada!':'Rotina criada!');
   };
 }
 
 /* ═══════ QUICK TASKS (today's tasks - lightweight) ═══════ */
-let quickTasks=[];
-try{quickTasks=JSON.parse(localStorage.getItem('cal_qtasks')||'[]');}catch(e){console.error('[MGC] Falha ao carregar tarefas:',e);}
+try{AppState.quickTasks=JSON.parse(localStorage.getItem('cal_qtasks')||'[]');}catch(e){console.error('[MGC] Falha ao carregar tarefas:',e);}
 function saveQuickTasks(){
-  localStorage.setItem('cal_qtasks',JSON.stringify(quickTasks));
+  localStorage.setItem('cal_qtasks',JSON.stringify(AppState.quickTasks));
   localStorage.setItem('cal_local_ts',new Date().toISOString());
   if(sbClient){clearTimeout(_cloudSaveTimer);_cloudSaveTimer=setTimeout(()=>syncToCloud(true),1500);}
 }
 
 function getTodayTasks(){
   const td=todayDs();
-  return quickTasks.filter(t=>t.date===td);
+  return AppState.quickTasks.filter(t=>t.date===td);
 }
 
 function addQuickTask(title){
   if(!title.trim())return;
-  quickTasks.push({id:uid(),title:title.trim(),date:todayDs(),done:false});
+  AppState.quickTasks.push({id:uid(),title:title.trim(),date:todayDs(),done:false});
   saveQuickTasks();
 }
 
 /* ═══════ TOP 3 FOCUS ═══════ */
-let top3Data={};
-try{top3Data=JSON.parse(localStorage.getItem('cal_top3')||'{}');}catch(e){console.error('[MGC] Falha ao carregar Top 3:',e);}
-function saveTop3(){localStorage.setItem('cal_top3',JSON.stringify(top3Data));localStorage.setItem('cal_local_ts',new Date().toISOString());if(sbClient){clearTimeout(_cloudSaveTimer);_cloudSaveTimer=setTimeout(()=>syncToCloud(true),1500);}}
-function getTop3(){return top3Data[todayDs()]||[{text:'',done:false},{text:'',done:false},{text:'',done:false}];}
+try{AppState.top3Data=JSON.parse(localStorage.getItem('cal_top3')||'{}');}catch(e){console.error('[MGC] Falha ao carregar Top 3:',e);}
+function saveTop3(){localStorage.setItem('cal_top3',JSON.stringify(AppState.top3Data));localStorage.setItem('cal_local_ts',new Date().toISOString());if(sbClient){clearTimeout(_cloudSaveTimer);_cloudSaveTimer=setTimeout(()=>syncToCloud(true),1500);}}
+function getTop3(){return AppState.top3Data[todayDs()]||[{text:'',done:false},{text:'',done:false},{text:'',done:false}];}
 
 /* ═══════ TODAY VIEW ═══════ */
 function renderToday(){
@@ -4884,11 +4889,11 @@ function renderToday(){
   const hour=today.getHours();
   const greeting=hour<12?'Bom dia':hour<18?'Boa tarde':'Boa noite';
 
-  // Today's events
+  // Today's AppState.events
   const evMap=buildEvMap(td,td);
   const todayEvs=(evMap[td]||[]).sort((a,b)=>(a.start||'').localeCompare(b.start||''));
 
-  // Today's routines + checks
+  // Today's AppState.routines + checks
   const todayRouts=getRoutinesForToday();
   const checks=getRoutineChecks(td);
 
@@ -4941,7 +4946,7 @@ function renderToday(){
       ${top3.map((item,i)=>{
           let realDone=false;
           if(item.text&&item.srcId){
-            if(item.srcType==='event'){const ev=events.find(e=>e.id===item.srcId);realDone=ev?isDoneOn(ev,td):false;}
+            if(item.srcType==='event'){const ev=AppState.events.find(e=>e.id===item.srcId);realDone=ev?isDoneOn(ev,td):false;}
             else if(item.srcType==='routine'){realDone=checks.includes(item.srcId);}
             else if(item.srcType==='task'){const t=qtasks.find(x=>x.id===item.srcId);realDone=t?t.done:false;}
           }else{realDone=item.done;}
@@ -4958,7 +4963,7 @@ function renderToday(){
         </div>`;}).join('')}
     </div>
 
-    <!-- Today events — DRAGGABLE -->
+    <!-- Today AppState.events — DRAGGABLE -->
     <div class="tv-panel">
       <div class="tv-panel-title">📅 Compromissos de hoje</div>
       <div class="drop-hint">Arraste um evento para o Top 3 ↑</div>
@@ -5068,7 +5073,7 @@ function renderToday(){
       const slot=parseInt(zone.dataset.top3slot);
       const cur3=getTop3();
       cur3[slot]={text:_dragPayload.text,done:false,srcType:_dragPayload.type,srcId:_dragPayload.id,srcColor:_dragPayload.color};
-      top3Data[todayDs()]=cur3;saveTop3();renderToday();
+      AppState.top3Data[todayDs()]=cur3;saveTop3();renderToday();
       toast(`Prioridade ${slot+1} definida: ${_dragPayload.text}`);
       _dragPayload=null;
     });
@@ -5111,12 +5116,12 @@ function renderToday(){
         const rc=getRoutineChecks(td),isDoneNow=rc.includes(srcId);
         setRoutineCheck(td,srcId,!isDoneNow);renderToday();toast(!isDoneNow?'Rotina concluída ✓':'Rotina desmarcada');
       }else if(srcId&&srcType==='task'){
-        const t=quickTasks.find(x=>x.id===srcId);
+        const t=AppState.quickTasks.find(x=>x.id===srcId);
         if(t){t.done=!t.done;saveQuickTasks();}renderToday();
       }else{
         const i=parseInt(el.dataset.top3check);
         const cur3=getTop3();cur3[i].done=!cur3[i].done;
-        top3Data[todayDs()]=cur3;saveTop3();renderToday();
+        AppState.top3Data[todayDs()]=cur3;saveTop3();renderToday();
       }
     });
   });
@@ -5124,7 +5129,7 @@ function renderToday(){
     el.addEventListener('click',e=>{e.stopPropagation();
       const i=parseInt(el.dataset.top3clear);
       const cur3=getTop3();cur3[i]={text:'',done:false};
-      top3Data[todayDs()]=cur3;saveTop3();renderToday();
+      AppState.top3Data[todayDs()]=cur3;saveTop3();renderToday();
     });
   });
 
@@ -5148,15 +5153,15 @@ function renderToday(){
   // ── Wire quick task checks & delete ──
   document.querySelectorAll('[data-qtcheck]').forEach(el=>{
     el.addEventListener('click',e=>{e.stopPropagation();
-      const t=quickTasks.find(x=>x.id===el.dataset.qtcheck);
+      const t=AppState.quickTasks.find(x=>x.id===el.dataset.qtcheck);
       if(t){t.done=!t.done;saveQuickTasks();renderToday();}
     });
   });
   document.querySelectorAll('[data-qtdel]').forEach(el=>{
     el.addEventListener('click',e=>{e.stopPropagation();
-      const delQt=quickTasks.find(x=>x.id===el.dataset.qtdel);
-      quickTasks=quickTasks.filter(x=>x.id!==el.dataset.qtdel);saveQuickTasks();renderToday();
-      toastUndo('Tarefa excluída.',()=>{if(delQt){quickTasks.push(delQt);saveQuickTasks();renderToday();}});
+      const delQt=AppState.quickTasks.find(x=>x.id===el.dataset.qtdel);
+      AppState.quickTasks=AppState.quickTasks.filter(x=>x.id!==el.dataset.qtdel);saveQuickTasks();renderToday();
+      toastUndo('Tarefa excluída.',()=>{if(delQt){AppState.quickTasks.push(delQt);saveQuickTasks();renderToday();}});
     });
   });
   document.getElementById('tvQtBtn')?.addEventListener('click',()=>{
@@ -5169,10 +5174,9 @@ function renderToday(){
 }
 
 /* ═══════ REVIEW VIEW ═══════ */
-let reviews={};
-try{reviews=JSON.parse(localStorage.getItem('cal_reviews')||'{}');}catch(e){console.error('[MGC] Falha ao carregar revisões:',e);}
+try{AppState.reviews=JSON.parse(localStorage.getItem('cal_reviews')||'{}');}catch(e){console.error('[MGC] Falha ao carregar revisões:',e);}
 function saveReviews(){
-  localStorage.setItem('cal_reviews',JSON.stringify(reviews));
+  localStorage.setItem('cal_reviews',JSON.stringify(AppState.reviews));
   localStorage.setItem('cal_local_ts',new Date().toISOString());
   if(sbClient){clearTimeout(_cloudSaveTimer);_cloudSaveTimer=setTimeout(()=>syncToCloud(true),1500);}
 }
@@ -5184,7 +5188,7 @@ function _rewStreak(){
   for(let i=0;i<365;i++){
     const d=new Date();d.setDate(d.getDate()-i);
     const dk=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-    const r=reviews[dk];
+    const r=AppState.reviews[dk];
     const filled=r&&(r.rating>0||(r.wentWell||'').trim()||(r.toImprove||'').trim()||(r.tomorrow||'').trim());
     if(dk===td&&!filled)continue;
     if(filled)streak++;
@@ -5198,7 +5202,7 @@ function _rewMoodChartHTML(){
   for(let i=N-1;i>=0;i--){
     const d=new Date();d.setDate(d.getDate()-i);
     const dk=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-    pts.push({rating:reviews[dk]?.rating||0});
+    pts.push({rating:AppState.reviews[dk]?.rating||0});
   }
   if(!pts.some(p=>p.rating>0))return '<div style="font-size:10px;color:var(--muted);text-align:center;padding:8px 0">Sem avaliações nos últimos 30 dias.</div>';
   const W=200,H=56,pad=8,xStep=(W-pad*2)/(N-1),yScale=(H-pad*2)/4;
@@ -5217,7 +5221,7 @@ function _rewMoodChartHTML(){
 
 function renderReviewView(){
   const el=document.getElementById('reviewContent');
-  const rev=reviews[reviewDate]||{wentWell:'',toImprove:'',rating:0};
+  const rev=AppState.reviews[reviewDate]||{wentWell:'',toImprove:'',rating:0};
   const td=todayDs();
 
   // Metrics for selected date
@@ -5225,14 +5229,14 @@ function renderReviewView(){
   const dayEvs=evMap[reviewDate]||[];
   const doneEvs=dayEvs.filter(ev=>isDoneOn(ev,reviewDate)).length;
   const pct=dayEvs.length?Math.round(doneEvs/dayEvs.length*100):0;
-  const routs=routines.filter(r=>getRoutinesForToday().find(x=>x.id===r.id));
+  const routs=AppState.routines.filter(r=>getRoutinesForToday().find(x=>x.id===r.id));
   const checks=getRoutineChecks(reviewDate);
   const routDone=routs.filter(r=>checks.includes(r.id)).length;
-  const qtasks=quickTasks.filter(t=>t.date===reviewDate);
+  const qtasks=AppState.quickTasks.filter(t=>t.date===reviewDate);
   const qtDone=qtasks.filter(t=>t.done).length;
 
-  // Recent reviews history
-  const histKeys=Object.keys(reviews).sort().reverse().slice(0,7);
+  // Recent AppState.reviews history
+  const histKeys=Object.keys(AppState.reviews).sort().reverse().slice(0,7);
 
   el.innerHTML=`
   <div class="rew-wrap">
@@ -5298,7 +5302,7 @@ function renderReviewView(){
         <div class="rew-history-title">Histórico recente</div>
         ${histKeys.length===0?'<div style="font-size:10px;color:var(--muted)">Nenhuma revisão ainda.</div>':
           histKeys.map(k=>{
-            const r2=reviews[k];
+            const r2=AppState.reviews[k];
             const d=new Date(k+'T12:00:00');
             const stars=['😞','😐','🙂','😊','🤩'][r2.rating-1]||'—';
             return `<div class="rew-hist-item">
@@ -5326,8 +5330,8 @@ function renderReviewView(){
   document.querySelectorAll('.rew-star').forEach(s=>{
     s.addEventListener('click',()=>{
       const r2=parseInt(s.dataset.r);
-      if(!reviews[reviewDate])reviews[reviewDate]={};
-      reviews[reviewDate].rating=r2;saveReviews();
+      if(!AppState.reviews[reviewDate])AppState.reviews[reviewDate]={};
+      AppState.reviews[reviewDate].rating=r2;saveReviews();
       document.querySelectorAll('.rew-star').forEach(x=>x.classList.toggle('active',parseInt(x.dataset.r)===r2));
     });
   });
@@ -5335,30 +5339,29 @@ function renderReviewView(){
   // Auto-save on blur
   ['rewWell','rewImprove','rewTomorrow'].forEach(id=>{
     document.getElementById(id)?.addEventListener('blur',()=>{
-      if(!reviews[reviewDate])reviews[reviewDate]={};
-      reviews[reviewDate].wentWell=document.getElementById('rewWell')?.value||'';
-      reviews[reviewDate].toImprove=document.getElementById('rewImprove')?.value||'';
-      reviews[reviewDate].tomorrow=document.getElementById('rewTomorrow')?.value||'';
+      if(!AppState.reviews[reviewDate])AppState.reviews[reviewDate]={};
+      AppState.reviews[reviewDate].wentWell=document.getElementById('rewWell')?.value||'';
+      AppState.reviews[reviewDate].toImprove=document.getElementById('rewImprove')?.value||'';
+      AppState.reviews[reviewDate].tomorrow=document.getElementById('rewTomorrow')?.value||'';
       saveReviews();
     });
   });
 
   document.getElementById('rewSaveBtn')?.addEventListener('click',()=>{
-    if(!reviews[reviewDate])reviews[reviewDate]={};
-    reviews[reviewDate].wentWell=document.getElementById('rewWell')?.value||'';
-    reviews[reviewDate].toImprove=document.getElementById('rewImprove')?.value||'';
-    reviews[reviewDate].tomorrow=document.getElementById('rewTomorrow')?.value||'';
+    if(!AppState.reviews[reviewDate])AppState.reviews[reviewDate]={};
+    AppState.reviews[reviewDate].wentWell=document.getElementById('rewWell')?.value||'';
+    AppState.reviews[reviewDate].toImprove=document.getElementById('rewImprove')?.value||'';
+    AppState.reviews[reviewDate].tomorrow=document.getElementById('rewTomorrow')?.value||'';
     saveReviews();toast('Revisão salva!');renderReviewView();
   });
 }
 
 /* ═══════ STANDALONE NOTES ═══════ */
 let _noteDragId=null,_noteDragGhost=null,_noteDragTimer=null,_noteDragTarget=null,_noteTouchX=0,_noteTouchY=0;
-let standaloneNotes=[];
-try{standaloneNotes=JSON.parse(localStorage.getItem('cal_standalone_notes')||'[]');}catch(e){console.error('[MGC] Falha ao carregar notas:',e);toast('⚠️ Erro ao carregar notas — verifique o armazenamento local.');}
+try{AppState.standaloneNotes=JSON.parse(localStorage.getItem('cal_standalone_notes')||'[]');}catch(e){console.error('[MGC] Falha ao carregar notas:',e);toast('⚠️ Erro ao carregar notas — verifique o armazenamento local.');}
 
 function saveStandaloneNotes(){
-  localStorage.setItem('cal_standalone_notes',JSON.stringify(standaloneNotes));
+  localStorage.setItem('cal_standalone_notes',JSON.stringify(AppState.standaloneNotes));
   localStorage.setItem('cal_local_ts',new Date().toISOString());
   if(sbClient){clearTimeout(_cloudSaveTimer);_cloudSaveTimer=setTimeout(()=>syncToCloud(true),1500);}
 }
@@ -5377,7 +5380,7 @@ function openNoteEdit(noteId){
     document.getElementById('neSavedLabel').textContent='📝 Nova nota';
     document.getElementById('neDeleteBtn').style.display='none';
   } else {
-    const note=standaloneNotes.find(n=>n.id===noteId);
+    const note=AppState.standaloneNotes.find(n=>n.id===noteId);
     if(!note)return;
     _editingNoteId=noteId;
     document.getElementById('neTitleInput').value=note.title||'';
@@ -5401,10 +5404,10 @@ function saveNoteEdit(){
   if(!content.trim()||content==='<br>'){toast('Escreva algo na nota!');return;}
   const now=new Date().toISOString();
   if(_editingNoteId){
-    const idx=standaloneNotes.findIndex(n=>n.id===_editingNoteId);
-    if(idx>-1)standaloneNotes[idx]={...standaloneNotes[idx],title,content,color,pinned,updatedAt:now};
+    const idx=AppState.standaloneNotes.findIndex(n=>n.id===_editingNoteId);
+    if(idx>-1)AppState.standaloneNotes[idx]={...AppState.standaloneNotes[idx],title,content,color,pinned,updatedAt:now};
   } else {
-    standaloneNotes.unshift({id:uid(),title,content,color,pinned,createdAt:now,updatedAt:now});
+    AppState.standaloneNotes.unshift({id:uid(),title,content,color,pinned,createdAt:now,updatedAt:now});
   }
   saveStandaloneNotes();
   document.getElementById('noteEditOverlay').classList.remove('open');
@@ -5413,17 +5416,17 @@ function saveNoteEdit(){
 
 function deleteNote(noteId){
   if(!confirm('Excluir esta nota?'))return;
-  const delN=standaloneNotes.find(n=>n.id===noteId);
-  standaloneNotes=standaloneNotes.filter(n=>n.id!==noteId);
+  const delN=AppState.standaloneNotes.find(n=>n.id===noteId);
+  AppState.standaloneNotes=AppState.standaloneNotes.filter(n=>n.id!==noteId);
   saveStandaloneNotes();
   document.getElementById('noteEditOverlay').classList.remove('open');
   renderNotesView();
-  toastUndo('Nota excluída.',()=>{if(delN){standaloneNotes.push(delN);saveStandaloneNotes();renderNotesView();}});
+  toastUndo('Nota excluída.',()=>{if(delN){AppState.standaloneNotes.push(delN);saveStandaloneNotes();renderNotesView();}});
 }
 
 function _renderNotesGrid(search){
   const s=(search||'').toLowerCase();
-  const filtered=standaloneNotes.filter(n=>
+  const filtered=AppState.standaloneNotes.filter(n=>
     !s||(n.title||'').toLowerCase().includes(s)||
     (n.content||'').replace(/<[^>]+>/g,'').toLowerCase().includes(s)
   );
@@ -5489,11 +5492,11 @@ function _renderNotesGrid(search){
       e.preventDefault();
       card.classList.remove('note-drag-over');
       if(!_noteDragId||card.dataset.noteId===_noteDragId)return;
-      const dragIdx=standaloneNotes.findIndex(n=>n.id===_noteDragId);
-      const targetIdx=standaloneNotes.findIndex(n=>n.id===card.dataset.noteId);
+      const dragIdx=AppState.standaloneNotes.findIndex(n=>n.id===_noteDragId);
+      const targetIdx=AppState.standaloneNotes.findIndex(n=>n.id===card.dataset.noteId);
       if(dragIdx===-1||targetIdx===-1)return;
-      const [dragged]=standaloneNotes.splice(dragIdx,1);
-      standaloneNotes.splice(targetIdx,0,dragged);
+      const [dragged]=AppState.standaloneNotes.splice(dragIdx,1);
+      AppState.standaloneNotes.splice(targetIdx,0,dragged);
       _noteDragId=null;
       saveStandaloneNotes();
       _renderNotesGrid(document.getElementById('nvSearch')?.value||'');
@@ -5558,11 +5561,11 @@ function _renderNotesGrid(search){
       _noteCleanup();
       _noteDragId=null;_noteDragTarget=null;
       if(!targetId)return;
-      const dragIdx=standaloneNotes.findIndex(n=>n.id===dragId);
-      const targetIdx=standaloneNotes.findIndex(n=>n.id===targetId);
+      const dragIdx=AppState.standaloneNotes.findIndex(n=>n.id===dragId);
+      const targetIdx=AppState.standaloneNotes.findIndex(n=>n.id===targetId);
       if(dragIdx===-1||targetIdx===-1)return;
-      const [dragged]=standaloneNotes.splice(dragIdx,1);
-      standaloneNotes.splice(targetIdx,0,dragged);
+      const [dragged]=AppState.standaloneNotes.splice(dragIdx,1);
+      AppState.standaloneNotes.splice(targetIdx,0,dragged);
       saveStandaloneNotes();
       _renderNotesGrid(document.getElementById('nvSearch')?.value||'');
     },{passive:true});
@@ -5576,17 +5579,17 @@ function _renderNotesGrid(search){
   }
   grid.querySelectorAll('[data-note-pin]').forEach(btn=>{
     btn.addEventListener('click',e=>{e.stopPropagation();
-      const n=standaloneNotes.find(x=>x.id===btn.dataset.notePin);
+      const n=AppState.standaloneNotes.find(x=>x.id===btn.dataset.notePin);
       if(n){n.pinned=!n.pinned;n.updatedAt=new Date().toISOString();saveStandaloneNotes();_renderNotesGrid(document.getElementById('nvSearch')?.value||'');}
     });
   });
   grid.querySelectorAll('[data-note-del]').forEach(btn=>{
     btn.addEventListener('click',e=>{e.stopPropagation();
       if(!confirm('Excluir esta nota?'))return;
-      const delN2=standaloneNotes.find(x=>x.id===btn.dataset.noteDel);
-      standaloneNotes=standaloneNotes.filter(x=>x.id!==btn.dataset.noteDel);
+      const delN2=AppState.standaloneNotes.find(x=>x.id===btn.dataset.noteDel);
+      AppState.standaloneNotes=AppState.standaloneNotes.filter(x=>x.id!==btn.dataset.noteDel);
       saveStandaloneNotes();_renderNotesGrid(document.getElementById('nvSearch')?.value||'');
-      toastUndo('Nota excluída.',()=>{if(delN2){standaloneNotes.push(delN2);saveStandaloneNotes();_renderNotesGrid(document.getElementById('nvSearch')?.value||'');}});
+      toastUndo('Nota excluída.',()=>{if(delN2){AppState.standaloneNotes.push(delN2);saveStandaloneNotes();_renderNotesGrid(document.getElementById('nvSearch')?.value||'');}});
     });
   });
 }
@@ -5661,11 +5664,11 @@ document.getElementById('neEditor').addEventListener('input',()=>{
     if(!content.trim()||content==='<br>')return;
     const now=new Date().toISOString();
     if(_editingNoteId){
-      const idx=standaloneNotes.findIndex(n=>n.id===_editingNoteId);
-      if(idx>-1)standaloneNotes[idx]={...standaloneNotes[idx],title,content,color,pinned,updatedAt:now};
+      const idx=AppState.standaloneNotes.findIndex(n=>n.id===_editingNoteId);
+      if(idx>-1)AppState.standaloneNotes[idx]={...AppState.standaloneNotes[idx],title,content,color,pinned,updatedAt:now};
     } else {
       const newId=uid();
-      standaloneNotes.unshift({id:newId,title,content,color,pinned,createdAt:now,updatedAt:now});
+      AppState.standaloneNotes.unshift({id:newId,title,content,color,pinned,createdAt:now,updatedAt:now});
       _editingNoteId=newId;
     }
     saveStandaloneNotes();
@@ -5769,16 +5772,16 @@ function getLocalPayload(){
     }
   }
   return {
-    events: JSON.stringify(events),
+    AppState.events: JSON.stringify(AppState.events),
     notes: JSON.stringify(notesStore),
     category_colors: JSON.stringify(categoryColors),
     calendars: JSON.stringify(calendars),
     theme: currentTheme,
-    routines: JSON.stringify(routines),
-    quick_tasks: JSON.stringify(quickTasks),
-    reviews: JSON.stringify(reviews),
-    top3: JSON.stringify(top3Data),
-    standalone_notes: JSON.stringify(standaloneNotes),
+    AppState.routines: JSON.stringify(AppState.routines),
+    quick_tasks: JSON.stringify(AppState.quickTasks),
+    AppState.reviews: JSON.stringify(AppState.reviews),
+    top3: JSON.stringify(AppState.top3Data),
+    standalone_notes: JSON.stringify(AppState.standaloneNotes),
     routine_checks: JSON.stringify(rchecks),
     updated_at: new Date().toISOString()
   };
@@ -5792,24 +5795,24 @@ function applyRemotePayload(row){
     const remoteNotes=JSON.parse(row.notes||'{}');
     const remoteCatColors=JSON.parse(row.category_colors||'{}');
     const remoteCalendars=JSON.parse(row.calendars||'null');
-    events=remoteEvents;
+    AppState.events=remoteEvents;
     notesStore=remoteNotes;
     categoryColors=remoteCatColors;
     if(remoteCalendars&&remoteCalendars.length)calendars=remoteCalendars;
     if(row.theme)applyTheme(row.theme);
-    if(row.routines)try{const r=JSON.parse(row.routines);if(Array.isArray(r))routines=r;}catch(e){}
-    if(row.quick_tasks)try{const q=JSON.parse(row.quick_tasks);if(Array.isArray(q))quickTasks=q;}catch(e){}
-    if(row.reviews)try{const rv=JSON.parse(row.reviews);if(rv&&typeof rv==='object')reviews=rv;}catch(e){}
-    if(row.top3)try{const t3=JSON.parse(row.top3);if(t3&&typeof t3==='object')top3Data=t3;}catch(e){}
-    if(row.standalone_notes)try{const sn=JSON.parse(row.standalone_notes);if(Array.isArray(sn))standaloneNotes=sn;}catch(e){}
+    if(row.AppState.routines)try{const r=JSON.parse(row.AppState.routines);if(Array.isArray(r))AppState.routines=r;}catch(e){}
+    if(row.quick_tasks)try{const q=JSON.parse(row.quick_tasks);if(Array.isArray(q))AppState.quickTasks=q;}catch(e){}
+    if(row.AppState.reviews)try{const rv=JSON.parse(row.AppState.reviews);if(rv&&typeof rv==='object')AppState.reviews=rv;}catch(e){}
+    if(row.top3)try{const t3=JSON.parse(row.top3);if(t3&&typeof t3==='object')AppState.top3Data=t3;}catch(e){}
+    if(row.standalone_notes)try{const sn=JSON.parse(row.standalone_notes);if(Array.isArray(sn))AppState.standaloneNotes=sn;}catch(e){}
     // Persist locally
     localStorage.setItem('cal_marlon_v8',row.events||'[]');
     localStorage.setItem('cal_notes',row.notes||'{}');
     localStorage.setItem('cal_catcolors',row.category_colors||'{}');
     if(remoteCalendars)localStorage.setItem('cal_calendars',row.calendars);
-    if(row.routines)localStorage.setItem('cal_routines',row.routines);
+    if(row.AppState.routines)localStorage.setItem('cal_routines',row.AppState.routines);
     if(row.quick_tasks)localStorage.setItem('cal_qtasks',row.quick_tasks);
-    if(row.reviews)localStorage.setItem('cal_reviews',row.reviews);
+    if(row.AppState.reviews)localStorage.setItem('cal_reviews',row.AppState.reviews);
     if(row.top3)localStorage.setItem('cal_top3',row.top3);
     if(row.standalone_notes)localStorage.setItem('cal_standalone_notes',row.standalone_notes);
     if(row.routine_checks)try{
@@ -5878,7 +5881,7 @@ async function syncFromCloud(silent=false){
 // Patch save() to also push to cloud (debounced)
 let _cloudSaveTimer=null;
 let _cloudSaveTimerColors=null;
-const _localSave=()=>localStorage.setItem('cal_marlon_v8',JSON.stringify(events));
+const _localSave=()=>localStorage.setItem('cal_marlon_v8',JSON.stringify(AppState.events));
 function _scheduleSbSync(){
   if(sbClient){clearTimeout(_cloudSaveTimer);_cloudSaveTimer=setTimeout(()=>syncToCloud(true),1500);}
 }
@@ -6181,7 +6184,7 @@ async function gcalSync(pullOnly=false){
   if(r){r.style.display='block';r.style.background='#fff8e1';r.style.color='#92400e';r.textContent='🔄 Sincronizando...';}
 
   try{
-    // ── PULL: fetch events from Google (last 6 months + next 12 months) ──
+    // ── PULL: fetch AppState.events from Google (last 6 months + next 12 months) ──
     const tMin=new Date();tMin.setMonth(tMin.getMonth()-6);
     const tMax=new Date();tMax.setMonth(tMax.getMonth()+12);
     const params=new URLSearchParams({
@@ -6193,7 +6196,7 @@ async function gcalSync(pullOnly=false){
       showDeleted:'true',
       fields:'items(id,summary,description,location,start,end,updated,status,recurringEventId,extendedProperties)'
     });
-    const resp=await fetch(`${GCAL_API}/calendars/${encodeURIComponent(calId)}/events?${params}`,{
+    const resp=await fetch(`${GCAL_API}/calendars/${encodeURIComponent(calId)}/AppState.events?${params}`,{
       headers:{Authorization:`Bearer ${gcalToken}`}
     });
     const data=await resp.json();
@@ -6205,7 +6208,7 @@ async function gcalSync(pullOnly=false){
     // ── Dedup: remove local duplicates (same title+date, keep the one with gcalId or the first) ──
     const seen={};
     const deduped=[];
-    for(const ev of events){
+    for(const ev of AppState.events){
       const key=(ev.title||'').trim().toLowerCase()+'|'+ev.date;
       if(!seen[key]){seen[key]=ev;deduped.push(ev);}
       else if(ev.gcalId&&!seen[key].gcalId){
@@ -6214,16 +6217,16 @@ async function gcalSync(pullOnly=false){
         seen[key]=ev;
       }
     }
-    if(deduped.length<events.length){
-      events.length=0;events.push(...deduped);
+    if(deduped.length<AppState.events.length){
+      AppState.events.length=0;AppState.events.push(...deduped);
     }
 
-    // Map existing events by gcalId for quick lookup
+    // Map existing AppState.events by gcalId for quick lookup
     const localByGcalId={};
-    events.forEach(ev=>{if(ev.gcalId)localByGcalId[ev.gcalId]=ev;});
+    AppState.events.forEach(ev=>{if(ev.gcalId)localByGcalId[ev.gcalId]=ev;});
 
     // Build set of local gcalIds for recurring base event lookup
-    const localGcalIds=new Set(events.map(ev=>ev.gcalId).filter(Boolean));
+    const localGcalIds=new Set(AppState.events.map(ev=>ev.gcalId).filter(Boolean));
     // IDs excluídos pelo usuário — nunca reimportar
     const deletedIds=gcalGetDeletedIds();
 
@@ -6232,12 +6235,12 @@ async function gcalSync(pullOnly=false){
     for(const gcEv of gcalEvents){
       if(gcEv.status==='cancelled'&&localByGcalId[gcEv.id]){
         const localId=localByGcalId[gcEv.id].id;
-        events=events.filter(e=>e.id!==localId);
+        AppState.events=AppState.events.filter(e=>e.id!==localId);
         removed++;
       }
     }
 
-    // Process Google events → local
+    // Process Google AppState.events → local
     for(const gcEv of gcalEvents){
       if(gcEv.status==='cancelled')continue;
       // Nunca reimportar evento que o usuário excluiu
@@ -6250,7 +6253,7 @@ async function gcalSync(pullOnly=false){
         // No gcalId match — check by title+date to avoid duplicates
         const gcDate=(gcEv.start?.date||gcEv.start?.dateTime||'').slice(0,10);
         const gcTitle=(gcEv.summary||'').trim().toLowerCase();
-        const titleDateMatch=events.find(ev=>
+        const titleDateMatch=AppState.events.find(ev=>
           !ev.gcalId &&
           ev.date===gcDate &&
           (ev.title||'').trim().toLowerCase()===gcTitle
@@ -6263,7 +6266,7 @@ async function gcalSync(pullOnly=false){
         } else {
         // New event from Google → add locally
         const newEv=gcalToMgc(gcEv);
-        events.push(newEv);
+        AppState.events.push(newEv);
         localByGcalId[gcEv.id]=newEv;
         added++;
         }
@@ -6275,23 +6278,23 @@ async function gcalSync(pullOnly=false){
           // Google is newer → update local (but keep localUpdatedAt so pending local edits still sync)
           const updated_ev=gcalToMgc(gcEv);
           updated_ev.id=local.id; // keep local ID
-          const idx=events.findIndex(e=>e.id===local.id);
+          const idx=AppState.events.findIndex(e=>e.id===local.id);
           if(idx>-1){
-            const existingEv=events[idx]; // re-fetch current state (may have changed since localByGcalId snapshot)
-            events[idx]={...existingEv,...updated_ev,localUpdatedAt:existingEv.localUpdatedAt};
+            const existingEv=AppState.events[idx]; // re-fetch current state (may have changed since localByGcalId snapshot)
+            AppState.events[idx]={...existingEv,...updated_ev,localUpdatedAt:existingEv.localUpdatedAt};
           }
           updated++;
         }
       }
     }
 
-    // ── PUSH: send local events (without gcalId) to Google ──
+    // ── PUSH: send local AppState.events (without gcalId) to Google ──
     if(!pullOnly){
-      const toPush=events.filter(ev=>!ev.gcalId&&ev.title&&ev.date);
+      const toPush=AppState.events.filter(ev=>!ev.gcalId&&ev.title&&ev.date);
       for(const ev of toPush){
         try{
           const body=mgcToGcal(ev);
-          const res=await fetch(`${GCAL_API}/calendars/${encodeURIComponent(calId)}/events`,{
+          const res=await fetch(`${GCAL_API}/calendars/${encodeURIComponent(calId)}/AppState.events`,{
             method:'POST',
             headers:{Authorization:`Bearer ${gcalToken}`,'Content-Type':'application/json'},
             body:JSON.stringify(body)
@@ -6305,8 +6308,8 @@ async function gcalSync(pullOnly=false){
         }catch(e){errors++;console.warn('push error:',e);}
       }
 
-      // ── UPDATE: sync local edits back to Google for existing events ──
-      const toUpdate=events.filter(ev=>
+      // ── UPDATE: sync local edits back to Google for existing AppState.events ──
+      const toUpdate=AppState.events.filter(ev=>
         ev.gcalId &&
         ev.localUpdatedAt &&
         ev.title && ev.date &&
@@ -6315,7 +6318,7 @@ async function gcalSync(pullOnly=false){
       for(const ev of toUpdate){
         try{
           const body=mgcToGcal(ev);
-          const res=await fetch(`${GCAL_API}/calendars/${encodeURIComponent(calId)}/events/${encodeURIComponent(ev.gcalId)}`,{
+          const res=await fetch(`${GCAL_API}/calendars/${encodeURIComponent(calId)}/AppState.events/${encodeURIComponent(ev.gcalId)}`,{
             method:'PUT',
             headers:{Authorization:`Bearer ${gcalToken}`,'Content-Type':'application/json'},
             body:JSON.stringify(body)
@@ -6403,7 +6406,7 @@ document.getElementById('gcalSyncPullBtn').addEventListener('click',()=>gcalSync
 document.getElementById('gcalDedupeBtn').addEventListener('click',()=>{
   // Agrupar eventos por título (lowercase) + horário de início
   const groups={};
-  events.forEach(ev=>{
+  AppState.events.forEach(ev=>{
     const key=(ev.title||'').trim().toLowerCase()+'|'+(ev.start||'');
     if(!groups[key])groups[key]={title:ev.title,start:ev.start||'(dia todo)',evs:[]};
     groups[key].evs.push(ev);
@@ -6456,11 +6459,11 @@ document.getElementById('gcalDedupeDeleteBtn').addEventListener('click',()=>{
   if(!checked.length){toast('Selecione ao menos um grupo.');return;}
   const idsToDelete=new Set();
   checked.forEach(i=>dupes[i].evs.forEach(ev=>idsToDelete.add(ev.id)));
-  const before=events.length;
-  events=events.filter(ev=>!idsToDelete.has(ev.id));
+  const before=AppState.events.length;
+  AppState.events=AppState.events.filter(ev=>!idsToDelete.has(ev.id));
   save();render();
   document.getElementById('gcalDedupeOverlay').classList.remove('open');
-  toast(`🗑 ${before-events.length} eventos excluídos.`);
+  toast(`🗑 ${before-AppState.events.length} eventos excluídos.`);
 });
 
 // Auto-init client if Client ID already saved
@@ -6512,7 +6515,7 @@ async function loadSharedReviews(){
   try{
     const{data,error}=await revClient.from('app_reviews').select('*').order('ts',{ascending:false}).limit(200);
     if(error||!data)return;
-    // Mescla com reviews locais, deduplica por id
+    // Mescla com AppState.reviews locais, deduplica por id
     const localIds=new Set(appReviews.map(r=>r.id));
     const novos=data.filter(r=>!localIds.has(r.id));
     if(novos.length){
@@ -6655,9 +6658,9 @@ document.getElementById('pixSkipReview').addEventListener('click',()=>document.g
 document.getElementById('pixFinalClose').addEventListener('click',()=>document.getElementById('pixOverlay').classList.remove('open'));
 
 // Calcula quantos meses distintos um usuário doou e retorna seu badge
-function getUserBadge(name,reviews){
+function getUserBadge(name,memberReviews){
   const meses=new Set(
-    reviews.filter(r=>r.donated&&r.name.trim().toLowerCase()===name.trim().toLowerCase()&&r.date)
+    memberReviews.filter(r=>r.donated&&r.name.trim().toLowerCase()===name.trim().toLowerCase()&&r.date)
            .map(r=>r.date.slice(0,7)) // 'YYYY-MM'
   );
   const n=meses.size;
@@ -6733,7 +6736,7 @@ if(_sbReady){
   syncFromCloud(true).then(()=>{render();});
 }
 // Carrega avaliações compartilhadas de todos os usuários
-// e migra reviews locais antigas para o Supabase (roda só uma vez por dispositivo)
+// e migra AppState.reviews locais antigas para o Supabase (roda só uma vez por dispositivo)
 loadSharedReviews().then(()=>migrateLocalReviews());
 
 /* ═══════ PWA — SERVICE WORKER ═══════ */
@@ -6800,13 +6803,13 @@ function syncAlertsToSW(){
   const sw=getActiveSW();
   if(!sw)return;
   if(!isNotifEnabled()){sw.postMessage({type:'CLEAR_ALL_ALERTS'});return;}
-  if(!events.length)return;
+  if(!AppState.events.length)return;
   const now=Date.now(),td=todayDs();
   const tom=new Date();tom.setDate(tom.getDate()+1);
   const tomStr=ds(tom.getFullYear(),tom.getMonth(),tom.getDate());
   const swAlerts=[];
   [td,tomStr].forEach(dStr=>{
-    events.forEach(ev=>{
+    AppState.events.forEach(ev=>{
       if(ev.alert===''||ev.alert==null||!ev.start)return;
       if(!getOccurrences(ev,dStr,dStr).includes(dStr))return;
       const alertMin=parseInt(ev.alert)||0;
@@ -6841,7 +6844,7 @@ document.addEventListener('visibilitychange',()=>{
   }
 });
 
-// Re-sync alerts to SW whenever events change
+// Re-sync alerts to SW whenever AppState.events change
 const _patchedSyncAlerts=()=>{setTimeout(syncAlertsToSW,500);};
 document.getElementById('saveBtn').addEventListener('click',_patchedSyncAlerts);
 document.getElementById('deleteBtn').addEventListener('click',_patchedSyncAlerts);
