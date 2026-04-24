@@ -5772,14 +5772,14 @@ function getLocalPayload(){
     }
   }
   return {
-    AppState.events: JSON.stringify(AppState.events),
+    events: JSON.stringify(AppState.events),
     notes: JSON.stringify(notesStore),
     category_colors: JSON.stringify(categoryColors),
     calendars: JSON.stringify(calendars),
     theme: currentTheme,
-    AppState.routines: JSON.stringify(AppState.routines),
+    routines: JSON.stringify(AppState.routines),
     quick_tasks: JSON.stringify(AppState.quickTasks),
-    AppState.reviews: JSON.stringify(AppState.reviews),
+    reviews: JSON.stringify(AppState.reviews),
     top3: JSON.stringify(AppState.top3Data),
     standalone_notes: JSON.stringify(AppState.standaloneNotes),
     routine_checks: JSON.stringify(rchecks),
