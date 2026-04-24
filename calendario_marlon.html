@@ -2312,10 +2312,18 @@ const RRULE_CLS={DAILY:'ev-daily',WEEKLY:'ev-weekly',BIWEEKLY:'ev-biweekly',MONT
 const RRULE_FREQ={DAILY:'DAILY',WEEKLY:'WEEKLY',BIWEEKLY:'WEEKLY',MONTHLY:'MONTHLY',YEARLY:'YEARLY'};
 const CAT_ICONS={'Aula':'📚','Reunião':'👥','CPA':'📋','NAPNE':'♿','Pesquisa':'🔬','Extensão':'🌱','TCC':'🎓','Viagem':'✈️','Saúde':'🏥','Rotina':'🔄','Pessoal':'👤'};
 
-let cur=new Date(),sidebarYear=cur.getFullYear();
+// ─── Estado de UI ────────────────────────────────────
+const AppState={
+  cur:new Date(),
+  sidebarYear:new Date().getFullYear(),
+  selectedDay:null,
+  viewMode:'today',
+  navDir:1,
+  lastNavDir:1,
+};
+// ─────────────────────────────────────────────────────
 let events=[],editingId=null,editingDate=null,selectedColor='#3b5bdb',isDone=false;
-let selectedCustomDays=new Set(),currentTags=[],activeTagFilter='',selectedDay=null;
-let viewMode='today',navDir=1;
+let selectedCustomDays=new Set(),currentTags=[],activeTagFilter='';
 let categoryColors={};
 
 /* ═══════ MULTI-CALENDAR ═══════ */
@@ -2524,7 +2532,7 @@ function toggleDone(evId,date){
   const ev=events.find(e=>e.id===evId);if(!ev)return;
   if(!ev.rrule){ev.done=!ev.done;toast(ev.done?'Concluído ✓':'Pendente');}
   else{if(!ev.doneInstances)ev.doneInstances=[];const i=ev.doneInstances.indexOf(date);if(i>-1){ev.doneInstances.splice(i,1);toast('Pendente');}else{ev.doneInstances.push(date);toast('Concluído ✓');}}
-  save();render();if(selectedDay)renderDayPanel(selectedDay);
+  save();render();if(AppState.selectedDay)renderDayPanel(AppState.selectedDay);
 }
 
 function countdownDays(dateStr){
@@ -2584,7 +2592,7 @@ function suggestFreeSlot(dateStr){
 
 /* ═══════ PROGRESS ═══════ */
 function updateProgress(){
-  const y=cur.getFullYear(),m=cur.getMonth();
+  const y=AppState.cur.getFullYear(),m=AppState.cur.getMonth();
   const evMap=buildEvMap(ds(y,m,1),ds(y,m,new Date(y,m+1,0).getDate()));
   let total=0,done=0;
   Object.entries(evMap).forEach(([d,evs])=>evs.forEach(ev=>{total++;if(isDoneOn(ev,d))done++;}));
@@ -2635,9 +2643,8 @@ function makePill(ev,dateStr,forWeek=false){
 }
 
 /* ═══════ MONTH VIEW ═══════ */
-let lastNavDir=1;
 function renderMonth(){
-  const y=cur.getFullYear(),m=cur.getMonth();
+  const y=AppState.cur.getFullYear(),m=AppState.cur.getMonth();
   const today=todayDs(),first=new Date(y,m,1).getDay(),days=new Date(y,m+1,0).getDate(),prevDays=new Date(y,m,0).getDate();
   const rs=ds(y,m-1,Math.max(1,prevDays-(first-1))),re=ds(y,m+1,14);
   const evMap=buildEvMap(rs,re);
@@ -2653,7 +2660,7 @@ function renderMonth(){
     const MAX=8;
     let ehtml=evs.slice(0,MAX).map(e=>makePill(e,dateStr)).join('');
     if(evs.length>MAX)ehtml+=`<div class="ev-more">+${evs.length-MAX}</div>`;
-    const isSel=dateStr===selectedDay?' selected-day':'';
+    const isSel=dateStr===AppState.selectedDay?' selected-day':'';
     const cls=['day',other?'other-month':'',dateStr===today?'today':'',hols.length?'has-holiday':'',isSel].filter(Boolean).join(' ').replace(/  +/g,' ');
     return `<div class="${cls}" data-date="${dateStr}"><div class="day-num"><span class="dnum-s">${num}</span></div>${holHtml}<div class="day-events">${ehtml}</div></div>`;
   }
@@ -2669,7 +2676,7 @@ function renderMonth(){
   // Slide animation
   grid.classList.remove('slide-in-right','slide-in-left');
   void grid.offsetWidth;
-  grid.classList.add(lastNavDir>0?'slide-in-right':'slide-in-left');
+  grid.classList.add(AppState.lastNavDir>0?'slide-in-right':'slide-in-left');
 
   // ── Drag & Drop state ──
   // Use a module-level variable so drop can read it without relying on dataTransfer
@@ -2755,7 +2762,7 @@ function renderMonth(){
       }
       ev.localUpdatedAt=new Date().toISOString();
       save();render();
-      if(selectedDay)renderDayPanel(selectedDay);
+      if(AppState.selectedDay)renderDayPanel(AppState.selectedDay);
       gcalSyncAfterDrag();
       const [yy,mm,dd]=nd.split('-');
       toast(`Evento movido para ${dd}/${mm}`);
@@ -2822,13 +2829,13 @@ function renderDayPanel(dateStr){
 document.getElementById('dpClose').addEventListener('click',()=>{
   document.getElementById('dayPanel').classList.remove('open');
   document.getElementById('calMain').classList.remove('panel-open');
-  selectedDay=null;
+  AppState.selectedDay=null;
   document.querySelectorAll('.day.selected-day').forEach(d=>d.classList.remove('selected-day'));
 });
 
 /* ═══════ WEEK VIEW ═══════ */
 const WEEK_START_H=6,WEEK_END_H=23,HOUR_H=48;
-function getWeekDates(){const d=new Date(cur);d.setDate(d.getDate()-d.getDay());return Array.from({length:7},(_,i)=>{const x=new Date(d);x.setDate(x.getDate()+i);return x;});}
+function getWeekDates(){const d=new Date(AppState.cur);d.setDate(d.getDate()-d.getDay());return Array.from({length:7},(_,i)=>{const x=new Date(d);x.setDate(x.getDate()+i);return x;});}
 
 /* Qual dia da semana está selecionado no mobile (0=Dom … 6=Sáb) */
 let mobileWeekDay=new Date().getDay();
@@ -3045,7 +3052,7 @@ function renderUpcoming(){
   const end=new Date();end.setDate(end.getDate()+60);
   const endStr=ds(end.getFullYear(),end.getMonth(),end.getDate());
   const evMap=buildEvMap(today,endStr);
-  const allHols={};[cur.getFullYear(),cur.getFullYear()+1].forEach(y=>Object.assign(allHols,getHolidaysForYear(y)));
+  const allHols={};[AppState.cur.getFullYear(),AppState.cur.getFullYear()+1].forEach(y=>Object.assign(allHols,getHolidaysForYear(y)));
   const sortedDates=Object.keys(evMap).filter(d=>d>=today).sort();
   if(!sortedDates.length){body.innerHTML='<div class="dp-empty" style="padding:40px 0;text-align:center">Nenhum evento nos próximos 60 dias</div>';return;}
   let html='';
@@ -3091,12 +3098,12 @@ function renderUpcoming(){
 
 /* ═══════ SIDEBAR ═══════ */
 function renderSidebar(){
-  document.getElementById('sidebarYear').textContent=sidebarYear;
-  const today=todayDs(),evMap=buildEvMap(`${sidebarYear}-01-01`,`${sidebarYear}-12-31`);
-  const yearHols=getHolidaysForYear(sidebarYear);
+  document.getElementById('sidebarYear').textContent=AppState.sidebarYear;
+  const today=todayDs(),evMap=buildEvMap(`${AppState.sidebarYear}-01-01`,`${AppState.sidebarYear}-12-31`);
+  const yearHols=getHolidaysForYear(AppState.sidebarYear);
   let html='';
   for(let m=0;m<12;m++){
-    const y=sidebarYear,isActive=cur.getFullYear()===y&&cur.getMonth()===m;
+    const y=AppState.sidebarYear,isActive=AppState.cur.getFullYear()===y&&AppState.cur.getMonth()===m;
     const first=new Date(y,m,1).getDay(),days=new Date(y,m+1,0).getDate(),prevDays=new Date(y,m,0).getDate();
     let g='';DOWS_M.forEach(d=>{g+=`<div class="mini-dow">${d}</div>`});
     const addC=(dstr,num,other)=>{
@@ -3112,7 +3119,7 @@ function renderSidebar(){
     html+=`<div class="mini-month${isActive?' active':''}" data-y="${y}" data-m="${m}"><div class="mini-label">${MONTHS_S[m]}</div><div class="mini-grid">${g}</div></div>`;
   }
   const c=document.getElementById('sidebarMonths');c.innerHTML=html;
-  c.querySelectorAll('.mini-month').forEach(el=>{el.addEventListener('click',()=>{lastNavDir=parseInt(el.dataset.m)>=cur.getMonth()?1:-1;cur=new Date(parseInt(el.dataset.y),parseInt(el.dataset.m),1);render();setTimeout(()=>el.scrollIntoView({block:'nearest',behavior:'smooth'}),50);});});
+  c.querySelectorAll('.mini-month').forEach(el=>{el.addEventListener('click',()=>{AppState.lastNavDir=parseInt(el.dataset.m)>=AppState.cur.getMonth()?1:-1;AppState.cur=new Date(parseInt(el.dataset.y),parseInt(el.dataset.m),1);render();setTimeout(()=>el.scrollIntoView({block:'nearest',behavior:'smooth'}),50);});});
   const active=c.querySelector('.mini-month.active');if(active)setTimeout(()=>active.scrollIntoView({block:'center',behavior:'smooth'}),80);
 }
 
@@ -3129,38 +3136,38 @@ function renderTodayPreview(){
 }
 
 function updateMonthLabel(){
-  const y=cur.getFullYear(),m=cur.getMonth();
-  if(viewMode==='week'){
+  const y=AppState.cur.getFullYear(),m=AppState.cur.getMonth();
+  if(AppState.viewMode==='week'){
     const dates=getWeekDates();const a=dates[0],b=dates[6];
     document.getElementById('monthLabel').textContent=a.getMonth()===b.getMonth()?`${MONTHS[a.getMonth()]} ${y}`:`${MONTHS_S[a.getMonth()]}–${MONTHS_S[b.getMonth()]} ${y}`;
   } else document.getElementById('monthLabel').textContent=`${MONTHS[m]} ${y}`;
 }
 
 function render(){
-  if(cur.getFullYear()!==sidebarYear)sidebarYear=cur.getFullYear();
+  if(AppState.cur.getFullYear()!==AppState.sidebarYear)AppState.sidebarYear=AppState.cur.getFullYear();
   updateMonthLabel();
   // Show/hide all cards
   // Mobile: 'block' → page scrolls naturally. Desktop: 'flex' → internal scroll (fixed layout).
   const _isMobile=window.innerWidth<=768;
-  DOM.todayCard.style.display=viewMode==='today'?(_isMobile?'block':'flex'):'none';
+  DOM.todayCard.style.display=AppState.viewMode==='today'?(_isMobile?'block':'flex'):'none';
   DOM.todayCard.style.overflowY=_isMobile?'visible':'auto';
-  DOM.monthCard.style.display=viewMode==='month'?'':'none';
-  DOM.weekCard.classList.toggle('show',viewMode==='week');
-  DOM.upcomingCard.classList.toggle('show',viewMode==='upcoming');
-  DOM.routinesCard.style.display=viewMode==='routines'?'flex':'none';
-  DOM.reviewCard.style.display=viewMode==='review'?'flex':'none';
-  DOM.notesCard.style.display=viewMode==='notes'?'flex':'none';
+  DOM.monthCard.style.display=AppState.viewMode==='month'?'':'none';
+  DOM.weekCard.classList.toggle('show',AppState.viewMode==='week');
+  DOM.upcomingCard.classList.toggle('show',AppState.viewMode==='upcoming');
+  DOM.routinesCard.style.display=AppState.viewMode==='routines'?'flex':'none';
+  DOM.reviewCard.style.display=AppState.viewMode==='review'?'flex':'none';
+  DOM.notesCard.style.display=AppState.viewMode==='notes'?'flex':'none';
   // Resetar topbar ao sair da aba Notas para recriar corretamente ao voltar
-  if(viewMode!=='notes')DOM.notesViewContent.innerHTML='';
+  if(AppState.viewMode!=='notes')DOM.notesViewContent.innerHTML='';
   // Also hide footer on non-calendar views
-  if(DOM.calFooter)DOM.calFooter.style.display=['today','routines','review','notes'].includes(viewMode)?'none':'flex';
-  if(viewMode==='month')renderMonth();
-  else if(viewMode==='week')renderWeek();
-  else if(viewMode==='upcoming')renderUpcoming();
-  else if(viewMode==='today')renderToday();
-  else if(viewMode==='routines')renderRoutinesView();
-  else if(viewMode==='review')renderReviewView();
-  else if(viewMode==='notes')renderNotesView();
+  if(DOM.calFooter)DOM.calFooter.style.display=['today','routines','review','notes'].includes(AppState.viewMode)?'none':'flex';
+  if(AppState.viewMode==='month')renderMonth();
+  else if(AppState.viewMode==='week')renderWeek();
+  else if(AppState.viewMode==='upcoming')renderUpcoming();
+  else if(AppState.viewMode==='today')renderToday();
+  else if(AppState.viewMode==='routines')renderRoutinesView();
+  else if(AppState.viewMode==='review')renderReviewView();
+  else if(AppState.viewMode==='notes')renderNotesView();
   renderSidebar();updateProgress();renderTodayPreview();updateTagBar();
   const n=events.length;DOM.evCount.textContent=`${n} evento${n!==1?'s':''}`;
   syncBottomNav();
@@ -3240,7 +3247,7 @@ function openStats(mode){
   document.getElementById('statsTabMonth').classList.toggle('active',statsMode==='month');
   document.getElementById('statsTabWeek').classList.toggle('active',statsMode==='week');
   if(statsMode==='month'){
-    const y=cur.getFullYear(),m=cur.getMonth();
+    const y=AppState.cur.getFullYear(),m=AppState.cur.getMonth();
     const data=buildStatsData(ds(y,m,1),ds(y,m,new Date(y,m+1,0).getDate()),`${MONTHS[m]} ${y}`);
     renderStatsContent(data);
   } else {
@@ -3488,7 +3495,7 @@ document.getElementById('searchInput').addEventListener('input',function(){
   res.innerHTML=matches.slice(0,8).map(e=>`<div class="search-item" data-id="${e.id}"><strong style="color:var(--text)">${CAT_ICONS[e.category]||''} ${esc(e.title)}</strong><span style="display:block;font-size:10px;color:var(--muted)">${e.date}${e.start?' '+e.start:''}${e.category?' · '+esc(e.category):''}${(e.tags||[]).length?' · '+(e.tags||[]).map(t=>esc(t)).join(' '):''}</span></div>`).join('');
   res.classList.add('open');
   res.querySelectorAll('.search-item[data-id]').forEach(item=>{
-    item.addEventListener('click',()=>{const ev=events.find(e=>e.id===item.dataset.id);if(ev){cur=new Date(ev.date+'T12:00:00');render();openEdit(ev.id,ev.date);}res.classList.remove('open');document.getElementById('searchInput').value='';});
+    item.addEventListener('click',()=>{const ev=events.find(e=>e.id===item.dataset.id);if(ev){AppState.cur=new Date(ev.date+'T12:00:00');render();openEdit(ev.id,ev.date);}res.classList.remove('open');document.getElementById('searchInput').value='';});
   });
 });
 document.addEventListener('click',e=>{if(!e.target.closest('.search-wrap'))document.getElementById('searchResults').classList.remove('open');});
@@ -3609,8 +3616,8 @@ function openNew(date){
   document.getElementById('modalTitle').textContent='Novo evento';
   document.getElementById('deleteBtn').style.display='none';
   ['evTitle','evCategory','evLocation','evDesc','evUntil'].forEach(id=>document.getElementById(id).value='');
-  document.getElementById('evDate').value=date||ds(cur.getFullYear(),cur.getMonth(),1);
-  document.getElementById('evDateEnd').value=date||ds(cur.getFullYear(),cur.getMonth(),1);
+  document.getElementById('evDate').value=date||ds(AppState.cur.getFullYear(),AppState.cur.getMonth(),1);
+  document.getElementById('evDateEnd').value=date||ds(AppState.cur.getFullYear(),AppState.cur.getMonth(),1);
   document.getElementById('evStart').value='08:00';document.getElementById('evEnd').value='09:00';
   document.getElementById('evAlert').value='15';document.getElementById('evRrule').value='';
   document.getElementById('recurBox').classList.remove('show');document.getElementById('customDaysWrap').classList.remove('show');
@@ -3692,7 +3699,7 @@ document.getElementById('saveBtn').addEventListener('click',()=>{
     if(old){ev.gcalId=old.gcalId;ev.gcalUpdated=old.gcalUpdated;} // preserve gcal link
     const i=events.findIndex(e=>e.id===editingId);if(i>-1)events[i]=ev;
   }else events.push(ev);
-  save();closeModal();render();if(selectedDay)renderDayPanel(selectedDay);
+  save();closeModal();render();if(AppState.selectedDay)renderDayPanel(AppState.selectedDay);
   rescheduleAlerts();
   toast(editingId?'Evento atualizado!':'Evento salvo!');
   }catch(err){console.error('Erro ao salvar evento:',err);toast('Erro ao salvar: '+err.message);}
@@ -3777,13 +3784,13 @@ async function gcalProcessDeleteQueue(){
 function deleteEventById(id){
   const ev=events.find(e=>e.id===id);
   events=events.filter(e=>e.id!==id);
-  save();render();if(selectedDay)renderDayPanel(selectedDay);
+  save();render();if(AppState.selectedDay)renderDayPanel(AppState.selectedDay);
   if(ev?.gcalId)gcalMarkDeleted(ev.gcalId);
   toastUndo('Evento excluído.',()=>{
     if(ev){
       events.push(ev);
       if(ev.gcalId)gcalUnmarkDeleted(ev.gcalId);
-      save();render();if(selectedDay)renderDayPanel(selectedDay);
+      save();render();if(AppState.selectedDay)renderDayPanel(AppState.selectedDay);
     }
   });
   if(ev?.gcalId)setTimeout(()=>{if(gcalIsConnected())gcalProcessDeleteQueue().catch(()=>{});},5200);
@@ -3794,10 +3801,10 @@ function deleteEventById(id){
   const btn=document.getElementById('btn'+v);
   if(!btn)return;
   btn.addEventListener('click',()=>{
-    const prev=viewMode;
-    viewMode=v.toLowerCase();
+    const prev=AppState.viewMode;
+    AppState.viewMode=v.toLowerCase();
     // Ao entrar na Vista Semana no mobile, posicionar no dia correto
-    if(viewMode==='week'&&window.innerWidth<=768){
+    if(AppState.viewMode==='week'&&window.innerWidth<=768){
       const dates=getWeekDates();
       const todayDow=new Date().getDay();
       const todayStr=todayDs();
@@ -3813,30 +3820,30 @@ function deleteEventById(id){
 
 /* ═══════ NAV ═══════ */
 document.getElementById('prevBtn').addEventListener('click',()=>{
-  lastNavDir=-1;
-  if(viewMode==='week'){cur=new Date(cur);cur.setDate(cur.getDate()-7);}
-  else if(viewMode==='upcoming'){cur=new Date(cur);cur.setMonth(cur.getMonth()-1);}
-  else cur=new Date(cur.getFullYear(),cur.getMonth()-1,1);
+  AppState.lastNavDir=-1;
+  if(AppState.viewMode==='week'){AppState.cur=new Date(AppState.cur);AppState.cur.setDate(AppState.cur.getDate()-7);}
+  else if(AppState.viewMode==='upcoming'){AppState.cur=new Date(AppState.cur);AppState.cur.setMonth(AppState.cur.getMonth()-1);}
+  else AppState.cur=new Date(AppState.cur.getFullYear(),AppState.cur.getMonth()-1,1);
   render();
 });
 document.getElementById('nextBtn').addEventListener('click',()=>{
-  lastNavDir=1;
-  if(viewMode==='week'){cur=new Date(cur);cur.setDate(cur.getDate()+7);}
-  else if(viewMode==='upcoming'){cur=new Date(cur);cur.setMonth(cur.getMonth()+1);}
-  else cur=new Date(cur.getFullYear(),cur.getMonth()+1,1);
+  AppState.lastNavDir=1;
+  if(AppState.viewMode==='week'){AppState.cur=new Date(AppState.cur);AppState.cur.setDate(AppState.cur.getDate()+7);}
+  else if(AppState.viewMode==='upcoming'){AppState.cur=new Date(AppState.cur);AppState.cur.setMonth(AppState.cur.getMonth()+1);}
+  else AppState.cur=new Date(AppState.cur.getFullYear(),AppState.cur.getMonth()+1,1);
   render();
 });
-document.getElementById('todayBtn').addEventListener('click',()=>{cur=new Date();sidebarYear=cur.getFullYear();render();});
+document.getElementById('todayBtn').addEventListener('click',()=>{AppState.cur=new Date();AppState.sidebarYear=AppState.cur.getFullYear();render();});
 document.getElementById('addBtn').addEventListener('click',()=>openNew(null));
-document.getElementById('sYearPrev').addEventListener('click',()=>{sidebarYear--;renderSidebar();});
-document.getElementById('sYearNext').addEventListener('click',()=>{sidebarYear++;renderSidebar();});
+document.getElementById('sYearPrev').addEventListener('click',()=>{AppState.sidebarYear--;renderSidebar();});
+document.getElementById('sYearNext').addEventListener('click',()=>{AppState.sidebarYear++;renderSidebar();});
 
 /* ═══════ DENSITY ═══════ */
 document.getElementById('btnCompact').addEventListener('click',()=>{document.body.className=document.body.className.replace(/compact|comfortable/g,'').trim()+' compact';localStorage.setItem('cal_density','compact');document.getElementById('themePopup').classList.remove('open');});
 document.getElementById('btnComfort').addEventListener('click',()=>{document.body.className=document.body.className.replace(/compact|comfortable/g,'').trim()+' comfortable';localStorage.setItem('cal_density','comfortable');document.getElementById('themePopup').classList.remove('open');});
 
 /* ═══════ PRINT ═══════ */
-document.getElementById('printBtn').addEventListener('click',()=>{if(viewMode!=='month')toast('Dica: alterne para Mês antes de imprimir.');window.print();});
+document.getElementById('printBtn').addEventListener('click',()=>{if(AppState.viewMode!=='month')toast('Dica: alterne para Mês antes de imprimir.');window.print();});
 
 /* ═══════ POPUPS ═══════ */
 ['backup','theme'].forEach(name=>{
@@ -4179,8 +4186,8 @@ document.getElementById('ctxMove').addEventListener('click',()=>{
   // Fecha painel do dia e vai para vista Mês
   document.getElementById('dayPanel').classList.remove('open');
   document.getElementById('calMain').classList.remove('panel-open');
-  selectedDay=null;
-  if(viewMode!=='month'){viewMode='month';render();}
+  AppState.selectedDay=null;
+  if(AppState.viewMode!=='month'){AppState.viewMode='month';render();}
   document.getElementById('calGrid').classList.add('move-mode');
   document.getElementById('moveBanner').classList.add('active');
 });
@@ -4201,7 +4208,7 @@ document.getElementById('ctxSkip').addEventListener('click',()=>{
   if(!ev.skipped)ev.skipped=[];
   if(!ev.skipped.includes(ctxEvDate)){
     ev.skipped.push(ctxEvDate);
-    save();render();if(selectedDay)renderDayPanel(selectedDay);
+    save();render();if(AppState.selectedDay)renderDayPanel(AppState.selectedDay);
     toast('Ocorrência pulada neste dia.');
   }
 });
@@ -4218,7 +4225,7 @@ document.addEventListener('keydown',e=>{
 
 /* ═══════ PDF VISUAL EXPORT ═══════ */
 document.getElementById('pdfBtn').addEventListener('click',async()=>{
-  if(viewMode!=='month'){toast('Alterne para a vista Mês para exportar PDF.');return;}
+  if(AppState.viewMode!=='month'){toast('Alterne para a vista Mês para exportar PDF.');return;}
   const card=document.getElementById('monthCard');
   toast('Gerando PDF…');
   try{
@@ -4229,7 +4236,7 @@ document.getElementById('pdfBtn').addEventListener('click',async()=>{
     const ratio=Math.min(w/canvas.width,h/canvas.height)*96;
     const imgW=canvas.width*ratio/96,imgH=canvas.height*ratio/96;
     const x=(w-imgW)/2,y=8;
-    const y2=cur.getFullYear(),m2=cur.getMonth();
+    const y2=AppState.cur.getFullYear(),m2=AppState.cur.getMonth();
     pdf.setFontSize(14);pdf.setFont('helvetica','bold');
     pdf.text(`${MONTHS[m2]} ${y2}`,w/2,y,{align:'center'});
     pdf.addImage(canvas.toDataURL('image/jpeg',0.95),'JPEG',x,y+6,imgW,imgH-6);
@@ -4289,13 +4296,13 @@ function addLongPress(el,evId,evDate){
   calMain.addEventListener('touchend',e=>{
     if(!swActive)return;
     swActive=false;
-    if(!['month','week'].includes(viewMode))return;
+    if(!['month','week'].includes(AppState.viewMode))return;
     const dx=e.changedTouches[0].clientX-swStartX;
     const dy=Math.abs(e.changedTouches[0].clientY-swStartY);
     if(dy>MAX_VERT||Math.abs(dx)<THRESHOLD)return;
 
     // Mobile week view: navega por DIA (não por semana)
-    if(viewMode==='week'&&window.innerWidth<=768){
+    if(AppState.viewMode==='week'&&window.innerWidth<=768){
       if(dx<0){
         // swipe esquerda → próximo dia
         mobileWeekDay++;
@@ -4323,7 +4330,7 @@ const BN_VIEW_MAP={
 
 function syncBottomNav(){
   document.querySelectorAll('.bn-item').forEach(b=>{
-    b.classList.toggle('active',b.dataset.bnview===viewMode);
+    b.classList.toggle('active',b.dataset.bnview===AppState.viewMode);
   });
 }
 
@@ -4451,7 +4458,7 @@ function openMobileDaySheet(dateStr){
 function _mdsGoToDay(){
   const d=_mdsDate;
   closeMobileDaySheet();
-  selectedDay=d;
+  AppState.selectedDay=d;
   renderDayPanel(d);
   document.querySelectorAll('.day').forEach(x=>x.classList.remove('selected-day'));
   document.querySelector(`.day[data-date="${d}"]`)?.classList.add('selected-day');
@@ -4596,7 +4603,7 @@ function _rvStreak(routineId){
   return streak;
 }
 function _rvBestStreak(routineId){
-  let best=0,cur=0;
+  let best=0,cnt=0;
   for(let i=365;i>=0;i--){
     const d=new Date();d.setDate(d.getDate()-i);
     const ds=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
@@ -4604,10 +4611,10 @@ function _rvBestStreak(routineId){
     if(routineId){
       const r=routines.find(x=>x.id===routineId);if(!r)continue;
       if(!_rvDue(r,ds))continue;
-      if(checks.includes(routineId)){cur++;best=Math.max(best,cur);}else cur=0;
+      if(checks.includes(routineId)){cnt++;best=Math.max(best,cnt);}else cnt=0;
     }else{
       const due=routines.filter(r=>_rvDue(r,ds));if(!due.length)continue;
-      if(due.every(r=>checks.includes(r.id))){cur++;best=Math.max(best,cur);}else cur=0;
+      if(due.every(r=>checks.includes(r.id))){cnt++;best=Math.max(best,cnt);}else cnt=0;
     }
   }
   return best;
@@ -5663,7 +5670,7 @@ document.getElementById('neEditor').addEventListener('input',()=>{
     }
     saveStandaloneNotes();
     document.getElementById('neSavedLabel').textContent='💾 Salvo automaticamente';
-    if(viewMode==='notes')renderNotesView();
+    if(AppState.viewMode==='notes')renderNotesView();
   },900);
 });
 // Close overlay clicking backdrop
@@ -5680,7 +5687,7 @@ document.getElementById('qcBtn').addEventListener('click',()=>{
   // Smart detection: starts with time (08:00) or @ → event, otherwise → task
   const isEvent=/^(\d{1,2}[:h]\d{0,2})|@/.test(val);
   if(isEvent){openNew(todayDs());setTimeout(()=>{document.getElementById('evTitle').value=val;},80);}
-  else{addQuickTask(val);if(viewMode==='today')renderToday();}
+  else{addQuickTask(val);if(AppState.viewMode==='today')renderToday();}
   input.value='';toast(isEvent?'Abrindo novo evento…':'Tarefa adicionada!');
 });
 document.getElementById('qcInput').addEventListener('keydown',e=>{
@@ -6270,8 +6277,8 @@ async function gcalSync(pullOnly=false){
           updated_ev.id=local.id; // keep local ID
           const idx=events.findIndex(e=>e.id===local.id);
           if(idx>-1){
-            const cur=events[idx]; // re-fetch current state (may have changed since localByGcalId snapshot)
-            events[idx]={...cur,...updated_ev,localUpdatedAt:cur.localUpdatedAt};
+            const existingEv=events[idx]; // re-fetch current state (may have changed since localByGcalId snapshot)
+            events[idx]={...existingEv,...updated_ev,localUpdatedAt:existingEv.localUpdatedAt};
           }
           updated++;
         }
@@ -6843,7 +6850,7 @@ document.getElementById('deleteBtn').addEventListener('click',_patchedSyncAlerts
 (()=>{
   const params=new URLSearchParams(location.search);
   if(params.get('action')==='new')setTimeout(()=>openNew(null),500);
-  if(params.get('view')==='today'){viewMode='today';render();}
+  if(params.get('view')==='today'){AppState.viewMode='today';render();}
 })();
 
 /* ── Versão automática via CHANGELOG.md ── */
