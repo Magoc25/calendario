@@ -3848,21 +3848,44 @@ document.getElementById('importIcsFile').addEventListener('change',function(){
   const file=this.files[0];if(!file)return;
   const reader=new FileReader();
   reader.onload=e=>{
-    const lines=e.target.result.replace(/\r\n/g,'\n').replace(/\r/g,'\n').split('\n');
+    // RFC 5545 line unfolding: linhas que começam com espaço/tab são continuação da linha anterior
+    const raw=e.target.result.replace(/\r\n/g,'\n').replace(/\r/g,'\n');
+    const lines=raw.replace(/\n[ \t]/g,'').split('\n');
     const imported=[];let ev=null;
     lines.forEach(line=>{
       if(line==='BEGIN:VEVENT'){ev={id:uid(),title:'',date:'',start:'08:00',end:'09:00'};}
       else if(line==='END:VEVENT'&&ev){if(ev.title&&ev.date)imported.push(ev);ev=null;}
       else if(ev){
         const[key,...rest]=line.split(':');const val=rest.join(':');
-        if(key==='SUMMARY')ev.title=val;
-        else if(key==='LOCATION')ev.location=val;
-        else if(key==='DESCRIPTION')ev.desc=val;
-        else if(key==='CATEGORIES')ev.category=val;
-        else if(key.startsWith('DTSTART')){const d=val.replace(/T\d+Z?$/,'');if(d.length>=8)ev.date=`${d.slice(0,4)}-${d.slice(4,6)}-${d.slice(6,8)}`;const t=val.match(/T(\d{2})(\d{2})/);if(t)ev.start=`${t[1]}:${t[2]}`;}
-        else if(key.startsWith('DTEND')){const t=val.match(/T(\d{2})(\d{2})/);if(t)ev.end=`${t[1]}:${t[2]}`;}
-        else if(key==='RRULE'){if(val.includes('FREQ=WEEKLY'))ev.rrule='WEEKLY';else if(val.includes('FREQ=DAILY'))ev.rrule='DAILY';else if(val.includes('FREQ=MONTHLY'))ev.rrule='MONTHLY';else if(val.includes('FREQ=YEARLY'))ev.rrule='YEARLY';}
+        const prop=key.split(';')[0]; // ignora parâmetros (ex: DTSTART;TZID=...)
+        if(prop==='SUMMARY')ev.title=val;
+        else if(prop==='LOCATION')ev.location=val;
+        else if(prop==='DESCRIPTION')ev.desc=val;
+        else if(prop==='CATEGORIES')ev.category=val;
+        else if(prop==='DTSTART'){const d=val.replace(/T\d+Z?$/,'');if(d.length>=8)ev.date=`${d.slice(0,4)}-${d.slice(4,6)}-${d.slice(6,8)}`;const t=val.match(/T(\d{2})(\d{2})/);if(t)ev.start=`${t[1]}:${t[2]}`;}
+        else if(prop==='DTEND'){const d=val.replace(/T\d+Z?$/,'');if(d.length>=8){const end=`${d.slice(0,4)}-${d.slice(4,6)}-${d.slice(6,8)}`;if(end!==ev.date)ev.dateEnd=end;}const t=val.match(/T(\d{2})(\d{2})/);if(t)ev.end=`${t[1]}:${t[2]}`;}
+        else if(prop==='RRULE'){
+          if(val.includes('FREQ=WEEKLY'))ev.rrule='WEEKLY';
+          else if(val.includes('FREQ=DAILY'))ev.rrule='DAILY';
+          else if(val.includes('FREQ=MONTHLY'))ev.rrule='MONTHLY';
+          else if(val.includes('FREQ=YEARLY'))ev.rrule='YEARLY';
+          // Extrai UNTIL do RRULE (ex: FREQ=WEEKLY;UNTIL=20261231T235959Z)
+          const until=val.match(/UNTIL=(\d{8})/);
+          if(until)ev.until=`${until[1].slice(0,4)}-${until[1].slice(4,6)}-${until[1].slice(6,8)}`;
+          // Extrai COUNT (limita ocorrências pela contagem, não por data)
+          const count=val.match(/COUNT=(\d+)/);
+          if(count)ev._icsCount=parseInt(count[1]);
+        }
       }
+    });
+    // Converte COUNT em until aproximado (N ocorrências a partir da data de início)
+    imported.forEach(ev=>{
+      if(ev._icsCount&&ev.rrule&&!ev.until){
+        const d=new Date(ev.date+'T12:00:00');
+        for(let i=1;i<ev._icsCount;i++)d=advance(d,ev.rrule);
+        ev.until=ds(d.getFullYear(),d.getMonth(),d.getDate());
+      }
+      delete ev._icsCount;
     });
     if(!imported.length){toast('Nenhum evento encontrado no arquivo .ics');return;}
     if(confirm(`Importar ${imported.length} evento(s) do arquivo .ics? Serão adicionados aos existentes.`)){

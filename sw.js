@@ -6,7 +6,7 @@
    3. Periodic Background Sync (Android Chrome)
 ═══════════════════════════════════════════════════════ */
 
-const CACHE_NAME = 'cal-mgc-v53'; // bumped: cache DOM + memoize buildEvMap + CAT_ICONS sync
+const CACHE_NAME = 'cal-mgc-v54';
 const DB_NAME = 'cal-mgc-sw';
 const DB_VERSION = 1;
 const STORE_ALERTS = 'pending_alerts';
