@@ -2338,7 +2338,7 @@ try{
   const stored=JSON.parse(localStorage.getItem('cal_calendars')||'null');
   if(stored&&stored.length)calendars=stored;
 }catch(e){console.error('[MGC] Falha ao carregar calendários:',e);}
-function saveCalendars(){localStorage.setItem('cal_calendars',JSON.stringify(calendars));localStorage.setItem('cal_local_ts',new Date().toISOString());if(sbClient){clearTimeout(_cloudSaveTimer);_cloudSaveTimer=setTimeout(()=>syncToCloud(true),1500);}}
+function saveCalendars(){invalidateEvMapCache();localStorage.setItem('cal_calendars',JSON.stringify(calendars));localStorage.setItem('cal_local_ts',new Date().toISOString());if(sbClient){clearTimeout(_cloudSaveTimer);_cloudSaveTimer=setTimeout(()=>syncToCloud(true),1500);}}
 function getCal(id){return calendars.find(c=>c.id===id)||calendars[0];}
 function getCalColor(ev){
   const cal=getCal(ev.calendarId);
@@ -2424,7 +2424,28 @@ const pad=n=>String(n).padStart(2,'0');
 const ds=(y,m,d)=>`${y}-${pad(m+1)}-${pad(d)}`;
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2);
 const esc=s=>String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
-const save=()=>{localStorage.setItem('cal_marlon_v8',JSON.stringify(events));localStorage.setItem('cal_local_ts',new Date().toISOString());if(sbClient){clearTimeout(_cloudSaveTimer);_cloudSaveTimer=setTimeout(()=>syncToCloud(true),1500);}};
+
+// Cache de referências DOM estáticas — evita getElementById repetido em cada render()
+const DOM={
+  todayCard:    document.getElementById('todayCard'),
+  monthCard:    document.getElementById('monthCard'),
+  weekCard:     document.getElementById('weekCard'),
+  upcomingCard: document.getElementById('upcomingCard'),
+  routinesCard: document.getElementById('routinesCard'),
+  reviewCard:   document.getElementById('reviewCard'),
+  notesCard:    document.getElementById('notesCard'),
+  notesViewContent: document.getElementById('notesViewContent'),
+  evCount:      document.getElementById('evCount'),
+  tagBar:       document.getElementById('tagBar'),
+  tagChips:     document.getElementById('tagChips'),
+  progressWrap: document.getElementById('progressWrap'),
+  calFooter:    document.querySelector('.cal-footer'),
+};
+
+// Cache de buildEvMap — invalidado a cada save() para evitar recomputação desnecessária
+let _evMapCache={};
+const invalidateEvMapCache=()=>{_evMapCache={};};
+const save=()=>{invalidateEvMapCache();localStorage.setItem('cal_marlon_v8',JSON.stringify(events));localStorage.setItem('cal_local_ts',new Date().toISOString());if(sbClient){clearTimeout(_cloudSaveTimer);_cloudSaveTimer=setTimeout(()=>syncToCloud(true),1500);}};
 let _gcalDragSyncTimer=null;
 function gcalSyncAfterDrag(){clearTimeout(_gcalDragSyncTimer);_gcalDragSyncTimer=setTimeout(()=>{if(typeof gcalIsConnected==='function'&&gcalIsConnected())gcalSync(false).catch(()=>{});},3000);}
 const saveCatColors=()=>{localStorage.setItem('cal_catcolors',JSON.stringify(categoryColors));localStorage.setItem('cal_local_ts',new Date().toISOString());if(sbClient){clearTimeout(_cloudSaveTimer2);_cloudSaveTimer2=setTimeout(()=>syncToCloud(true),1500);}};
@@ -2484,6 +2505,8 @@ function filterEvents(){
 }
 
 function buildEvMap(rs,re){
+  const key=rs+'|'+re;
+  if(_evMapCache[key])return _evMapCache[key];
   const map={};
   filterEvents().forEach(ev=>{
     getOccurrences(ev,rs,re).forEach(d=>{
@@ -2491,6 +2514,7 @@ function buildEvMap(rs,re){
     });
   });
   Object.keys(map).forEach(k=>map[k].sort((a,b)=>(a.start||'00:00').localeCompare(b.start||'00:00')));
+  _evMapCache[key]=map;
   return map;
 }
 
@@ -2515,11 +2539,9 @@ function countdownDays(dateStr){
 function getAllTags(){const s=new Set();events.forEach(ev=>(ev.tags||[]).forEach(t=>s.add(t)));return [...s].sort();}
 function updateTagBar(){
   const tags=getAllTags();
-  const bar=document.getElementById('tagBar');
-  if(!tags.length){bar.style.display='none';return;}
-  bar.style.display='flex';
-  const chips=document.getElementById('tagChips');
-  chips.innerHTML=tags.map(t=>`<span class="tag-chip-filter${activeTagFilter===t?' active':''}" data-tag="${esc(t)}">${esc(t)}</span>`).join('');
+  if(!tags.length){DOM.tagBar.style.display='none';return;}
+  DOM.tagBar.style.display='flex';
+  DOM.tagChips.innerHTML=tags.map(t=>`<span class="tag-chip-filter${activeTagFilter===t?' active':''}" data-tag="${esc(t)}">${esc(t)}</span>`).join('');
   document.querySelectorAll('.tag-chip-filter').forEach(c=>{
     c.addEventListener('click',()=>{activeTagFilter=c.dataset.tag;document.querySelectorAll('.tag-chip-filter').forEach(x=>x.classList.toggle('active',x.dataset.tag===activeTagFilter));render();});
   });
@@ -2565,9 +2587,8 @@ function updateProgress(){
   const evMap=buildEvMap(ds(y,m,1),ds(y,m,new Date(y,m+1,0).getDate()));
   let total=0,done=0;
   Object.entries(evMap).forEach(([d,evs])=>evs.forEach(ev=>{total++;if(isDoneOn(ev,d))done++;}));
-  const pw=document.getElementById('progressWrap');
-  if(!total){pw.style.display='none';return;}
-  pw.style.display='flex';
+  if(!total){DOM.progressWrap.style.display='none';return;}
+  DOM.progressWrap.style.display='flex';
   document.getElementById('progressLabel').textContent=`${done}/${total}`;
   document.getElementById('progressFill').style.width=`${Math.round(done/total*100)}%`;
 }
@@ -3120,19 +3141,18 @@ function render(){
   // Show/hide all cards
   // Mobile: 'block' → page scrolls naturally. Desktop: 'flex' → internal scroll (fixed layout).
   const _isMobile=window.innerWidth<=768;
-  document.getElementById('todayCard').style.display=viewMode==='today'?(_isMobile?'block':'flex'):'none';
-  document.getElementById('todayCard').style.overflowY=_isMobile?'visible':'auto';
-  document.getElementById('monthCard').style.display=viewMode==='month'?'':'none';
-  document.getElementById('weekCard').classList.toggle('show',viewMode==='week');
-  document.getElementById('upcomingCard').classList.toggle('show',viewMode==='upcoming');
-  document.getElementById('routinesCard').style.display=viewMode==='routines'?'flex':'none';
-  document.getElementById('reviewCard').style.display=viewMode==='review'?'flex':'none';
-  document.getElementById('notesCard').style.display=viewMode==='notes'?'flex':'none';
+  DOM.todayCard.style.display=viewMode==='today'?(_isMobile?'block':'flex'):'none';
+  DOM.todayCard.style.overflowY=_isMobile?'visible':'auto';
+  DOM.monthCard.style.display=viewMode==='month'?'':'none';
+  DOM.weekCard.classList.toggle('show',viewMode==='week');
+  DOM.upcomingCard.classList.toggle('show',viewMode==='upcoming');
+  DOM.routinesCard.style.display=viewMode==='routines'?'flex':'none';
+  DOM.reviewCard.style.display=viewMode==='review'?'flex':'none';
+  DOM.notesCard.style.display=viewMode==='notes'?'flex':'none';
   // Resetar topbar ao sair da aba Notas para recriar corretamente ao voltar
-  if(viewMode!=='notes')document.getElementById('notesViewContent').innerHTML='';
+  if(viewMode!=='notes')DOM.notesViewContent.innerHTML='';
   // Also hide footer on non-calendar views
-  const footer=document.querySelector('.cal-footer');
-  if(footer)footer.style.display=['today','routines','review','notes'].includes(viewMode)?'none':'flex';
+  if(DOM.calFooter)DOM.calFooter.style.display=['today','routines','review','notes'].includes(viewMode)?'none':'flex';
   if(viewMode==='month')renderMonth();
   else if(viewMode==='week')renderWeek();
   else if(viewMode==='upcoming')renderUpcoming();
@@ -3141,7 +3161,7 @@ function render(){
   else if(viewMode==='review')renderReviewView();
   else if(viewMode==='notes')renderNotesView();
   renderSidebar();updateProgress();renderTodayPreview();updateTagBar();
-  const n=events.length;document.getElementById('evCount').textContent=`${n} evento${n!==1?'s':''}`;
+  const n=events.length;DOM.evCount.textContent=`${n} evento${n!==1?'s':''}`;
   syncBottomNav();
 }
 
@@ -5716,6 +5736,7 @@ function getLocalPayload(){
 
 function applyRemotePayload(row){
   if(!row) return;
+  invalidateEvMapCache();
   try{
     const remoteEvents=JSON.parse(row.events||'[]');
     const remoteNotes=JSON.parse(row.notes||'{}');
@@ -6748,7 +6769,7 @@ function syncAlertsToSW(){
     });
   });
   if(swAlerts.length){
-    sw.postMessage({type:'STORE_ALERTS',data:{alerts:swAlerts}});
+    sw.postMessage({type:'STORE_ALERTS',data:{alerts:swAlerts,catIcons:CAT_ICONS}});
     console.log('[PWA] '+swAlerts.length+' alerta(s) enviado(s) para o SW');
   }
 }

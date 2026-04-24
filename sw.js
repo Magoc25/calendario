@@ -6,11 +6,15 @@
    3. Periodic Background Sync (Android Chrome)
 ═══════════════════════════════════════════════════════ */
 
-const CACHE_NAME = 'cal-mgc-v52';
+const CACHE_NAME = 'cal-mgc-v53'; // bumped: cache DOM + memoize buildEvMap + CAT_ICONS sync
 const DB_NAME = 'cal-mgc-sw';
 const DB_VERSION = 1;
 const STORE_ALERTS = 'pending_alerts';
 const STORE_FIRED  = 'fired_alerts';
+
+// Ícones de categoria — populados pelo app via postMessage (STORE_ALERTS)
+// Fallback hardcoded caso o SW dispare antes do app enviar os ícones
+let catIcons = { 'Aula':'📚','Reunião':'👥','Rotina':'🔄','Pessoal':'👤','CPA':'📋' };
 
 // ── Install: skip waiting immediately ──────────────────
 self.addEventListener('install', event => {
@@ -64,6 +68,7 @@ self.addEventListener('message', async event => {
 
   if (type === 'STORE_ALERTS') {
     // Main thread sends upcoming alerts for SW to monitor
+    if (data.catIcons) catIcons = { ...catIcons, ...data.catIcons };
     await storeAlerts(data.alerts);
     await checkAndFireAlerts('message');
   }
@@ -209,8 +214,7 @@ async function checkAndFireAlerts(source) {
         continue;
       }
 
-      // Show notification
-      const catIcons = { 'Aula':'📚','Reunião':'👥','Rotina':'🔄','Pessoal':'👤','CPA':'📋' };
+      // Show notification (catIcons populado pelo app via STORE_ALERTS)
       const icon = catIcons[alert.category] || '🔔';
       const bodyParts = [];
       if (alert.time) bodyParts.push('às ' + alert.time);
