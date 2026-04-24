@@ -5800,9 +5800,9 @@ function applyRemotePayload(row){
     categoryColors=remoteCatColors;
     if(remoteCalendars&&remoteCalendars.length)calendars=remoteCalendars;
     if(row.theme)applyTheme(row.theme);
-    if(row.AppState.routines)try{const r=JSON.parse(row.AppState.routines);if(Array.isArray(r))AppState.routines=r;}catch(e){}
+    if(row.routines)try{const r=JSON.parse(row.routines);if(Array.isArray(r))AppState.routines=r;}catch(e){}
     if(row.quick_tasks)try{const q=JSON.parse(row.quick_tasks);if(Array.isArray(q))AppState.quickTasks=q;}catch(e){}
-    if(row.AppState.reviews)try{const rv=JSON.parse(row.AppState.reviews);if(rv&&typeof rv==='object')AppState.reviews=rv;}catch(e){}
+    if(row.reviews)try{const rv=JSON.parse(row.reviews);if(rv&&typeof rv==='object')AppState.reviews=rv;}catch(e){}
     if(row.top3)try{const t3=JSON.parse(row.top3);if(t3&&typeof t3==='object')AppState.top3Data=t3;}catch(e){}
     if(row.standalone_notes)try{const sn=JSON.parse(row.standalone_notes);if(Array.isArray(sn))AppState.standaloneNotes=sn;}catch(e){}
     // Persist locally
@@ -5810,9 +5810,9 @@ function applyRemotePayload(row){
     localStorage.setItem('cal_notes',row.notes||'{}');
     localStorage.setItem('cal_catcolors',row.category_colors||'{}');
     if(remoteCalendars)localStorage.setItem('cal_calendars',row.calendars);
-    if(row.AppState.routines)localStorage.setItem('cal_routines',row.AppState.routines);
+    if(row.routines)localStorage.setItem('cal_routines',row.routines);
     if(row.quick_tasks)localStorage.setItem('cal_qtasks',row.quick_tasks);
-    if(row.AppState.reviews)localStorage.setItem('cal_reviews',row.AppState.reviews);
+    if(row.reviews)localStorage.setItem('cal_reviews',row.reviews);
     if(row.top3)localStorage.setItem('cal_top3',row.top3);
     if(row.standalone_notes)localStorage.setItem('cal_standalone_notes',row.standalone_notes);
     if(row.routine_checks)try{
