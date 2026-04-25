@@ -73,6 +73,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);hei
 .hbtn-accent:hover{background:var(--accent-light)!important}
 .hbtn-primary{background:var(--accent);border:none;color:#fff;box-shadow:0 2px 8px rgba(0,0,0,.12)}
 .hbtn-primary:hover{background:var(--accent-dark);transform:translateY(-1px);color:#fff}
+.hbtn.density-active{border-color:var(--accent)!important;color:var(--accent)!important;background:var(--accent-light)!important;font-weight:700}
 
 /* Sync status */
 .sync-dot{width:7px;height:7px;border-radius:50%;display:inline-block;margin-left:3px;vertical-align:middle;transition:background .3s}
@@ -447,6 +448,90 @@ body.large .dp-ev-title{font-size:14.5px}
 body.large .upcoming-ev{padding:13px 16px;margin-bottom:9px}
 body.large .up-title{font-size:14px}
 
+/* Compact — Rotinas */
+body.compact .routine-card{padding:7px 10px;margin-bottom:5px;gap:7px}
+body.compact .routine-card-title{font-size:10.5px}
+body.compact .routine-card-meta{font-size:9px}
+body.compact .rv-bar-name{font-size:9px}
+body.compact .rv-bar-track{height:5px}
+body.compact .rv-bar-pct{font-size:9px}
+body.compact .rv-bars{gap:6px}
+/* Compact — Revisão */
+body.compact .rew-wrap{padding:12px 14px;gap:10px}
+body.compact .rew-field{margin-bottom:9px}
+body.compact .rew-field textarea{font-size:10.5px;min-height:64px;padding:7px 9px}
+body.compact .rew-metric-card{padding:8px;margin-bottom:5px}
+body.compact .rew-metric-num{font-size:20px}
+body.compact .rew-streak-card{padding:7px 9px;margin-bottom:5px}
+body.compact .rew-streak-num{font-size:18px}
+body.compact .rew-star{font-size:17px}
+body.compact .rew-hist-item{font-size:9.5px;padding:3px 0}
+/* Compact — Notas */
+body.compact .note-card{padding:10px 10px 8px;min-height:80px;gap:5px;border-radius:10px}
+body.compact .note-card-title{font-size:11.5px}
+body.compact .note-card-preview{font-size:9.5px}
+body.compact .note-card-date{font-size:8.5px}
+/* Compact — Busca */
+body.compact .search-item{padding:5px 9px;font-size:11px}
+/* Compact — Sidebar */
+body.compact .mini-month{padding:4px;margin-bottom:6px}
+body.compact .sidebar-year{font-size:15px}
+
+/* Comfortable — Rotinas */
+body.comfortable .routine-card{padding:14px 16px;margin-bottom:10px;gap:12px}
+body.comfortable .routine-card-title{font-size:13px}
+body.comfortable .routine-card-meta{font-size:11px}
+body.comfortable .rv-bar-name{font-size:11px}
+body.comfortable .rv-bars{gap:11px}
+/* Comfortable — Revisão */
+body.comfortable .rew-wrap{padding:22px 24px;gap:20px}
+body.comfortable .rew-field{margin-bottom:18px}
+body.comfortable .rew-field textarea{font-size:12.5px;min-height:96px;padding:11px 13px}
+body.comfortable .rew-metric-card{padding:16px;margin-bottom:11px}
+body.comfortable .rew-metric-num{font-size:30px}
+body.comfortable .rew-streak-card{padding:13px 16px;margin-bottom:11px}
+body.comfortable .rew-streak-num{font-size:28px}
+body.comfortable .rew-star{font-size:26px}
+body.comfortable .rew-hist-item{font-size:11.5px;padding:7px 0}
+/* Comfortable — Notas */
+body.comfortable .note-card{padding:18px 16px 14px;min-height:130px;gap:10px}
+body.comfortable .note-card-title{font-size:14.5px}
+body.comfortable .note-card-preview{font-size:12px}
+body.comfortable .note-card-date{font-size:10.5px}
+/* Comfortable — Busca */
+body.comfortable .search-item{padding:9px 13px;font-size:13px}
+/* Comfortable — Sidebar */
+body.comfortable .mini-month{padding:8px;margin-bottom:11px}
+body.comfortable .sidebar-year{font-size:20px}
+
+/* Large — Rotinas */
+body.large .routine-card{padding:16px 18px;margin-bottom:12px;gap:14px}
+body.large .routine-card-title{font-size:14px}
+body.large .routine-card-meta{font-size:12px}
+body.large .rv-bar-name{font-size:12px}
+body.large .rv-bar-track{height:8px}
+body.large .rv-bars{gap:13px}
+/* Large — Revisão */
+body.large .rew-wrap{padding:26px 28px;gap:24px}
+body.large .rew-field{margin-bottom:22px}
+body.large .rew-field textarea{font-size:13.5px;min-height:110px;padding:13px 15px}
+body.large .rew-metric-card{padding:20px;margin-bottom:13px}
+body.large .rew-metric-num{font-size:36px}
+body.large .rew-streak-card{padding:16px 20px;margin-bottom:13px}
+body.large .rew-streak-num{font-size:34px}
+body.large .rew-star{font-size:30px}
+body.large .rew-hist-item{font-size:12.5px;padding:9px 0}
+/* Large — Notas */
+body.large .note-card{padding:22px 20px 18px;min-height:150px;gap:12px}
+body.large .note-card-title{font-size:16px}
+body.large .note-card-preview{font-size:13px}
+body.large .note-card-date{font-size:11px}
+/* Large — Busca */
+body.large .search-item{padding:11px 15px;font-size:14px}
+/* Large — Sidebar */
+body.large .mini-month{padding:10px;margin-bottom:13px}
+body.large .sidebar-year{font-size:22px}
+
 /* Compact/Comfortable/Large — mobile overrides */
 @media(max-width:768px){
   /* tv-wrap: preserva padding-bottom 72px da bottom nav */
@@ -467,6 +552,33 @@ body.large .up-title{font-size:14px}
   body.comfortable .ev-pill{font-size:10px;padding:2px 4px 2px 5px}
   body.large .day{padding:5px;min-height:62px}
   body.large .ev-pill{font-size:11px;padding:2px 5px 2px 6px}
+  /* Rotinas mobile */
+  body.compact .routine-card{padding:5px 8px!important;margin-bottom:4px!important;gap:6px!important}
+  body.compact .routine-card-title{font-size:10px!important}
+  body.comfortable .routine-card{padding:11px 12px!important;margin-bottom:8px!important}
+  body.large .routine-card{padding:13px 14px!important;margin-bottom:10px!important}
+  body.large .routine-card-title{font-size:13px!important}
+  /* Revisão mobile */
+  body.compact .rew-wrap{padding:8px 10px!important;gap:8px!important}
+  body.comfortable .rew-wrap{padding:16px 16px!important;gap:14px!important}
+  body.large .rew-wrap{padding:20px 20px!important;gap:18px!important}
+  body.compact .rew-metric-num{font-size:18px!important}
+  body.large .rew-metric-num{font-size:28px!important}
+  body.compact .rew-star{font-size:16px!important}
+  body.large .rew-star{font-size:24px!important}
+  /* Notas mobile */
+  body.compact .note-card{padding:8px 8px 6px!important;min-height:68px!important;gap:4px!important}
+  body.compact .note-card-title{font-size:11px!important}
+  body.compact .note-card-preview{font-size:9px!important}
+  body.comfortable .note-card{padding:14px 12px 11px!important;min-height:115px!important}
+  body.comfortable .note-card-title{font-size:13.5px!important}
+  body.large .note-card{padding:18px 16px 14px!important;min-height:135px!important}
+  body.large .note-card-title{font-size:15px!important}
+  body.large .note-card-preview{font-size:12px!important}
+  /* Busca mobile */
+  body.compact .search-item{padding:4px 8px!important;font-size:10.5px!important}
+  body.comfortable .search-item{padding:8px 11px!important;font-size:12.5px!important}
+  body.large .search-item{padding:10px 13px!important;font-size:13.5px!important}
 }
 
 /* Transition animation */
@@ -3870,7 +3982,13 @@ document.getElementById('sYearPrev').addEventListener('click',()=>{AppState.side
 document.getElementById('sYearNext').addEventListener('click',()=>{AppState.sidebarYear++;renderSidebar();});
 
 /* ═══════ DENSITY ═══════ */
-const _applyDensity=d=>{document.body.className=document.body.className.replace(/compact|comfortable|large/g,'').trim()+(d?' '+d:'');localStorage.setItem('cal_density',d);document.getElementById('themePopup').classList.remove('open');};
+const _densityMap={compact:'btnCompact',comfortable:'btnComfort',large:'btnLarge'};
+const _applyDensity=d=>{
+  document.body.className=document.body.className.replace(/compact|comfortable|large/g,'').trim()+(d?' '+d:'');
+  localStorage.setItem('cal_density',d);
+  document.getElementById('themePopup').classList.remove('open');
+  Object.entries(_densityMap).forEach(([k,id])=>document.getElementById(id).classList.toggle('density-active',k===d));
+};
 document.getElementById('btnCompact').addEventListener('click',()=>_applyDensity('compact'));
 document.getElementById('btnComfort').addEventListener('click',()=>_applyDensity('comfortable'));
 document.getElementById('btnLarge').addEventListener('click',()=>_applyDensity('large'));
@@ -6779,7 +6897,7 @@ buildThemeUI();
 updateNotifBadge();
 renderCalendarList();
 populateCalendarSelect();
-const density=localStorage.getItem('cal_density');if(density)document.body.classList.add(density);
+const density=localStorage.getItem('cal_density');if(density){document.body.classList.add(density);const _db=document.getElementById(_densityMap[density]);if(_db)_db.classList.add('density-active');}
 // Pre-fill Supabase config modal with stored values
 document.getElementById('sbUrl').value=localStorage.getItem(SB_URL_KEY)||'';
 document.getElementById('sbKey').value=localStorage.getItem(SB_KEY_KEY)||'';
