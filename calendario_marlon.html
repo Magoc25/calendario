@@ -5467,21 +5467,20 @@ function renderReviewView(){
     <div class="rew-side">
       ${(()=>{const s=_rewStreak();return`<div class="rew-streak-card"><div class="rew-streak-num">🔥 ${s}</div><div class="rew-streak-label">dia${s!==1?'s':''} consecutivo${s!==1?'s':''} de revisão</div></div>`;})()}
       ${(()=>{
-        const _bar=(pct)=>pct>=100?'#0ca678':pct>=70?'var(--accent)':'#f59f00';
-        const _card=(fraction,pct,label,color)=>`
+        const _card=(fraction,pct,label)=>`
           <div class="rew-metric-card">
             <div style="display:flex;align-items:baseline;justify-content:space-between">
               <div class="rew-metric-num">${fraction}</div>
               <div class="rew-metric-num" style="font-size:18px">${pct}%</div>
             </div>
             <div class="rew-metric-label">${label}</div>
-            <div class="rew-progress-bar" style="margin-top:8px"><div class="rew-progress-fill" style="width:${pct}%;background:${color}"></div></div>
+            <div class="rew-progress-bar" style="margin-top:8px"><div class="rew-progress-fill" style="width:${pct}%"></div></div>
           </div>`;
         const routPct=routs.length?Math.round(routDone/routs.length*100):0;
         const qtPct=qtasks.length?Math.round(qtDone/qtasks.length*100):0;
-        return _card(`${doneEvs}/${dayEvs.length}`,pct,`evento${dayEvs.length!==1?'s':''} · concluído${doneEvs!==1?'s':''}`,_bar(pct))
-          +_card(`${routDone}/${routs.length}`,routPct,'rotinas concluídas',_bar(routPct))
-          +_card(`${qtDone}/${qtasks.length}`,qtPct,'tarefas do dia',_bar(qtPct));
+        return _card(`${doneEvs}/${dayEvs.length}`,pct,`evento${dayEvs.length!==1?'s':''} · concluído${doneEvs!==1?'s':''}`)
+          +_card(`${routDone}/${routs.length}`,routPct,'rotinas concluídas')
+          +_card(`${qtDone}/${qtasks.length}`,qtPct,'tarefas do dia');
       })()}
 
       <div class="rew-mood-section">
