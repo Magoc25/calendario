@@ -4715,15 +4715,14 @@ function saveRoutines(){
   if(sbClient){clearTimeout(_cloudSaveTimer);_cloudSaveTimer=setTimeout(()=>syncToCloud(true),1500);}
 }
 const ROUTINE_COLORS=['#3b5bdb','#0ca678','#e64980','#f59f00','#7048e8','#f76707','#1098ad','#e03131'];
-const FREQ_LABELS={daily:'Todos os dias',weekly:'Semanal',custom:'Dias personalizados'};
+const FREQ_LABELS={daily:'Todos os dias',weekly:'Dias da semana'};
 const DOW_SHORT=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
 
 function getRoutinesForToday(){
   const dow=new Date().getDay();
   return AppState.routines.filter(r=>{
     if(r.freq==='daily')return true;
-    if(r.freq==='weekly')return r.days&&r.days.includes(dow);
-    if(r.freq==='custom')return r.days&&r.days.includes(dow);
+    if(r.freq==='weekly'||r.freq==='custom')return r.days&&r.days.includes(dow);
     return false;
   });
 }
@@ -4929,7 +4928,6 @@ function renderRoutinesView(){
             <select id="rvFreq">
               <option value="daily">Todos os dias</option>
               <option value="weekly" selected>Dias da semana</option>
-              <option value="custom">Personalizado</option>
             </select>
           </div>
           <div id="rvRestDaysWrap" style="display:none;margin-bottom:10px">
@@ -4957,7 +4955,7 @@ function renderRoutinesView(){
       ${AppState.routines.length===0?'<div class="rv-empty">Nenhuma rotina ainda.<br>Crie rotinas para acompanhar hábitos e compromissos recorrentes.</div>':
         AppState.routines.map(r=>{
           const restLabel=r.freq==='daily'&&r.restDays&&r.restDays.length?` · folga ${r.restDays.map(d=>DOW_SHORT[d]).join('/')}` :'';
-          const daysLabel=(r.freq==='daily'?'Todos os dias':r.freq==='weekly'?'Dias úteis':(r.days||[]).map(d=>DOW_SHORT[d]).join(', '))+restLabel;
+          const daysLabel=(r.freq==='daily'?'Todos os dias':(r.days||[]).map(d=>DOW_SHORT[d]).join(', '))+restLabel;
           const todayDone=checks.includes(r.id);
           return `<div class="routine-card" data-rid="${r.id}">
             <span class="routine-card-dot" style="background:${r.color||'#3b5bdb'}"></span>
