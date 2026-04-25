@@ -3775,7 +3775,7 @@ async function gcalProcessDeleteQueue(){
     const remaining=[];
     for(const gcalId of q){
       try{
-        const res=await fetch(`${GCAL_API}/calendars/${encodeURIComponent(calId)}/AppState.events/${encodeURIComponent(gcalId)}`,{
+        const res=await fetch(`${GCAL_API}/calendars/${encodeURIComponent(calId)}/events/${encodeURIComponent(gcalId)}`,{
           method:'DELETE',
           headers:{Authorization:`Bearer ${gcalToken}`}
         });
@@ -6196,7 +6196,7 @@ async function gcalSync(pullOnly=false){
       showDeleted:'true',
       fields:'items(id,summary,description,location,start,end,updated,status,recurringEventId,extendedProperties)'
     });
-    const resp=await fetch(`${GCAL_API}/calendars/${encodeURIComponent(calId)}/AppState.events?${params}`,{
+    const resp=await fetch(`${GCAL_API}/calendars/${encodeURIComponent(calId)}/events?${params}`,{
       headers:{Authorization:`Bearer ${gcalToken}`}
     });
     const data=await resp.json();
@@ -6294,7 +6294,7 @@ async function gcalSync(pullOnly=false){
       for(const ev of toPush){
         try{
           const body=mgcToGcal(ev);
-          const res=await fetch(`${GCAL_API}/calendars/${encodeURIComponent(calId)}/AppState.events`,{
+          const res=await fetch(`${GCAL_API}/calendars/${encodeURIComponent(calId)}/events`,{
             method:'POST',
             headers:{Authorization:`Bearer ${gcalToken}`,'Content-Type':'application/json'},
             body:JSON.stringify(body)
@@ -6318,7 +6318,7 @@ async function gcalSync(pullOnly=false){
       for(const ev of toUpdate){
         try{
           const body=mgcToGcal(ev);
-          const res=await fetch(`${GCAL_API}/calendars/${encodeURIComponent(calId)}/AppState.events/${encodeURIComponent(ev.gcalId)}`,{
+          const res=await fetch(`${GCAL_API}/calendars/${encodeURIComponent(calId)}/events/${encodeURIComponent(ev.gcalId)}`,{
             method:'PUT',
             headers:{Authorization:`Bearer ${gcalToken}`,'Content-Type':'application/json'},
             body:JSON.stringify(body)
