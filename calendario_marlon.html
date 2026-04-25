@@ -2926,6 +2926,8 @@ function renderDayPanel(dateStr){
   else holEl.style.display='none';
   const evMap=buildEvMap(dateStr,dateStr);
   const evs=evMap[dateStr]||[];
+  let _dpNotes={};try{_dpNotes=JSON.parse(localStorage.getItem('cal_notes')||'{}');}catch(e){}
+  const _dpHasNote=id=>!!(_dpNotes[id]&&String(_dpNotes[id]).trim().length>0);
   const body=document.getElementById('dpBody');
   const today=todayDs();
   let html=`<button class="dp-add" data-date="${dateStr}">+ Adicionar evento neste dia</button>`;
@@ -2934,11 +2936,11 @@ function renderDayPanel(dateStr){
     html+=`<div class="dp-timeline">`;
     evs.forEach(ev=>{
       const done=isDoneOn(ev,dateStr);
-      const hasNote=hasNotes(ev.id);
+      const hasNote=_dpHasNote(ev.id);
       const cd=countdownDays(dateStr);
       const cdHtml=cd&&cd!=='hoje'?`<span class="countdown-badge">${cd}</span>`:'';
       const tagsHtml=(ev.tags||[]).length?`<div class="dp-ev-tags">${ev.tags.map(t=>`<span class="dp-tag">${t}</span>`).join('')}</div>`:'';
-      const noteBtn=`<span class="dp-note-btn" data-notes-id="${ev.id}" title="Ver notas" style="font-size:15px;flex-shrink:0;cursor:pointer;line-height:1;${hasNote?'':'display:none'}">📝</span>`;
+      const noteBtn=hasNote?`<span class="dp-note-btn" data-notes-id="${ev.id}" title="Ver notas" style="font-size:15px;flex-shrink:0;cursor:pointer;line-height:1">📝</span>`:'';
       html+=`<div class="dp-ev${done?' done-dp':''}" data-id="${ev.id}" data-date="${dateStr}" style="border-left-color:${ev.color||'var(--accent)'}">
         <div class="dp-ev-time">
           <span>${ev.start||''}${ev.end?' – '+ev.end:''} ${CAT_ICONS[ev.category]||''} ${cdHtml}</span>
@@ -2956,10 +2958,6 @@ function renderDayPanel(dateStr){
     html+=`</div>`;
   }
   body.innerHTML=html;
-  // Passo pós-render: garante visibilidade do ícone de nota após o DOM ser atualizado
-  body.querySelectorAll('.dp-note-btn').forEach(btn=>{
-    if(hasNotes(btn.dataset.notesId))btn.style.display='';
-  });
   body.querySelector('.dp-add').addEventListener('click',()=>openNew(dateStr));
   body.querySelectorAll('.dp-ev').forEach(el=>{
     el.addEventListener('click',e=>{
