@@ -429,21 +429,44 @@ body.comfortable .dp-ev{padding:11px 13px;margin-bottom:12px}
 body.comfortable .dp-ev-title{font-size:13px}
 body.comfortable .upcoming-ev{padding:10px 13px;margin-bottom:7px}
 
-/* Compact/Comfortable — mobile overrides */
+/* Large density */
+body.large .day{padding:8px}
+body.large .ev-pill{font-size:12px;padding:4px 6px 4px 8px}
+/* Large — Aba Hoje */
+body.large .tv-wrap{padding:28px 28px;gap:22px}
+body.large .tv-panel{padding:20px}
+body.large .tv-ev-item{padding:12px 0}
+body.large .tr-item{padding:11px 0}
+body.large .qt-item{padding:10px 0}
+/* Large — Semana */
+body.large .week-slot{height:64px}
+body.large .week-ev{font-size:11.5px;padding:4px 6px}
+/* Large — Dia e Próximos */
+body.large .dp-ev{padding:14px 16px;margin-bottom:15px}
+body.large .dp-ev-title{font-size:14.5px}
+body.large .upcoming-ev{padding:13px 16px;margin-bottom:9px}
+body.large .up-title{font-size:14px}
+
+/* Compact/Comfortable/Large — mobile overrides */
 @media(max-width:768px){
   /* tv-wrap: preserva padding-bottom 72px da bottom nav */
   body.compact .tv-wrap{padding:8px 8px 72px;gap:8px}
   body.comfortable .tv-wrap{padding:14px 14px 72px;gap:14px}
+  body.large .tv-wrap{padding:16px 16px 72px;gap:16px}
   /* Semana mobile usa !important — compact preserva fonte legível */
   body.compact .week-ev{font-size:11px!important;padding:2px 4px!important}
   body.compact .week-ev-time{font-size:10px!important}
   body.comfortable .week-ev{font-size:11px!important}
   body.comfortable .week-ev-time{font-size:10px!important}
+  body.large .week-ev{font-size:12px!important;padding:3px 5px!important}
+  body.large .week-ev-time{font-size:10.5px!important}
   /* Mês mobile já é compacto — compact não reduz mais */
   body.compact .day{padding:2px;min-height:48px}
   body.compact .ev-pill{font-size:9px;padding:1px 3px 1px 4px}
   body.comfortable .day{padding:4px;min-height:58px}
   body.comfortable .ev-pill{font-size:10px;padding:2px 4px 2px 5px}
+  body.large .day{padding:5px;min-height:62px}
+  body.large .ev-pill{font-size:11px;padding:2px 5px 2px 6px}
 }
 
 /* Transition animation */
@@ -1610,6 +1633,7 @@ body.comfortable .upcoming-ev{padding:10px 13px;margin-bottom:7px}
               <span style="font-size:10px;color:var(--muted);font-weight:600">Densidade:</span>
               <button class="hbtn" id="btnCompact" style="padding:3px 8px;font-size:10px">Compacto</button>
               <button class="hbtn" id="btnComfort" style="padding:3px 8px;font-size:10px">Normal</button>
+              <button class="hbtn" id="btnLarge" style="padding:3px 8px;font-size:10px">Grande</button>
             </div>
           </div>
         </div>
@@ -3847,8 +3871,10 @@ document.getElementById('sYearPrev').addEventListener('click',()=>{AppState.side
 document.getElementById('sYearNext').addEventListener('click',()=>{AppState.sidebarYear++;renderSidebar();});
 
 /* ═══════ DENSITY ═══════ */
-document.getElementById('btnCompact').addEventListener('click',()=>{document.body.className=document.body.className.replace(/compact|comfortable/g,'').trim()+' compact';localStorage.setItem('cal_density','compact');document.getElementById('themePopup').classList.remove('open');});
-document.getElementById('btnComfort').addEventListener('click',()=>{document.body.className=document.body.className.replace(/compact|comfortable/g,'').trim()+' comfortable';localStorage.setItem('cal_density','comfortable');document.getElementById('themePopup').classList.remove('open');});
+const _applyDensity=d=>{document.body.className=document.body.className.replace(/compact|comfortable|large/g,'').trim()+(d?' '+d:'');localStorage.setItem('cal_density',d);document.getElementById('themePopup').classList.remove('open');};
+document.getElementById('btnCompact').addEventListener('click',()=>_applyDensity('compact'));
+document.getElementById('btnComfort').addEventListener('click',()=>_applyDensity('comfortable'));
+document.getElementById('btnLarge').addEventListener('click',()=>_applyDensity('large'));
 
 /* ═══════ PRINT ═══════ */
 document.getElementById('printBtn').addEventListener('click',()=>{if(AppState.viewMode!=='month')toast('Dica: alterne para Mês antes de imprimir.');window.print();});
