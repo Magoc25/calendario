@@ -4580,11 +4580,15 @@ function setRoutineCheck(dateStr,routineId,done){
 
 /* ── Routines view ── */
 let rvEditId=null,rvSelectedColor=ROUTINE_COLORS[0],rvSelectedDays=new Set([1,2,3,4,5]);
+let rvRestDays=new Set();
 let rvFormOpen=false,_rvDashFilter=null;
 
 function _rvDue(r,ds){
   const dow=new Date(ds+'T12:00:00').getDay();
-  if(r.freq==='daily')return true;
+  if(r.freq==='daily'){
+    if(r.restDays&&r.restDays.includes(dow))return false;
+    return true;
+  }
   return !!(r.days&&r.days.includes(dow));
 }
 function _rvStreak(routineId){
@@ -4765,9 +4769,17 @@ function renderRoutinesView(){
               <option value="custom">Personalizado</option>
             </select>
           </div>
-          <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px">Dias</div>
-          <div class="rv-days-row" id="rvDays">
-            ${DOW_SHORT.map((d,i)=>`<span class="rv-day-chip${rvSelectedDays.has(i)?' sel':''}" data-dow="${i}">${d}</span>`).join('')}
+          <div id="rvRestDaysWrap" style="display:none;margin-bottom:10px">
+            <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px">Dias de descanso</div>
+            <div class="rv-days-row" id="rvRestDays">
+              ${DOW_SHORT.map((d,i)=>`<span class="rv-day-chip" data-rd="${i}">${d}</span>`).join('')}
+            </div>
+          </div>
+          <div id="rvWorkDaysWrap">
+            <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px">Dias</div>
+            <div class="rv-days-row" id="rvDays">
+              ${DOW_SHORT.map((d,i)=>`<span class="rv-day-chip${rvSelectedDays.has(i)?' sel':''}" data-dow="${i}">${d}</span>`).join('')}
+            </div>
           </div>
           <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px">Cor</div>
           <div class="rv-color-row" id="rvColors">
@@ -4781,7 +4793,8 @@ function renderRoutinesView(){
       </div>
       ${AppState.routines.length===0?'<div class="rv-empty">Nenhuma rotina ainda.<br>Crie rotinas para acompanhar hábitos e compromissos recorrentes.</div>':
         AppState.routines.map(r=>{
-          const daysLabel=r.freq==='daily'?'Todos os dias':r.freq==='weekly'?'Dias úteis':(r.days||[]).map(d=>DOW_SHORT[d]).join(', ');
+          const restLabel=r.freq==='daily'&&r.restDays&&r.restDays.length?` · folga ${r.restDays.map(d=>DOW_SHORT[d]).join('/')}` :'';
+          const daysLabel=(r.freq==='daily'?'Todos os dias':r.freq==='weekly'?'Dias úteis':(r.days||[]).map(d=>DOW_SHORT[d]).join(', '))+restLabel;
           const todayDone=checks.includes(r.id);
           return `<div class="routine-card" data-rid="${r.id}">
             <span class="routine-card-dot" style="background:${r.color||'#3b5bdb'}"></span>
@@ -4823,17 +4836,32 @@ function openRvForm(id,keepOpen=false){
     document.getElementById('rvFreq').value=r.freq||'weekly';
     rvSelectedColor=r.color||ROUTINE_COLORS[0];
     rvSelectedDays=new Set(r.days||[1,2,3,4,5]);
+    rvRestDays=new Set(r.restDays||[]);
   } else {
     document.getElementById('rvName').value='';
     document.getElementById('rvTime').value='07:00';
     document.getElementById('rvFreq').value='weekly';
     rvSelectedColor=ROUTINE_COLORS[0];
     rvSelectedDays=new Set([1,2,3,4,5]);
+    rvRestDays=new Set();
   }
-  // Wire days
-  document.querySelectorAll('.rv-day-chip').forEach(c=>{
+  // Mostra/oculta seções conforme frequência
+  const _rvToggleFreqUI=()=>{
+    const f=document.getElementById('rvFreq').value;
+    document.getElementById('rvRestDaysWrap').style.display=f==='daily'?'':'none';
+    document.getElementById('rvWorkDaysWrap').style.display=f!=='daily'?'':'none';
+  };
+  _rvToggleFreqUI();
+  document.getElementById('rvFreq').onchange=_rvToggleFreqUI;
+  // Wire work days
+  document.querySelectorAll('#rvDays .rv-day-chip').forEach(c=>{
     c.classList.toggle('sel',rvSelectedDays.has(parseInt(c.dataset.dow)));
     c.onclick=()=>{const d=parseInt(c.dataset.dow);if(rvSelectedDays.has(d)){rvSelectedDays.delete(d);}else rvSelectedDays.add(d);c.classList.toggle('sel',rvSelectedDays.has(d));};
+  });
+  // Wire rest days
+  document.querySelectorAll('#rvRestDays .rv-day-chip').forEach(c=>{
+    c.classList.toggle('sel',rvRestDays.has(parseInt(c.dataset.rd)));
+    c.onclick=()=>{const d=parseInt(c.dataset.rd);if(rvRestDays.has(d)){rvRestDays.delete(d);}else rvRestDays.add(d);c.classList.toggle('sel',rvRestDays.has(d));};
   });
   // Wire colors
   document.querySelectorAll('.rv-color-dot').forEach(c=>{
@@ -4843,11 +4871,13 @@ function openRvForm(id,keepOpen=false){
   document.getElementById('rvCancelBtn').onclick=()=>{form.style.display='none';rvFormOpen=false;rvEditId=null;};
   document.getElementById('rvSaveBtn').onclick=()=>{
     const title=document.getElementById('rvName').value.trim();if(!title)return;
+    const freq=document.getElementById('rvFreq').value;
     const r={
       id:rvEditId||uid(),title,
       time:document.getElementById('rvTime').value,
-      freq:document.getElementById('rvFreq').value,
+      freq,
       days:[...rvSelectedDays].sort(),
+      restDays:freq==='daily'&&rvRestDays.size>0?[...rvRestDays].sort():[],
       color:rvSelectedColor
     };
     if(rvEditId){const i=AppState.routines.findIndex(x=>x.id===rvEditId);if(i>-1)AppState.routines[i]=r;}
