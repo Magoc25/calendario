@@ -2934,16 +2934,18 @@ function renderDayPanel(dateStr){
     html+=`<div class="dp-timeline">`;
     evs.forEach(ev=>{
       const done=isDoneOn(ev,dateStr);
+      const hasNote=hasNotes(ev.id);
       const cd=countdownDays(dateStr);
       const cdHtml=cd&&cd!=='hoje'?`<span class="countdown-badge">${cd}</span>`:'';
       const tagsHtml=(ev.tags||[]).length?`<div class="dp-ev-tags">${ev.tags.map(t=>`<span class="dp-tag">${t}</span>`).join('')}</div>`:'';
+      const noteBtn=`<span class="dp-note-btn" data-notes-id="${ev.id}" title="Ver notas" style="font-size:15px;flex-shrink:0;cursor:pointer;line-height:1;${hasNote?'':'display:none'}">📝</span>`;
       html+=`<div class="dp-ev${done?' done-dp':''}" data-id="${ev.id}" data-date="${dateStr}" style="border-left-color:${ev.color||'var(--accent)'}">
         <div class="dp-ev-time">
           <span>${ev.start||''}${ev.end?' – '+ev.end:''} ${CAT_ICONS[ev.category]||''} ${cdHtml}</span>
           <span class="dp-ev-check${done?' checked':''}" data-check-id="${ev.id}" data-check-date="${dateStr}">${done?'✓':''}</span>
         </div>
-        <div style="display:flex;align-items:center;gap:5px;min-width:0">
-          ${hasNotes(ev.id)?`<span style="font-size:14px;flex-shrink:0;cursor:pointer;line-height:1" title="Ver notas" data-notes-id="${ev.id}">📝</span>`:''}
+        <div style="display:flex;align-items:center;gap:6px;min-width:0">
+          ${noteBtn}
           <div class="dp-ev-title" style="flex:1;min-width:0">${esc(ev.title)}</div>
         </div>
         ${ev.category?`<div class="dp-ev-cat">${esc(ev.category)}${ev.rrule?' · recorrente':''}</div>`:''}
@@ -2954,11 +2956,15 @@ function renderDayPanel(dateStr){
     html+=`</div>`;
   }
   body.innerHTML=html;
+  // Passo pós-render: garante visibilidade do ícone de nota após o DOM ser atualizado
+  body.querySelectorAll('.dp-note-btn').forEach(btn=>{
+    if(hasNotes(btn.dataset.notesId))btn.style.display='';
+  });
   body.querySelector('.dp-add').addEventListener('click',()=>openNew(dateStr));
   body.querySelectorAll('.dp-ev').forEach(el=>{
     el.addEventListener('click',e=>{
       if(e.target.closest('.dp-ev-check'))return;
-      if(e.target.closest('[data-notes-id]')){openNotes(e.target.closest('[data-notes-id]').dataset.notesId);return;}
+      if(e.target.closest('.dp-note-btn')){openNotes(e.target.closest('.dp-note-btn').dataset.notesId);return;}
       openEdit(el.dataset.id,el.dataset.date);
     });
     el.addEventListener('contextmenu',e=>{e.preventDefault();e.stopPropagation();openCtxMenu(e,el.dataset.id,el.dataset.date);});
@@ -4172,7 +4178,7 @@ document.getElementById('notesEditor').addEventListener('input',()=>{
     else delete notesStore[notesEvId];
     saveNotes();
     document.getElementById('notesSavedLabel').textContent='💾 Salvo automaticamente';
-    render();if(AppState.selectedDay)renderDayPanel(AppState.selectedDay);
+    if(AppState.selectedDay)renderDayPanel(AppState.selectedDay);
   },800);
 });
 
