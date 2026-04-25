@@ -2776,7 +2776,7 @@ function makePill(ev,dateStr,forWeek=false){
     else if(dateStr===ev.dateEnd)mdClass+=' md-end';
   }
   const timeStr=ev.start?`<span class="ev-time">${ev.start}</span>`:'';
-  const noteIcon=hasNotes(ev.id)?`<span style="font-size:8px;flex-shrink:0" title="Tem notas">📝</span>`:'';
+  const noteIcon=hasNotes(ev.id)?`<span style="font-size:11px;flex-shrink:0;line-height:1" title="Tem notas">📝</span>`:'';
   return `<div class="ev-pill ${base}${done?' done-pill':''}${rotina?' is-rotina':''}${mdClass}" data-id="${ev.id}" data-date="${dateStr}" style="border-left-color:${bc};--pill-ev-color:${bc}" draggable="true" title="${esc(ev.title)}${ev.category?' ['+esc(ev.category)+']':''}${hasNotes(ev.id)?' · tem notas':''}">
     <span class="ev-check${done?' checked':''}" data-check-id="${ev.id}" data-check-date="${dateStr}"></span>
     ${timeStr}${icon?`<span class="ev-cat-icon">${icon}</span>`:''}
@@ -2940,12 +2940,12 @@ function renderDayPanel(dateStr){
       html+=`<div class="dp-ev${done?' done-dp':''}" data-id="${ev.id}" data-date="${dateStr}" style="border-left-color:${ev.color||'var(--accent)'}">
         <div class="dp-ev-time">
           <span>${ev.start||''}${ev.end?' – '+ev.end:''} ${CAT_ICONS[ev.category]||''} ${cdHtml}</span>
-          <div style="display:flex;align-items:center;gap:4px">
-            ${hasNotes(ev.id)?`<span style="font-size:10px;cursor:pointer" title="Ver notas" data-notes-id="${ev.id}">📝</span>`:''}
-            <span class="dp-ev-check${done?' checked':''}" data-check-id="${ev.id}" data-check-date="${dateStr}">${done?'✓':''}</span>
-          </div>
+          <span class="dp-ev-check${done?' checked':''}" data-check-id="${ev.id}" data-check-date="${dateStr}">${done?'✓':''}</span>
         </div>
-        <div class="dp-ev-title">${esc(ev.title)}</div>
+        <div style="display:flex;align-items:center;gap:5px;min-width:0">
+          ${hasNotes(ev.id)?`<span style="font-size:14px;flex-shrink:0;cursor:pointer;line-height:1" title="Ver notas" data-notes-id="${ev.id}">📝</span>`:''}
+          <div class="dp-ev-title" style="flex:1;min-width:0">${esc(ev.title)}</div>
+        </div>
         ${ev.category?`<div class="dp-ev-cat">${esc(ev.category)}${ev.rrule?' · recorrente':''}</div>`:''}
         ${ev.location?`<div class="dp-ev-loc">📍 ${esc(ev.location)}</div>`:''}
         ${tagsHtml}
@@ -4172,6 +4172,7 @@ document.getElementById('notesEditor').addEventListener('input',()=>{
     else delete notesStore[notesEvId];
     saveNotes();
     document.getElementById('notesSavedLabel').textContent='💾 Salvo automaticamente';
+    render();if(AppState.selectedDay)renderDayPanel(AppState.selectedDay);
   },800);
 });
 
@@ -4205,6 +4206,7 @@ document.getElementById('notesClear').addEventListener('click',()=>{
   if(notesEvId)delete notesStore[notesEvId];
   saveNotes();
   document.getElementById('notesSavedLabel').textContent='📝 Sem notas ainda';
+  render();if(AppState.selectedDay)renderDayPanel(AppState.selectedDay);
 });
 
 // Keyboard shortcuts inside editor
@@ -4246,6 +4248,7 @@ document.getElementById('notesSaveBtn').addEventListener('click',()=>{
   }
   document.getElementById('notesOverlay').classList.remove('open');
   notesEvId=null;
+  render();if(AppState.selectedDay)renderDayPanel(AppState.selectedDay);
   toast('Notas salvas!');
 });
 
@@ -4259,6 +4262,7 @@ document.getElementById('notesClose').addEventListener('click',()=>{
   }
   document.getElementById('notesOverlay').classList.remove('open');
   notesEvId=null;
+  render();if(AppState.selectedDay)renderDayPanel(AppState.selectedDay);
 });
 document.getElementById('notesOverlay').addEventListener('click',e=>{
   if(e.target===document.getElementById('notesOverlay')){
