@@ -5466,25 +5466,23 @@ function renderReviewView(){
 
     <div class="rew-side">
       ${(()=>{const s=_rewStreak();return`<div class="rew-streak-card"><div class="rew-streak-num">🔥 ${s}</div><div class="rew-streak-label">dia${s!==1?'s':''} consecutivo${s!==1?'s':''} de revisão</div></div>`;})()}
-      <div class="rew-metric-card">
-        <div style="display:flex;align-items:baseline;justify-content:center;gap:8px">
-          <div class="rew-metric-num">${dayEvs.length}</div>
-          <div class="rew-metric-num" style="font-size:16px;color:var(--muted)">·</div>
-          <div class="rew-metric-num">${pct}%</div>
-        </div>
-        <div class="rew-metric-label">evento${dayEvs.length!==1?'s':''} agendado${dayEvs.length!==1?'s':''} · taxa de conclusão</div>
-        <div class="rew-progress-bar"><div class="rew-progress-fill" style="width:${pct}%"></div></div>
-      </div>
-      <div class="rew-metric-card">
-        <div class="rew-metric-num" style="color:${routDone===routs.length&&routs.length>0?'#0ca678':'var(--accent)'}">
-          ${routDone}/${routs.length}
-        </div>
-        <div class="rew-metric-label">Rotinas concluídas</div>
-      </div>
-      <div class="rew-metric-card">
-        <div class="rew-metric-num">${qtDone}/${qtasks.length}</div>
-        <div class="rew-metric-label">Tarefas do dia</div>
-      </div>
+      ${(()=>{
+        const _bar=(pct)=>pct>=100?'#0ca678':pct>=70?'var(--accent)':'#f59f00';
+        const _card=(fraction,pct,label,color)=>`
+          <div class="rew-metric-card">
+            <div style="display:flex;align-items:baseline;justify-content:space-between">
+              <div class="rew-metric-num">${fraction}</div>
+              <div class="rew-metric-num" style="font-size:18px">${pct}%</div>
+            </div>
+            <div class="rew-metric-label">${label}</div>
+            <div class="rew-progress-bar" style="margin-top:8px"><div class="rew-progress-fill" style="width:${pct}%;background:${color}"></div></div>
+          </div>`;
+        const routPct=routs.length?Math.round(routDone/routs.length*100):0;
+        const qtPct=qtasks.length?Math.round(qtDone/qtasks.length*100):0;
+        return _card(`${doneEvs}/${dayEvs.length}`,pct,`evento${dayEvs.length!==1?'s':''} · concluído${doneEvs!==1?'s':''}`,_bar(pct))
+          +_card(`${routDone}/${routs.length}`,routPct,'rotinas concluídas',_bar(routPct))
+          +_card(`${qtDone}/${qtasks.length}`,qtPct,'tarefas do dia',_bar(qtPct));
+      })()}
 
       <div class="rew-mood-section">
         <div class="rew-mood-title">📈 Humor — últimos 30 dias</div>
