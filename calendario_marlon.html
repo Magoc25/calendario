@@ -5085,7 +5085,7 @@ function renderToday(){
   const todayEvs=(evMap[td]||[]).sort((a,b)=>(a.start||'').localeCompare(b.start||''));
 
   // Today's AppState.routines + checks
-  const todayRouts=getRoutinesForToday();
+  const todayRouts=getRoutinesForToday().sort((a,b)=>(a.time||'99:99').localeCompare(b.time||'99:99'));
   const checks=getRoutineChecks(td);
 
   // Top 3
