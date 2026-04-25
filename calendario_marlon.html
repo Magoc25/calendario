@@ -4583,6 +4583,8 @@ function openMobileDaySheet(dateStr){
   const evs=evMap[dateStr]||[];
   const body=document.getElementById('mdsBody');
   const isDesktop=window.innerWidth>768;
+  let _mdsNotes={};try{_mdsNotes=JSON.parse(localStorage.getItem('cal_notes')||'{}');}catch(e){}
+  const _mdsHasNote=id=>!!(_mdsNotes[id]&&String(_mdsNotes[id]).trim().length>0);
   if(!evs.length){
     body.innerHTML=`<div class="mds-empty">Nenhum evento agendado.<br><small>${isDesktop?'Clique em':'Toque em'} "+ Evento" para adicionar.</small></div>`;
   }else{
@@ -4590,20 +4592,30 @@ function openMobileDaySheet(dateStr){
       const done=isDoneOn(ev,dateStr);
       const icon=CAT_ICONS[ev.category]||'';
       const time=ev.start?(ev.end?ev.start+' – '+ev.end:ev.start):'Dia todo';
+      const noteIcon=_mdsHasNote(ev.id)?`<span class="mds-note-btn" data-notes-id="${ev.id}" title="Ver notas" style="font-size:15px;cursor:pointer;flex-shrink:0;line-height:1">📝</span>`:'';
       return`<div class="mds-event" data-id="${ev.id}" data-date="${dateStr}" style="border-left-color:${ev.color||'var(--accent)'}">
         <span class="mds-event-time">${time}</span>
         <div class="mds-event-info">
-          <div class="mds-event-title${done?' done':''}">${ev.title}${done?' ✓':''}</div>
+          <div style="display:flex;align-items:center;gap:6px;min-width:0">
+            ${noteIcon}
+            <div class="mds-event-title${done?' done':''}" style="flex:1;min-width:0">${ev.title}${done?' ✓':''}</div>
+          </div>
           ${ev.category||ev.location?`<div class="mds-event-sub">${icon?icon+' ':''}${ev.category||''}${ev.location?' · 📍'+ev.location:''}</div>`:''}
         </div>
       </div>`;
     }).join('');
     body.querySelectorAll('.mds-event').forEach(el=>{
+      // Clique no ícone de nota abre o editor de notas diretamente
+      el.querySelector('.mds-note-btn')?.addEventListener('click',e=>{
+        e.stopPropagation();
+        closeMobileDaySheet();
+        openNotes(e.currentTarget.dataset.notesId);
+      });
       if(isDesktop){
-        el.addEventListener('click',()=>{closeMobileDaySheet();openEdit(el.dataset.id,el.dataset.date);});
+        el.addEventListener('click',e=>{if(e.target.closest('.mds-note-btn'))return;closeMobileDaySheet();openEdit(el.dataset.id,el.dataset.date);});
         el.addEventListener('contextmenu',e=>{e.preventDefault();e.stopPropagation();openCtxMenu(e,el.dataset.id,el.dataset.date);});
       }else{
-        el.addEventListener('click',()=>_mdsGoToDay());
+        el.addEventListener('click',e=>{if(e.target.closest('.mds-note-btn'))return;_mdsGoToDay();});
         addLongPress(el,el.dataset.id,el.dataset.date);
       }
     });
