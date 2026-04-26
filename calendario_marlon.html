@@ -209,7 +209,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);hei
 .week-hour-label{height:48px;display:flex;align-items:flex-start;justify-content:flex-end;padding:2px 5px 0 0;font-size:9px;color:var(--hint);font-weight:600;flex-shrink:0;border-bottom:1px solid var(--border)}
 .week-day-col{border-right:1px solid var(--border);position:relative;display:flex;flex-direction:column}
 .week-day-col:last-child{border-right:none}
-.week-slot{height:48px;border-bottom:1px solid var(--border);position:relative;cursor:pointer;transition:background .1s}
+.week-slot{height:48px;flex-shrink:0;border-bottom:1px solid var(--border);position:relative;cursor:pointer;transition:background .1s}
 .week-slot:hover{background:var(--surface2)}
 .week-day-col.today-col .week-slot{background:rgba(59,91,219,.02)}
 .week-ev{position:absolute;left:2px;right:2px;border-radius:4px;padding:2px 4px;font-size:9.5px;font-weight:600;overflow:hidden;cursor:pointer;border-left:3px solid transparent;transition:opacity .12s;z-index:1}
@@ -734,6 +734,7 @@ body.large .sidebar-year{font-size:22px}
     height:calc(100dvh - 220px);
     max-height:calc(100dvh - 220px);
     flex-shrink:0;
+    align-items:flex-start; /* impede que colunas sejam comprimidas para a altura do container */
   }
   .week-time-col{flex-shrink:0;min-width:44px;max-width:44px;}
   .wm-single-col{flex:1!important;width:auto!important;}
