@@ -20,7 +20,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-app-region:no-drag}
 :root{
   --bg:#eef1f8;--surface:#fff;--surface2:#f4f6fc;--border:#dde3f5;
   --text:#1a1f36;--muted:#6b7280;--hint:#b0b8d0;
@@ -5086,6 +5086,8 @@ function saveTop3(){localStorage.setItem('cal_top3',JSON.stringify(AppState.top3
 function getTop3(){return AppState.top3Data[todayDs()]||[{text:'',done:false},{text:'',done:false},{text:'',done:false}];}
 
 /* ═══════ TODAY VIEW ═══════ */
+let _dragPayload=null; // módulo-level: sobrevive a re-renders durante drag
+
 function renderToday(){
   const td=todayDs();
   const today=new Date();
@@ -5236,7 +5238,6 @@ function renderToday(){
   </div>`;
 
   // ── DRAG & DROP — draggable items ──
-  let _dragPayload=null;
   document.querySelectorAll('.tv-draggable').forEach(item=>{
     item.addEventListener('dragstart',e=>{
       _dragPayload={
@@ -5255,7 +5256,7 @@ function renderToday(){
     item.addEventListener('dragend',()=>{
       item.classList.remove('dragging');
       const tc=document.getElementById('todayCard');
-      if(tc)tc.style.overflowY=_isMobile?'visible':'auto';
+      if(tc)tc.style.overflowY=window.innerWidth<=768?'visible':'auto';
     });
   });
 
