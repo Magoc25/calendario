@@ -235,6 +235,20 @@ Depois de configurar o GitHub Pages e acessar a URL pelo celular:
 
 > 💡 Após instalar, o app abre em tela cheia, sem barra de endereços, como um aplicativo nativo.
 
+#### Instalar como app no desktop (Windows e macOS)
+
+O Calendário MGC também pode ser instalado como aplicativo no computador, sem precisar do navegador aberto.
+
+**Windows / macOS — Chrome ou Edge:**
+1. Acesse a URL do app no Chrome ou Edge
+2. Procure o ícone de instalar na **barra de endereços** (ícone de monitor com seta para baixo, no canto direito)
+3. Clique em **Instalar** → confirme
+4. O app abre em janela própria, sem abas ou barra de endereços, como um programa instalado
+
+> 💡 Se o ícone não aparecer na barra de endereços, acesse pelo menu: **⋮ → Converter site em app** (Edge) ou **⋮ → Salvar e compartilhar → Instalar página como app** (Chrome).
+
+> 💡 Após instalar, o app aparece no menu Iniciar (Windows) ou no Launchpad (macOS) e pode ser aberto como qualquer outro programa.
+
 **Quando avançar para o Nível 3?** Quando quiser que o Google Agenda e o Calendário MGC fiquem sincronizados automaticamente — criar um evento em um aparece no outro.
 
 ---
@@ -481,7 +495,7 @@ Na primeira sincronização, eventos recorrentes podem gerar cópias. Para remov
 |---|---|---|
 | `calendario_marlon.html` | Arquivo principal do app — interface, lógica e estilos | Todos |
 | `sw.js` | Service Worker — cache offline, alertas e notificações em segundo plano | Todos |
-| `manifest.json` | Define o app como PWA: nome, ícones e modo de exibição ao instalar no celular | Cenários 2, 3 e 4 |
+| `manifest.json` | Define o app como PWA: nome, ícones e modo de exibição ao instalar no celular, Windows e macOS | Cenários 2, 3 e 4 |
 | `icon-192.png` / `icon-512.png` | Ícones do app usados na tela inicial do celular e em notificações | Cenários 2, 3 e 4 |
 | `.github/workflows/keep-alive.yml` | Ping diário no Supabase para manter o banco ativo (configure com suas próprias chaves) | Cenários 2, 3 e 4 |
 
