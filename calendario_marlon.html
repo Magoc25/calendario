@@ -4732,7 +4732,10 @@ const DOW_SHORT=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
 function getRoutinesForToday(){
   const dow=new Date().getDay();
   return AppState.routines.filter(r=>{
-    if(r.freq==='daily')return true;
+    if(r.freq==='daily'){
+      if(r.restDays&&r.restDays.includes(dow))return false;
+      return true;
+    }
     if(r.freq==='weekly'||r.freq==='custom')return r.days&&r.days.includes(dow);
     return false;
   });
