@@ -4001,6 +4001,7 @@ const _applyDensity=d=>{
   localStorage.setItem('cal_density',d);
   document.getElementById('themePopup').classList.remove('open');
   Object.entries(_densityMap).forEach(([k,id])=>document.getElementById(id).classList.toggle('density-active',k===d));
+  if(AppState.viewMode==='week')renderWeek();
 };
 document.getElementById('btnCompact').addEventListener('click',()=>_applyDensity('compact'));
 document.getElementById('btnComfort').addEventListener('click',()=>_applyDensity('comfortable'));
