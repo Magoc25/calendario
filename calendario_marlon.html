@@ -5237,53 +5237,93 @@ function renderToday(){
 
   </div>`;
 
-  // ── DRAG & DROP — draggable items ──
-  document.querySelectorAll('.tv-draggable').forEach(item=>{
-    item.addEventListener('dragstart',e=>{
-      _dragPayload={
-        type:item.dataset.dragType,
-        text:item.dataset.dragText,
-        id:item.dataset.dragId,
-        color:item.dataset.dragColor
-      };
-      e.dataTransfer.effectAllowed='copy';
-      e.dataTransfer.setData('text/plain',item.dataset.dragText||'');
-      // Firefox: overflow:auto no container bloqueia drop — remove durante drag
-      const tc=document.getElementById('todayCard');
-      if(tc)tc.style.overflowY='visible';
-      setTimeout(()=>item.classList.add('dragging'),0);
-    });
-    item.addEventListener('dragend',()=>{
-      item.classList.remove('dragging');
-      const tc=document.getElementById('todayCard');
-      if(tc)tc.style.overflowY=window.innerWidth<=768?'visible':'auto';
-    });
-  });
+  // ── DRAG & DROP ──
+  // Desktop: custom mouse drag (HTML5 drag falha em containers overflow:auto no Chrome)
+  // Mobile:  HTML5 drag via touch (funciona porque todayCard tem overflow:visible no mobile)
+  if(window.innerWidth>768){
+    // ── Desktop: mousedown → mousemove → mouseup ──
+    let _mdActive=false,_mdGhost=null,_mdStartX=0,_mdStartY=0;
+    document.querySelectorAll('.tv-draggable').forEach(item=>{
+      item.addEventListener('mousedown',e=>{
+        // Ignora cliques em botões/checks filhos
+        if(e.button!==0||e.target.closest('[data-evcheck],[data-rcheck],[data-qtcheck],[data-qtdel],[data-top3clear],[data-top3check]'))return;
+        e.preventDefault(); // impede seleção de texto e HTML5 drag nativo
+        _dragPayload={type:item.dataset.dragType,text:item.dataset.dragText,id:item.dataset.dragId,color:item.dataset.dragColor};
+        _mdStartX=e.clientX;_mdStartY=e.clientY;_mdActive=false;
 
-  // ── DRAG & DROP — Top 3 drop zones ──
-  document.querySelectorAll('[data-top3slot]').forEach(zone=>{
-    zone.addEventListener('dragenter',e=>{
-      e.preventDefault();e.dataTransfer.dropEffect='copy';
-      zone.classList.add('drag-over-top3');
+        const _findZone=()=>document.elementsFromPoint(
+          parseInt(_mdGhost?.style.left||0)-14,
+          parseInt(_mdGhost?.style.top||0)+18
+        ).find(el=>el.dataset&&'top3slot' in el.dataset);
+
+        const onMove=e=>{
+          if(!_mdActive){
+            if(Math.abs(e.clientX-_mdStartX)<6&&Math.abs(e.clientY-_mdStartY)<6)return;
+            _mdActive=true;
+            _mdGhost=document.createElement('div');
+            _mdGhost.textContent='📌 '+_dragPayload.text;
+            Object.assign(_mdGhost.style,{position:'fixed',zIndex:'9999',background:'var(--accent)',color:'#fff',padding:'5px 14px',borderRadius:'20px',fontSize:'11px',fontWeight:'700',pointerEvents:'none',opacity:'0.92',boxShadow:'0 4px 18px rgba(0,0,0,.28)',whiteSpace:'nowrap',maxWidth:'240px',overflow:'hidden',textOverflow:'ellipsis',transition:'none'});
+            document.body.appendChild(_mdGhost);
+            item.classList.add('dragging');
+          }
+          _mdGhost.style.left=(e.clientX+14)+'px';
+          _mdGhost.style.top=(e.clientY-18)+'px';
+          // Destacar drop zone sob o cursor
+          document.querySelectorAll('[data-top3slot]').forEach(z=>z.classList.remove('drag-over-top3'));
+          const zone=document.elementsFromPoint(e.clientX,e.clientY).find(el=>el.dataset&&'top3slot' in el.dataset);
+          if(zone)zone.classList.add('drag-over-top3');
+        };
+
+        const onUp=e=>{
+          document.removeEventListener('mousemove',onMove);
+          document.removeEventListener('mouseup',onUp);
+          item.classList.remove('dragging');
+          if(_mdGhost){_mdGhost.remove();_mdGhost=null;}
+          document.querySelectorAll('[data-top3slot]').forEach(z=>z.classList.remove('drag-over-top3'));
+          if(_mdActive&&_dragPayload){
+            const zone=document.elementsFromPoint(e.clientX,e.clientY).find(el=>el.dataset&&'top3slot' in el.dataset);
+            if(zone){
+              const slot=parseInt(zone.dataset.top3slot);
+              const cur3=getTop3();
+              cur3[slot]={text:_dragPayload.text,done:false,srcType:_dragPayload.type,srcId:_dragPayload.id,srcColor:_dragPayload.color};
+              AppState.top3Data[todayDs()]=cur3;saveTop3();renderToday();
+              toast(`Prioridade ${slot+1} definida: ${_dragPayload.text}`);
+            }
+          }
+          _mdActive=false;_dragPayload=null;
+        };
+
+        document.addEventListener('mousemove',onMove);
+        document.addEventListener('mouseup',onUp);
+      });
     });
-    zone.addEventListener('dragover',e=>{
-      e.preventDefault();e.dataTransfer.dropEffect='copy';
-      zone.classList.add('drag-over-top3');
+  }else{
+    // ── Mobile: HTML5 drag via touch (todayCard tem overflow:visible — sem bloqueio) ──
+    document.querySelectorAll('.tv-draggable').forEach(item=>{
+      item.addEventListener('dragstart',e=>{
+        _dragPayload={type:item.dataset.dragType,text:item.dataset.dragText,id:item.dataset.dragId,color:item.dataset.dragColor};
+        e.dataTransfer.effectAllowed='copy';
+        e.dataTransfer.setData('text/plain',item.dataset.dragText||'');
+        setTimeout(()=>item.classList.add('dragging'),0);
+      });
+      item.addEventListener('dragend',()=>item.classList.remove('dragging'));
     });
-    zone.addEventListener('dragleave',e=>{
-      if(!zone.contains(e.relatedTarget))zone.classList.remove('drag-over-top3');
+    document.querySelectorAll('[data-top3slot]').forEach(zone=>{
+      zone.addEventListener('dragenter',e=>{e.preventDefault();zone.classList.add('drag-over-top3');});
+      zone.addEventListener('dragover',e=>{e.preventDefault();zone.classList.add('drag-over-top3');});
+      zone.addEventListener('dragleave',e=>{if(!zone.contains(e.relatedTarget))zone.classList.remove('drag-over-top3');});
+      zone.addEventListener('drop',e=>{
+        e.preventDefault();zone.classList.remove('drag-over-top3');
+        if(!_dragPayload)return;
+        const slot=parseInt(zone.dataset.top3slot);
+        const cur3=getTop3();
+        cur3[slot]={text:_dragPayload.text,done:false,srcType:_dragPayload.type,srcId:_dragPayload.id,srcColor:_dragPayload.color};
+        AppState.top3Data[todayDs()]=cur3;saveTop3();renderToday();
+        toast(`Prioridade ${slot+1} definida: ${_dragPayload.text}`);
+        _dragPayload=null;
+      });
     });
-    zone.addEventListener('drop',e=>{
-      e.preventDefault();zone.classList.remove('drag-over-top3');
-      if(!_dragPayload)return;
-      const slot=parseInt(zone.dataset.top3slot);
-      const cur3=getTop3();
-      cur3[slot]={text:_dragPayload.text,done:false,srcType:_dragPayload.type,srcId:_dragPayload.id,srcColor:_dragPayload.color};
-      AppState.top3Data[todayDs()]=cur3;saveTop3();renderToday();
-      toast(`Prioridade ${slot+1} definida: ${_dragPayload.text}`);
-      _dragPayload=null;
-    });
-  });
+  }
 
   // ── Auto-scroll durante drag no mobile ──
   // Quando o usuário arrasta perto da borda superior/inferior,
