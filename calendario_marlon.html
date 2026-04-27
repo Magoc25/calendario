@@ -1367,6 +1367,7 @@ body.large .sidebar-year{font-size:22px}
   #printBtn,#pdfBtn,#gcalDedupeBtn,
   #backupWrap,
   #gcalBtn,
+  #reloadBtn,
   #addBtn,        /* substituído pelo FAB */
   .today-wrap     /* substituído pela bottom nav */
   {display:none!important;}
@@ -1756,6 +1757,7 @@ body.large .sidebar-year{font-size:22px}
         </div>
         <button class="hbtn hbtn-accent" id="notifBtn" title="Alertas">🔔<span class="notif-badge nb-default" id="notifBadge"></span></button>
         <button class="hbtn hbtn-accent" id="syncBtn" title="Sincronizar com nuvem">☁️<span class="sync-dot sync-warn" id="syncDot"></span></button>
+        <button class="hbtn" id="reloadBtn" title="Recarregar página">↻</button>
         <button class="hbtn" id="gcalBtn" title="Google Agenda">
           <span id="gcalBtnIcon">📆</span><span id="gcalBtnLabel" style="font-size:10px;margin-left:3px">Google</span><span class="sync-dot sync-warn" id="gcalDot" style="margin-left:3px"></span>
         </button>
@@ -4010,6 +4012,7 @@ document.getElementById('btnLarge').addEventListener('click',()=>_applyDensity('
 
 /* ═══════ PRINT ═══════ */
 document.getElementById('printBtn').addEventListener('click',()=>{if(AppState.viewMode!=='month')toast('Dica: alterne para Mês antes de imprimir.');window.print();});
+document.getElementById('reloadBtn').addEventListener('click',()=>location.reload());
 
 /* ═══════ POPUPS ═══════ */
 ['backup','theme'].forEach(name=>{
