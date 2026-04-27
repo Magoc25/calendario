@@ -6097,19 +6097,16 @@ async function syncFromCloud(silent=false){
       return false;
     }
     if(data){
-      // Na primeira carga da sessão, sempre prioriza o Supabase
-      // Evita que dados residuais de outro browser sobrescrevam dados atuais
-      const firstLoad=!sessionStorage.getItem('cal_session_synced');
       const remoteTs=new Date(data.updated_at||0).getTime();
       const localTs=new Date(localStorage.getItem('cal_local_ts')||0).getTime();
-      if(firstLoad||remoteTs>localTs){
+      sessionStorage.setItem('cal_session_synced','1');
+      if(remoteTs>localTs){
+        // Nuvem tem dados mais recentes — aplica localmente
         applyRemotePayload(data);
-        sessionStorage.setItem('cal_session_synced','1');
         render();
         if(!silent)toast('✓ Dados atualizados da nuvem!');
       } else {
-        // Local é mais recente (mudanças feitas nesta sessão) — envia para nuvem
-        sessionStorage.setItem('cal_session_synced','1');
+        // Local é mais recente (inclui alterações não enviadas antes de fechar) — envia para nuvem
         await syncToCloud(true);
         if(!silent)toast('✓ Nuvem atualizada com dados locais!');
       }
