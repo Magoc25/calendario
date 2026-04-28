@@ -313,6 +313,20 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);hei
 .cat-tag{padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;cursor:pointer;border:1.5px solid var(--border);color:var(--muted);background:var(--surface);transition:all .15s}
 .cat-tag:hover{border-color:var(--accent);color:var(--accent)}
 .cat-tag.selected{background:var(--accent);color:#fff;border-color:var(--accent)}
+.cat-mg-btn{font-size:9px;padding:1px 7px;border-radius:10px;border:1.5px solid var(--border);background:var(--surface);color:var(--muted);cursor:pointer;font-weight:700;line-height:1.6;vertical-align:middle;transition:all .15s}
+.cat-mg-btn:hover{border-color:var(--accent);color:var(--accent)}
+.cat-mg-panel{margin-top:8px;padding:10px;border-radius:8px;border:1.5px solid var(--border);background:var(--surface)}
+.cat-mg-section-title{font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
+.cat-mg-row{display:flex;align-items:center;gap:6px;padding:3px 4px;border-radius:5px;background:var(--bg);margin-bottom:3px}
+.cat-mg-del{border:none;background:none;cursor:pointer;color:var(--muted);font-size:13px;line-height:1;padding:0 3px;flex-shrink:0;opacity:.7}
+.cat-mg-del:hover{color:#e03131;opacity:1}
+.cat-mg-add-row{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:7px}
+.cat-mg-icon-input{width:40px;text-align:center;font-size:15px;padding:3px 4px;border-radius:6px;border:1.5px solid var(--border);background:var(--bg);color:var(--text)}
+.cat-mg-name-input{flex:1;min-width:90px;padding:4px 8px;border-radius:6px;border:1.5px solid var(--border);background:var(--bg);color:var(--text);font-size:11px}
+.cat-mg-add-btn{padding:4px 10px;border-radius:6px;border:none;background:var(--accent);color:#fff;font-size:11px;font-weight:700;cursor:pointer;flex-shrink:0}
+.cat-emoji-grid{display:flex;flex-wrap:wrap;gap:3px}
+.cat-emoji-opt{font-size:17px;cursor:pointer;padding:2px 4px;border-radius:5px;line-height:1.3;transition:background .1s}
+.cat-emoji-opt:hover,.cat-emoji-opt.picked{background:var(--accent-light,rgba(59,91,219,.12))}
 .color-hint{font-size:10px;color:var(--muted);margin-top:2px;font-style:italic}
 /* Tags input */
 .tags-input-wrap{display:flex;flex-wrap:wrap;gap:4px;padding:5px 8px;border:1.5px solid var(--border);border-radius:var(--radius-sm);background:var(--input-bg);min-height:34px;cursor:text;transition:border-color .15s}
@@ -1865,17 +1879,20 @@ body.large .sidebar-year{font-size:22px}
         <div class="color-hint" id="catColorHint" style="display:none"></div>
       </div>
       <div class="field">
-        <label>Sugestões</label>
-        <div class="cat-tags">
-          <span class="cat-tag" data-cat="Aula">📚 Aula</span>
-          <span class="cat-tag" data-cat="Reunião">👥 Reunião</span>
-          <span class="cat-tag" data-cat="CPA">📋 CPA</span>
-          <span class="cat-tag" data-cat="NAPNE">♿ NAPNE</span>
-          <span class="cat-tag" data-cat="Pesquisa">🔬 Pesquisa</span>
-          <span class="cat-tag" data-cat="Extensão">🌱 Extensão</span>
-          <span class="cat-tag" data-cat="TCC">🎓 TCC</span>
-          <span class="cat-tag" data-cat="Viagem">✈️ Viagem</span>
-          <span class="cat-tag" data-cat="Saúde">🏥 Saúde</span>
+        <label style="display:flex;align-items:center;gap:7px">Sugestões <button id="catMgBtn" class="cat-mg-btn">⚙️ Gerenciar</button></label>
+        <div id="catTagsContainer" class="cat-tags"></div>
+        <div id="catMgPanel" class="cat-mg-panel" style="display:none">
+          <div class="cat-mg-section-title">Categorias salvas</div>
+          <div id="catMgList"></div>
+          <div style="border-top:1px solid var(--border);padding-top:8px;margin-top:4px">
+            <div class="cat-mg-section-title">Nova categoria</div>
+            <div class="cat-mg-add-row">
+              <input id="catMgIcon" class="cat-mg-icon-input" type="text" placeholder="📌" maxlength="4">
+              <input id="catMgName" class="cat-mg-name-input" type="text" placeholder="Nome da categoria">
+              <button id="catMgAddBtn" class="cat-mg-add-btn">+ Adicionar</button>
+            </div>
+            <div id="catMgEmojiGrid" class="cat-emoji-grid"></div>
+          </div>
         </div>
       </div>
     </div>
@@ -2453,7 +2470,15 @@ const DOWS_M=['D','S','T','Q','Q','S','S'];
 const BYDAY={0:'SU',1:'MO',2:'TU',3:'WE',4:'TH',5:'FR',6:'SA'};
 const RRULE_CLS={DAILY:'ev-daily',WEEKLY:'ev-weekly',BIWEEKLY:'ev-biweekly',MONTHLY:'ev-monthly',YEARLY:'ev-yearly',CUSTOM:'ev-custom'};
 const RRULE_FREQ={DAILY:'DAILY',WEEKLY:'WEEKLY',BIWEEKLY:'WEEKLY',MONTHLY:'MONTHLY',YEARLY:'YEARLY'};
-const CAT_ICONS={'Aula':'📚','Reunião':'👥','CPA':'📋','NAPNE':'♿','Pesquisa':'🔬','Extensão':'🌱','TCC':'🎓','Viagem':'✈️','Saúde':'🏥','Rotina':'🔄','Pessoal':'👤'};
+const DEFAULT_CATEGORIES=[
+  {name:'Aula',icon:'📚'},{name:'Reunião',icon:'👥'},{name:'CPA',icon:'📋'},
+  {name:'NAPNE',icon:'♿'},{name:'Pesquisa',icon:'🔬'},{name:'Extensão',icon:'🌱'},
+  {name:'TCC',icon:'🎓'},{name:'Viagem',icon:'✈️'},{name:'Saúde',icon:'🏥'},
+  {name:'Rotina',icon:'🔄'},{name:'Pessoal',icon:'👤'}
+];
+const CAT_EMOJI_PICKER=['📚','👥','📋','♿','🔬','🌱','🎓','💼','📊','🏫','🏢','🎯','📝','🏥','💊','🍎','🏃','⚽','🧘','👤','🏠','💰','🚗','✈️','🎉','🎨','🎵','📸','🎤','📱','💻','🌐','🔑','🛠️','🔔','💡','🏆','📅','🔄','⭐','❤️','🍕','☕','🌍'];
+let CAT_ICONS={};
+function rebuildCatIcons(){Object.keys(CAT_ICONS).forEach(k=>delete CAT_ICONS[k]);AppState.categories.forEach(c=>{CAT_ICONS[c.name]=c.icon;});}
 
 // ─── Estado de UI + Dados persistidos ────────────────
 const AppState={
@@ -2471,6 +2496,7 @@ const AppState={
   top3Data:{},
   reviews:{},
   standaloneNotes:[],
+  categories:[],
 };
 // ─────────────────────────────────────────────────────
 let editingId=null,editingDate=null,selectedColor='#3b5bdb',isDone=false;
@@ -2578,6 +2604,8 @@ document.getElementById('calDeleteBtn').addEventListener('click',()=>{
 
 try{AppState.events=JSON.parse(localStorage.getItem('cal_marlon_v8')||'[]')}catch(e){console.error('[MGC] Falha ao carregar eventos:',e);toast('⚠️ Erro ao carregar eventos — verifique o armazenamento local.');}
 try{categoryColors=JSON.parse(localStorage.getItem('cal_catcolors')||'{}')}catch(e){console.error('[MGC] Falha ao carregar cores de categorias:',e);}
+try{AppState.categories=JSON.parse(localStorage.getItem('cal_categories')||'null')||DEFAULT_CATEGORIES.map(c=>({...c}));}catch(e){AppState.categories=DEFAULT_CATEGORIES.map(c=>({...c}));}
+rebuildCatIcons();
 
 const pad=n=>String(n).padStart(2,'0');
 const ds=(y,m,d)=>`${y}-${pad(m+1)}-${pad(d)}`;
@@ -2609,6 +2637,7 @@ const save=()=>{invalidateEvMapCache();localStorage.setItem('cal_marlon_v8',JSON
 let _gcalDragSyncTimer=null;
 function gcalSyncAfterDrag(){clearTimeout(_gcalDragSyncTimer);_gcalDragSyncTimer=setTimeout(()=>{if(typeof gcalIsConnected==='function'&&gcalIsConnected())gcalSync(false).catch(()=>{});},3000);}
 const saveCatColors=()=>{localStorage.setItem('cal_catcolors',JSON.stringify(categoryColors));localStorage.setItem('cal_local_ts',new Date().toISOString());if(sbClient){clearTimeout(_cloudSaveTimerColors);_cloudSaveTimerColors=setTimeout(()=>syncToCloud(true),1500);}};
+function saveCategories(){localStorage.setItem('cal_categories',JSON.stringify(AppState.categories));localStorage.setItem('cal_local_ts',new Date().toISOString());rebuildCatIcons();renderCatTags();};
 const todayDs=()=>{const t=new Date();return ds(t.getFullYear(),t.getMonth(),t.getDate())};
 const toast=msg=>{const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2400)};
 let _toastUndoTimer=null;
@@ -3664,7 +3693,75 @@ function setColor(color){selectedColor=color;document.querySelectorAll('#colorRo
 document.querySelectorAll('#colorRow .color-swatch').forEach(s=>s.addEventListener('click',()=>setColor(s.dataset.color)));
 document.getElementById('colorCustom').addEventListener('input',function(){setColor(this.value);document.querySelectorAll('#colorRow .color-swatch').forEach(s=>s.classList.remove('selected'));this.closest('.color-custom-wrap').querySelector('.color-custom-btn').style.cssText=`background:${this.value};border:none`;this.closest('.color-custom-wrap').querySelector('.color-custom-btn').textContent='';});
 function applyCatColor(cat){const h=document.getElementById('catColorHint');if(cat&&categoryColors[cat]){setColor(categoryColors[cat]);h.textContent=`Cor lembrada de "${cat}"`;h.style.display='block';}else h.style.display='none';}
-document.querySelectorAll('.cat-tag').forEach(t=>{t.addEventListener('click',function(){document.getElementById('evCategory').value=this.dataset.cat;document.querySelectorAll('.cat-tag').forEach(x=>x.classList.remove('selected'));this.classList.add('selected');applyCatColor(this.dataset.cat);});});
+
+function renderCatTags(){
+  const c=document.getElementById('catTagsContainer');
+  if(!c)return;
+  const cur=document.getElementById('evCategory')?.value||'';
+  c.innerHTML=AppState.categories.map(cat=>`<span class="cat-tag${cat.name===cur?' selected':''}" data-cat="${esc(cat.name)}">${cat.icon} ${esc(cat.name)}</span>`).join('');
+  c.querySelectorAll('.cat-tag').forEach(t=>{
+    t.addEventListener('click',function(){
+      document.getElementById('evCategory').value=this.dataset.cat;
+      c.querySelectorAll('.cat-tag').forEach(x=>x.classList.remove('selected'));
+      this.classList.add('selected');
+      applyCatColor(this.dataset.cat);
+    });
+  });
+  renderCatMgList();
+}
+
+function renderCatMgList(){
+  const list=document.getElementById('catMgList');
+  if(!list)return;
+  if(!AppState.categories.length){list.innerHTML='<div style="color:var(--muted);font-style:italic;font-size:11px;padding:2px 0 6px">Nenhuma categoria</div>';return;}
+  list.innerHTML=AppState.categories.map((cat,i)=>
+    `<div class="cat-mg-row">
+      <span style="font-size:15px;width:22px;text-align:center;flex-shrink:0">${cat.icon}</span>
+      <span style="flex:1;font-size:11px;color:var(--text)">${esc(cat.name)}</span>
+      <button class="cat-mg-del" data-del-cat="${i}" title="Excluir">✕</button>
+    </div>`
+  ).join('');
+  list.querySelectorAll('[data-del-cat]').forEach(b=>{
+    b.addEventListener('click',function(){
+      AppState.categories.splice(parseInt(this.dataset.delCat),1);
+      saveCategories();
+    });
+  });
+}
+
+function initCatManager(){
+  const btn=document.getElementById('catMgBtn');
+  const panel=document.getElementById('catMgPanel');
+  if(!btn||!panel)return;
+  const grid=document.getElementById('catMgEmojiGrid');
+  grid.innerHTML=CAT_EMOJI_PICKER.map(e=>`<span class="cat-emoji-opt" title="${e}">${e}</span>`).join('');
+  grid.querySelectorAll('.cat-emoji-opt').forEach(s=>{
+    s.addEventListener('click',function(){
+      document.getElementById('catMgIcon').value=this.textContent;
+      grid.querySelectorAll('.cat-emoji-opt').forEach(x=>x.classList.remove('picked'));
+      this.classList.add('picked');
+    });
+  });
+  btn.addEventListener('click',()=>{
+    const open=panel.style.display==='none';
+    panel.style.display=open?'block':'none';
+    btn.textContent=open?'✕ Fechar':'⚙️ Gerenciar';
+  });
+  document.getElementById('catMgAddBtn').addEventListener('click',()=>{
+    const icon=document.getElementById('catMgIcon').value.trim()||'📌';
+    const name=document.getElementById('catMgName').value.trim();
+    if(!name){document.getElementById('catMgName').focus();return;}
+    if(AppState.categories.some(c=>c.name.toLowerCase()===name.toLowerCase())){toast('Categoria já existe.');return;}
+    AppState.categories.push({name,icon});
+    saveCategories();
+    document.getElementById('catMgIcon').value='';
+    document.getElementById('catMgName').value='';
+    grid.querySelectorAll('.cat-emoji-opt').forEach(x=>x.classList.remove('picked'));
+  });
+}
+
+renderCatTags();
+initCatManager();
 document.getElementById('evCategory').addEventListener('input',function(){document.querySelectorAll('.cat-tag').forEach(t=>t.classList.toggle('selected',t.dataset.cat===this.value));applyCatColor(this.value);});
 document.getElementById('evRrule').addEventListener('change',function(){document.getElementById('recurBox').classList.toggle('show',!!this.value);document.getElementById('customDaysWrap').classList.toggle('show',this.value==='CUSTOM');});
 document.querySelectorAll('.day-chip').forEach(chip=>{chip.addEventListener('click',function(){const d=parseInt(this.dataset.d);if(selectedCustomDays.has(d)){selectedCustomDays.delete(d);this.classList.remove('sel');}else{selectedCustomDays.add(d);this.classList.add('sel');}});});
