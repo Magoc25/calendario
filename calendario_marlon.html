@@ -4970,7 +4970,7 @@ function renderRoutinesView(){
         </div>
       </div>
       ${AppState.routines.length===0?'<div class="rv-empty">Nenhuma rotina ainda.<br>Crie rotinas para acompanhar hábitos e compromissos recorrentes.</div>':
-        AppState.routines.map(r=>{
+        [...AppState.routines].sort((a,b)=>(a.time||'99:99').localeCompare(b.time||'99:99')).map(r=>{
           const restLabel=r.freq==='daily'&&r.restDays&&r.restDays.length?` · folga ${r.restDays.map(d=>DOW_SHORT[d]).join('/')}` :'';
           const daysLabel=(r.freq==='daily'?'Todos os dias':(r.days||[]).map(d=>DOW_SHORT[d]).join(', '))+restLabel;
           const todayDone=checks.includes(r.id);
