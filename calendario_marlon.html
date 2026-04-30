@@ -1298,20 +1298,20 @@ body.large .sidebar-year{font-size:22px}
   bottom:70px;right:14px;
   width:52px;height:52px;
   border-radius:50%;
-  background:rgba(59,91,219,.55);
-  backdrop-filter:blur(6px);
-  -webkit-backdrop-filter:blur(6px);
+  background:rgba(59,91,219,.32);
+  backdrop-filter:blur(10px);
+  -webkit-backdrop-filter:blur(10px);
   color:#fff;
-  border:none;
+  border:1.5px solid rgba(255,255,255,.30);
   font-size:28px;line-height:1;
   cursor:pointer;
   z-index:94;
-  box-shadow:0 4px 18px rgba(59,91,219,.32);
+  box-shadow:0 8px 28px rgba(59,91,219,.55), 0 2px 8px rgba(0,0,0,.18);
   align-items:center;justify-content:center;
   transition:transform .15s,box-shadow .15s,background .15s;
   -webkit-tap-highlight-color:transparent;
 }
-.mobile-fab:active{transform:scale(.90);background:var(--accent);box-shadow:0 2px 8px rgba(59,91,219,.28);}
+.mobile-fab:active{transform:scale(.90);background:var(--accent);border-color:transparent;box-shadow:0 3px 10px rgba(59,91,219,.40);}
 
 /* ── Mobile Week View — single day mode ── */
 .wm-day-tabs{
