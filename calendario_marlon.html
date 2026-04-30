@@ -1101,6 +1101,8 @@ body.large .sidebar-year{font-size:22px}
 .notes-editor{flex:1;min-height:280px;padding:12px 14px;border:1px solid var(--border);border-radius:0 0 var(--radius-sm) var(--radius-sm);outline:none;font-family:'DM Sans',sans-serif;font-size:13px;line-height:1.7;color:var(--text);background:var(--input-bg);overflow-y:auto;resize:vertical}
 .notes-editor:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(59,91,219,.07)}
 .notes-editor[placeholder]:empty::before{content:attr(placeholder);color:var(--hint);pointer-events:none}
+.notes-editor ol,.notes-editor ul{padding-left:1.6em;margin:.25em 0}
+.notes-editor li{margin:.1em 0}
 .notes-footer{display:flex;align-items:center;justify-content:space-between;margin-top:10px;padding-top:10px;border-top:1px solid var(--border);flex-shrink:0}
 .notes-saved{font-size:10px;color:var(--muted);font-style:italic}
 .notes-history{font-size:10px;color:var(--muted)}
@@ -6062,6 +6064,17 @@ document.getElementById('neEditor').addEventListener('input',()=>{
     document.getElementById('neSavedLabel').textContent='💾 Salvo automaticamente';
     if(AppState.viewMode==='notes')renderNotesView();
   },900);
+});
+// Prevent Chrome "Magic Lists" auto-conversion (e.g. typing "11. " auto-creates <ol>)
+// isTrusted=true → user-triggered auto-list (cancel it)
+// isTrusted=false → execCommand from toolbar (let it pass)
+['neEditor','notesEditor'].forEach(id=>{
+  const el=document.getElementById(id);
+  if(!el)return;
+  el.addEventListener('beforeinput',e=>{
+    if((e.inputType==='insertOrderedList'||e.inputType==='insertUnorderedList')&&e.isTrusted)
+      e.preventDefault();
+  });
 });
 // Close overlay clicking backdrop
 document.getElementById('noteEditOverlay').addEventListener('click',e=>{
