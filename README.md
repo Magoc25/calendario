@@ -339,6 +339,20 @@ create policy "Allow all operations" on cal_sync
 > alter table cal_sync add column if not exists routine_checks text;
 > ```
 
+> ⚠️ **Se criou a tabela sem ativar o RLS** (via interface do Supabase ou SQL anterior), rode:
+> ```sql
+> alter table cal_sync enable row level security;
+>
+> create policy "Allow all operations" on cal_sync
+>   for all using (true) with check (true);
+> ```
+> Se aparecer o erro `policy already exists`, rode apenas a linha `alter table`:
+> ```sql
+> alter table cal_sync enable row level security;
+> ```
+
+> ✅ **Como confirmar que o RLS está ativo:** no Table Editor, clique na tabela `cal_sync` — deve aparecer um botão **"1 RLS policy"** acima das colunas. Você também pode confirmar via SQL: `SELECT tablename, rowsecurity FROM pg_tables WHERE tablename = 'cal_sync';` — o resultado `rowsecurity = true` confirma.
+
 #### 3. Copiar as chaves
 Vá em **Settings → Data API**:
 - **Project URL** — `https://xxxx.supabase.co` (role para cima para encontrar)
