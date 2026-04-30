@@ -1298,18 +1298,20 @@ body.large .sidebar-year{font-size:22px}
   bottom:70px;right:14px;
   width:52px;height:52px;
   border-radius:50%;
-  background:var(--accent);
+  background:rgba(59,91,219,.76);
+  backdrop-filter:blur(6px);
+  -webkit-backdrop-filter:blur(6px);
   color:#fff;
   border:none;
   font-size:28px;line-height:1;
   cursor:pointer;
   z-index:94;
-  box-shadow:0 4px 18px rgba(59,91,219,.45);
+  box-shadow:0 4px 18px rgba(59,91,219,.32);
   align-items:center;justify-content:center;
-  transition:transform .15s,box-shadow .15s;
+  transition:transform .15s,box-shadow .15s,background .15s;
   -webkit-tap-highlight-color:transparent;
 }
-.mobile-fab:active{transform:scale(.90);box-shadow:0 2px 8px rgba(59,91,219,.35);}
+.mobile-fab:active{transform:scale(.90);background:var(--accent);box-shadow:0 2px 8px rgba(59,91,219,.28);}
 
 /* ── Mobile Week View — single day mode ── */
 .wm-day-tabs{
@@ -2424,6 +2426,15 @@ body.large .sidebar-year{font-size:22px}
       <button class="btn-cancel" id="calCancelBtn">Cancelar</button>
       <button class="btn-save" id="calSaveBtn">Salvar</button>
     </div>
+  </div>
+</div>
+
+<!-- QTASK HISTORY MODAL -->
+<div class="overlay" id="qtaskHistOverlay">
+  <div class="modal">
+    <button class="modal-close" id="qtaskHistClose">✕</button>
+    <div class="modal-title">📋 Histórico de tarefas</div>
+    <div id="qtaskHistBody" style="font-size:12px"></div>
   </div>
 </div>
 
@@ -5164,10 +5175,45 @@ function openRvForm(id,keepOpen=false){
 /* ═══════ QUICK TASKS (today's tasks - lightweight) ═══════ */
 try{AppState.quickTasks=JSON.parse(localStorage.getItem('cal_qtasks')||'[]');}catch(e){console.error('[MGC] Falha ao carregar tarefas:',e);}
 function saveQuickTasks(){
+  const cutoff=new Date();cutoff.setDate(cutoff.getDate()-90);
+  const co=ds(cutoff.getFullYear(),cutoff.getMonth(),cutoff.getDate());
+  AppState.quickTasks=AppState.quickTasks.filter(t=>t.date>=co);
   localStorage.setItem('cal_qtasks',JSON.stringify(AppState.quickTasks));
   localStorage.setItem('cal_local_ts',new Date().toISOString());
   if(sbClient){clearTimeout(_cloudSaveTimer);_cloudSaveTimer=setTimeout(()=>syncToCloud(true),1500);}
 }
+
+function openQtaskHistory(){
+  const td=todayDs();
+  const past=AppState.quickTasks.filter(t=>t.date<td);
+  const el=document.getElementById('qtaskHistBody');
+  if(!past.length){
+    el.innerHTML='<div style="color:var(--muted);padding:28px 0;text-align:center;font-size:13px">Nenhuma tarefa em dias anteriores.</div>';
+  }else{
+    const groups={};
+    past.forEach(t=>{if(!groups[t.date])groups[t.date]=[];groups[t.date].push(t);});
+    const dates=Object.keys(groups).sort().reverse();
+    el.innerHTML=dates.map(d=>{
+      const [y,m,day]=d.split('-');
+      const label=`${parseInt(day)} de ${MONTHS[parseInt(m)-1]} de ${y}`;
+      const tasks=groups[d];
+      const done=tasks.filter(t=>t.done).length;
+      return `<div style="margin-bottom:14px">
+        <div style="font-weight:700;font-size:11px;color:var(--text);padding-bottom:4px;margin-bottom:4px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:baseline">
+          <span>${label}</span>
+          <span style="font-weight:400;color:var(--muted)">${done}/${tasks.length} concluída${tasks.length!==1?'s':''}</span>
+        </div>
+        ${tasks.map(t=>`<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border)">
+          <span style="font-size:13px;flex-shrink:0">${t.done?'✅':'⬜'}</span>
+          <span style="flex:1;${t.done?'text-decoration:line-through;color:var(--muted)':'color:var(--text)'}">${esc(t.title)}</span>
+        </div>`).join('')}
+      </div>`;
+    }).join('');
+  }
+  document.getElementById('qtaskHistOverlay').classList.add('open');
+}
+document.getElementById('qtaskHistClose').addEventListener('click',()=>document.getElementById('qtaskHistOverlay').classList.remove('open'));
+document.getElementById('qtaskHistOverlay').addEventListener('click',e=>{if(e.target===e.currentTarget)e.currentTarget.classList.remove('open');});
 
 function getTodayTasks(){
   const td=todayDs();
@@ -5315,7 +5361,7 @@ function renderToday(){
 
     <!-- Quick tasks — DRAGGABLE -->
     <div class="tv-panel">
-      <div class="tv-panel-title">✅ Tarefas de hoje</div>
+      <div class="tv-panel-title">✅ Tarefas de hoje <button onclick="openQtaskHistory()" style="margin-left:auto;font-size:9px;padding:1px 7px;border-radius:10px;border:1.5px solid var(--border);background:var(--surface);color:var(--muted);cursor:pointer;font-weight:700;line-height:1.6" title="Ver histórico de tarefas">📋 Histórico</button></div>
       <div class="drop-hint">Arraste uma tarefa para o Top 3 ↑</div>
       <div id="tvQtasks">
         ${qtasks.length===0?'<div style="font-size:11px;color:var(--muted);margin-bottom:6px">Nenhuma tarefa ainda.</div>':
