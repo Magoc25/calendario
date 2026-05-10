@@ -2824,8 +2824,8 @@ function makePill(ev,dateStr,forWeek=false){
     else if(dateStr===ev.dateEnd)mdClass+=' md-end';
   }
   const timeStr=ev.start?`<span class="ev-time">${ev.start}</span>`:'';
-  const noteIcon=hasNotes(ev.id)?`<span style="font-size:11px;flex-shrink:0;line-height:1" title="Tem notas">📝</span>`:'';
-  return `<div class="ev-pill ${base}${done?' done-pill':''}${rotina?' is-rotina':''}${mdClass}" data-id="${ev.id}" data-date="${dateStr}" style="border-left-color:${bc};--pill-ev-color:${bc}" draggable="true" title="${esc(ev.title)}${ev.category?' ['+esc(ev.category)+']':''}${hasNotes(ev.id)?' · tem notas':''}">
+  const noteIcon=hasNotes(ev.id,dateStr)?`<span style="font-size:11px;flex-shrink:0;line-height:1" title="Tem notas">📝</span>`:'';
+  return `<div class="ev-pill ${base}${done?' done-pill':''}${rotina?' is-rotina':''}${mdClass}" data-id="${ev.id}" data-date="${dateStr}" style="border-left-color:${bc};--pill-ev-color:${bc}" draggable="true" title="${esc(ev.title)}${ev.category?' ['+esc(ev.category)+']':''}${hasNotes(ev.id,dateStr)?' · tem notas':''}">
     <span class="ev-check${done?' checked':''}" data-check-id="${ev.id}" data-check-date="${dateStr}"></span>
     ${timeStr}${icon?`<span class="ev-cat-icon">${icon}</span>`:''}
     <span class="ev-title-text">${esc(ev.title)}${recurIcon}</span>
@@ -2975,7 +2975,7 @@ function renderDayPanel(dateStr){
   const evMap=buildEvMap(dateStr,dateStr);
   const evs=evMap[dateStr]||[];
   let _dpNotes={};try{_dpNotes=JSON.parse(localStorage.getItem('cal_notes')||'{}');}catch(e){}
-  const _dpHasNote=id=>!!(_dpNotes[id]&&String(_dpNotes[id]).trim().length>0);
+  const _dpHasNote=(id,date)=>{const ev=AppState.events.find(e=>e.id===id);const k=(ev&&ev.rrule&&date)?id+'#'+date:id;return !!(_dpNotes[k]&&String(_dpNotes[k]).trim().length>0);};
   const body=document.getElementById('dpBody');
   const today=todayDs();
   let html=`<button class="dp-add" data-date="${dateStr}">+ Adicionar evento neste dia</button>`;
@@ -2984,11 +2984,11 @@ function renderDayPanel(dateStr){
     html+=`<div class="dp-timeline">`;
     evs.forEach(ev=>{
       const done=isDoneOn(ev,dateStr);
-      const hasNote=_dpHasNote(ev.id);
+      const hasNote=_dpHasNote(ev.id,dateStr);
       const cd=countdownDays(dateStr);
       const cdHtml=cd&&cd!=='hoje'?`<span class="countdown-badge">${cd}</span>`:'';
       const tagsHtml=(ev.tags||[]).length?`<div class="dp-ev-tags">${ev.tags.map(t=>`<span class="dp-tag">${t}</span>`).join('')}</div>`:'';
-      const noteBtn=hasNote?`<span class="dp-note-btn" data-notes-id="${ev.id}" title="Ver notas" style="font-size:15px;flex-shrink:0;cursor:pointer;line-height:1">📝</span>`:'';
+      const noteBtn=hasNote?`<span class="dp-note-btn" data-notes-id="${ev.id}" data-notes-date="${dateStr}" title="Ver notas" style="font-size:15px;flex-shrink:0;cursor:pointer;line-height:1">📝</span>`:'';
       html+=`<div class="dp-ev${done?' done-dp':''}" data-id="${ev.id}" data-date="${dateStr}" style="border-left-color:${ev.color||'var(--accent)'}">
         <div class="dp-ev-time">
           <span>${ev.start||''}${ev.end?' – '+ev.end:''} ${CAT_ICONS[ev.category]||''} ${cdHtml}</span>
@@ -3010,7 +3010,7 @@ function renderDayPanel(dateStr){
   body.querySelectorAll('.dp-ev').forEach(el=>{
     el.addEventListener('click',e=>{
       if(e.target.closest('.dp-ev-check'))return;
-      if(e.target.closest('.dp-note-btn')){openNotes(e.target.closest('.dp-note-btn').dataset.notesId);return;}
+      if(e.target.closest('.dp-note-btn')){const b=e.target.closest('.dp-note-btn');openNotes(b.dataset.notesId,b.dataset.notesDate);return;}
       openEdit(el.dataset.id,el.dataset.date);
     });
     el.addEventListener('contextmenu',e=>{e.preventDefault();e.stopPropagation();openCtxMenu(e,el.dataset.id,el.dataset.date);});
@@ -4265,10 +4265,12 @@ let notesEvId=null,notesAutoSaveTimer=null;
 let notesStore={};
 try{notesStore=JSON.parse(localStorage.getItem('cal_notes')||'{}')}catch(e){console.error('[MGC] Falha ao carregar notas de eventos:',e);}
 function saveNotes(){localStorage.setItem('cal_notes',JSON.stringify(notesStore));localStorage.setItem('cal_local_ts',new Date().toISOString());if(sbClient){clearTimeout(_cloudSaveTimer);_cloudSaveTimer=setTimeout(()=>syncToCloud(true),1500);}}
+function noteKey(evId,evDate){const ev=AppState.events.find(e=>e.id===evId);return(ev&&ev.rrule&&evDate)?evId+'#'+evDate:evId;}
 
-function openNotes(evId){
+function openNotes(evId,evDate){
   const ev=AppState.events.find(e=>e.id===evId);if(!ev)return;
-  notesEvId=evId;
+  const nk=noteKey(evId,evDate);
+  notesEvId=nk;
   // Badge color from calendar
   const cal=getCal(ev.calendarId);
   const badge=document.getElementById('notesBadge');
@@ -4276,13 +4278,13 @@ function openNotes(evId){
   badge.style.background=cal?cal.color:'#3b5bdb';
   document.getElementById('notesEvTitle').textContent=ev.title;
   // Date range
-  const d1=new Date(ev.date+'T12:00:00');
+  const d1=new Date((evDate||ev.date)+'T12:00:00');
   const dateStr=`${d1.getDate()} de ${MONTHS[d1.getMonth()]} ${d1.getFullYear()}${ev.start?' · '+ev.start:''}`;
   document.getElementById('notesEvDate').textContent=dateStr;
   // Load saved content
   const editor=document.getElementById('notesEditor');
-  editor.innerHTML=notesStore[evId]||'';
-  document.getElementById('notesSavedLabel').textContent=notesStore[evId]?'💾 Notas salvas':'📝 Sem notas ainda';
+  editor.innerHTML=notesStore[nk]||'';
+  document.getElementById('notesSavedLabel').textContent=notesStore[nk]?'💾 Notas salvas':'📝 Sem notas ainda';
   document.getElementById('notesOverlay').classList.add('open');
   setTimeout(()=>editor.focus(),80);
 }
@@ -4397,7 +4399,7 @@ document.getElementById('notesOverlay').addEventListener('click',e=>{
 });
 
 // Show note indicator on event pills that have notes
-function hasNotes(evId){return !!notesStore[evId]&&notesStore[evId].trim().length>0;}
+function hasNotes(evId,evDate){const k=noteKey(evId,evDate);return !!notesStore[k]&&notesStore[k].trim().length>0;}
 
 /* ═══════ CONTEXT MENU ═══════ */
 let ctxEvId=null,ctxEvDate=null;
@@ -4410,7 +4412,7 @@ function openCtxMenu(e,evId,evDate){
   const ev=AppState.events.find(x=>x.id===evId);
   const menu=document.getElementById('ctxMenu');
   document.getElementById('ctxSkip').style.display=ev&&ev.rrule?'flex':'none';
-  const hasN=hasNotes(evId);
+  const hasN=hasNotes(evId,ctxEvDate);
   document.getElementById('ctxNotes').textContent=hasN?'📝 Notas (com conteúdo)':'📝 Notas do evento';
   menu.style.left=Math.min(e.clientX,window.innerWidth-190)+'px';
   menu.style.top=Math.min(e.clientY,window.innerHeight-180)+'px';
@@ -4479,7 +4481,7 @@ document.getElementById('ctxEdit').addEventListener('click',()=>{
 });
 document.getElementById('ctxNotes').addEventListener('click',()=>{
   closeCtxMenu();closeMobileDaySheet();
-  if(ctxEvId)openNotes(ctxEvId);
+  if(ctxEvId)openNotes(ctxEvId,ctxEvDate);
 });
 document.getElementById('ctxSkip').addEventListener('click',()=>{
   closeCtxMenu();
@@ -4497,7 +4499,7 @@ document.getElementById('ctxDelete').addEventListener('click',()=>{
   closeCtxMenu();
   if(!ctxEvId)return;
   if(!confirm('Excluir este evento?'))return;
-  delete notesStore[ctxEvId];saveNotes();
+  Object.keys(notesStore).forEach(k=>{if(k===ctxEvId||k.startsWith(ctxEvId+'#'))delete notesStore[k];});saveNotes();
   deleteEventById(ctxEvId);
 });
 document.addEventListener('keydown',e=>{
@@ -4706,7 +4708,7 @@ function openMobileDaySheet(dateStr){
   const body=document.getElementById('mdsBody');
   const isDesktop=window.innerWidth>768;
   let _mdsNotes={};try{_mdsNotes=JSON.parse(localStorage.getItem('cal_notes')||'{}');}catch(e){}
-  const _mdsHasNote=id=>!!(_mdsNotes[id]&&String(_mdsNotes[id]).trim().length>0);
+  const _mdsHasNote=(id,date)=>{const ev=AppState.events.find(e=>e.id===id);const k=(ev&&ev.rrule&&date)?id+'#'+date:id;return !!(_mdsNotes[k]&&String(_mdsNotes[k]).trim().length>0);};
   if(!evs.length){
     body.innerHTML=`<div class="mds-empty">Nenhum evento agendado.<br><small>${isDesktop?'Clique em':'Toque em'} "+ Evento" para adicionar.</small></div>`;
   }else{
@@ -4714,7 +4716,7 @@ function openMobileDaySheet(dateStr){
       const done=isDoneOn(ev,dateStr);
       const icon=CAT_ICONS[ev.category]||'';
       const time=ev.start?(ev.end?ev.start+' – '+ev.end:ev.start):'Dia todo';
-      const noteIcon=_mdsHasNote(ev.id)?`<span class="mds-note-btn" data-notes-id="${ev.id}" title="Ver notas" style="font-size:15px;cursor:pointer;flex-shrink:0;line-height:1">📝</span>`:'';
+      const noteIcon=_mdsHasNote(ev.id,dateStr)?`<span class="mds-note-btn" data-notes-id="${ev.id}" data-notes-date="${dateStr}" title="Ver notas" style="font-size:15px;cursor:pointer;flex-shrink:0;line-height:1">📝</span>`:'';
       return`<div class="mds-event" data-id="${ev.id}" data-date="${dateStr}" style="border-left-color:${ev.color||'var(--accent)'}">
         <span class="mds-event-time">${time}</span>
         <div class="mds-event-info">
@@ -4731,7 +4733,7 @@ function openMobileDaySheet(dateStr){
       el.querySelector('.mds-note-btn')?.addEventListener('click',e=>{
         e.stopPropagation();
         closeMobileDaySheet();
-        openNotes(e.currentTarget.dataset.notesId);
+        openNotes(e.currentTarget.dataset.notesId,e.currentTarget.dataset.notesDate);
       });
       if(isDesktop){
         el.addEventListener('click',e=>{if(e.target.closest('.mds-note-btn'))return;closeMobileDaySheet();openEdit(el.dataset.id,el.dataset.date);});
