@@ -9,6 +9,37 @@ Desenvolvido por **Marlon Gomes da Costa (MGC Dev)**
 [![Versão](https://img.shields.io/badge/versão-2.1.0-blue)](#changelog)
 [![Licença](https://img.shields.io/badge/licença-uso%20pessoal%20livre-green)](#licença)
 [![PIX](https://img.shields.io/badge/apoie-PIX-brightgreen)](#apoiar)
+[![Dispositivos ativos](https://img.shields.io/badge/dynamic/json?url=https://raw.githubusercontent.com/Magoc25/calendario/main/stats.json&query=$.active_30d&label=dispositivos%20ativos%20(30d)&color=blue&suffix=%20dispositivos)](./stats.json)
+
+---
+
+## 🤔 Por que usar o Calendário MGC?
+
+Se você está avaliando este app, provavelmente já viu opções na Play Store ou App Store. Antes de decidir, considere:
+
+- **Seus dados são seus** — nenhuma empresa, servidor externo ou desenvolvedor acessa seus dados. Eles ficam no seu dispositivo ou no seu próprio banco de dados, sob seu controle total.
+- **Sem propagandas** — apps "gratuitos" nas lojas se sustentam exibindo anúncios. Este não.
+- **Sem prazo de expiração** — muitos apps oferecem período de teste e depois bloqueiam funcionalidades ou cobram assinatura. Este é gratuito para sempre, sem limitações.
+- **Funciona sem internet** — abre e funciona normalmente mesmo sem conexão. Sincroniza quando a internet voltar, se você quiser.
+- **Arquivo único, zero instalação** — você baixa um arquivo `.html` e abre no Chrome ou Edge de qualquer computador, imediatamente, sem instalar nada. Funciona até em pen drive.
+- **Integração com Google Calendar sem intermediários** — apps que sincronizam com o Google Agenda normalmente fazem seus dados passarem por um servidor do desenvolvedor. Aqui a integração OAuth2 é direta: seu navegador fala com o Google, sem intermediários. O desenvolvedor não vê seus eventos.
+
+O único "custo" honesto: a instalação é um pouco mais manual do que clicar em "Instalar" na loja — mas você faz uma única vez e leva menos de 5 minutos.
+
+---
+
+## 📂 O que são todos esses arquivos?
+
+Se você veio aqui só para **usar o app**, pode ignorar a grande maioria dos arquivos deste repositório — eles são documentação técnica e configuração voltadas para desenvolvedores.
+
+Para você, o que importa é simples:
+
+| Cenário | O que você precisa |
+|---|---|
+| **Usar no computador** (sem nuvem) | Baixar apenas `calendario_marlon.html` e `sw.js` para a mesma pasta e abrir no navegador |
+| **Acessar por URL em qualquer dispositivo** | Criar uma conta no GitHub, fazer upload dos arquivos deste repositório uma única vez — depois acessa de qualquer lugar pela URL, sem guardar nada no computador |
+
+👉 Vá direto para [**Como usar**](#-como-usar--4-cenários) para o passo a passo do seu cenário.
 
 ---
 
@@ -352,6 +383,24 @@ create policy "Allow all operations" on cal_sync
 > ```
 
 > ✅ **Como confirmar que o RLS está ativo:** no Table Editor, clique na tabela `cal_sync` — deve aparecer um botão **"1 RLS policy"** acima das colunas. Você também pode confirmar via SQL: `SELECT tablename, rowsecurity FROM pg_tables WHERE tablename = 'cal_sync';` — o resultado `rowsecurity = true` confirma.
+
+**Bloco extra — Evitar suspensão por inatividade (recomendado):**
+
+O Supabase pode suspender projetos gratuitos sem atividade por 7 dias. Para evitar isso, ative a extensão `pg_cron` e rode uma vez no SQL Editor:
+
+1. Supabase → **Database → Extensions** → buscar `pg_cron` → ativar o toggle
+2. No **SQL Editor**, execute:
+
+```sql
+SELECT cron.schedule(
+  'calendario-mgc-keep-alive',
+  '0 8 * * 1',
+  $$SELECT COUNT(*) FROM public.cal_sync$$
+);
+```
+
+> Agenda uma consulta toda segunda-feira às 5h Brasília — funciona sozinho a partir daí.
+> Para confirmar que foi criado: `SELECT * FROM cron.job;`
 
 #### 3. Copiar as chaves
 Vá em **Settings → Data API**:
