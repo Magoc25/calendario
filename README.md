@@ -36,7 +36,7 @@ Para você, o que importa é simples:
 
 | Cenário | O que você precisa |
 |---|---|
-| **Usar no computador** (sem nuvem) | Baixar apenas `calendario_marlon.html` e `sw.js` para a mesma pasta e abrir no navegador |
+| **Usar no computador** (sem nuvem) | Baixar apenas `calendario_marlon.html` e abrir no navegador — `sw.js` não é necessário para uso local |
 | **Acessar por URL em qualquer dispositivo** | Criar uma conta no GitHub, fazer upload dos arquivos deste repositório uma única vez — depois acessa de qualquer lugar pela URL, sem guardar nada no computador |
 
 👉 Vá direto para [**Como usar**](#-como-usar--4-cenários) para o passo a passo do seu cenário.
@@ -137,9 +137,10 @@ Quando quiser sincronizar entre computadores ou acessar pelo celular, basta conf
 ```
 
 **Passos:**
-1. Baixe `calendario_marlon.html` e `sw.js` para a mesma pasta
-2. Abra o `calendario_marlon.html` no Chrome, Edge ou Safari
-3. Pronto — use normalmente
+1. Baixe `calendario_marlon.html` e abra no Chrome, Edge ou Safari
+2. Pronto — use normalmente
+
+> `sw.js` não é necessário para uso local. O Service Worker só funciona quando o app é servido via HTTPS (GitHub Pages) — ao abrir o arquivo diretamente, o browser ignora o registro silenciosamente e o app funciona normalmente sem ele.
 
 **Backup:** clique em 💾 Backup → Exportar JSON regularmente e guarde o arquivo.
 
