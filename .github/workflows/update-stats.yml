@@ -8,9 +8,6 @@ on:
 permissions:
   contents: write
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-
 jobs:
   update-stats:
     runs-on: ubuntu-latest
@@ -26,11 +23,15 @@ jobs:
           SB_KEY: ${{ secrets.REV_SB_KEY }}
         run: |
           THIRTY_DAYS_AGO=$(date -d '30 days ago' +%Y-%m-%d)
-          RESPONSE=$(curl -s \
-            "${SB_URL}/rest/v1/app_pings?select=device_id&app_name=eq.Calendario MGC&ping_date=gte.${THIRTY_DAYS_AGO}" \
+          RESPONSE=$(curl -s -G \
+            "${SB_URL}/rest/v1/app_pings" \
+            --data-urlencode "select=device_id" \
+            --data-urlencode "app_name=eq.Calendario MGC" \
+            --data-urlencode "ping_date=gte.${THIRTY_DAYS_AGO}" \
             -H "apikey: ${SB_KEY}" \
             -H "Authorization: Bearer ${SB_KEY}")
-          COUNT=$(echo "$RESPONSE" | jq '[.[].device_id] | unique | length')
+          echo "Resposta Supabase: $RESPONSE"
+          COUNT=$(echo "$RESPONSE" | jq '[.[].device_id] | unique | length' 2>/dev/null || echo "0")
           TODAY=$(date +%Y-%m-%d)
           echo "{\"active_30d\":${COUNT},\"updated_at\":\"${TODAY}\"}" > stats.json
           echo "Dispositivos ativos (30d): $COUNT"
