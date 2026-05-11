@@ -46,7 +46,8 @@ O uso do Calendário MGC é de **exclusiva responsabilidade do usuário**. O des
 - **Os dados de agenda ficam armazenados localmente** no navegador do usuário (`localStorage`), exceto quando o usuário configura voluntariamente a sincronização via Supabase;
 - O desenvolvedor **não tem acesso** aos dados de agenda do usuário;
 - O usuário é **inteiramente responsável** por configurar corretamente os serviços de terceiros (Supabase, Google Cloud) e por proteger suas credenciais de acesso;
-- A integração com serviços externos (Supabase, Google Calendar API) é opcional e de responsabilidade exclusiva do usuário ao configurá-la.
+- A integração com serviços externos (Supabase, Google Calendar API) é opcional e de responsabilidade exclusiva do usuário ao configurá-la;
+- O app envia **um ping anônimo por dia** ao Supabase do autor para contagem de dispositivos ativos. O ping contém apenas: nome do app, versão, data e um identificador aleatório gerado no dispositivo (sem vínculo com dados pessoais). Não é possível identificar o usuário a partir deste dado.
 
 ### 3.3 Serviços de terceiros
 
