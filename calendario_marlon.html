@@ -6124,28 +6124,6 @@ document.getElementById('qcInput').addEventListener('keydown',e=>{
   if(e.key==='Enter'){document.getElementById('qcBtn').click();}
 });
 
-/* ═══════ KEYBOARD SHORTCUTS ═══════ */
-document.addEventListener('keydown',e=>{
-  const tag=e.target.tagName;
-  if(tag==='INPUT'||tag==='TEXTAREA'||tag==='SELECT')return;
-  if(e.target.contentEditable==='true')return;
-  if(document.getElementById('overlay').classList.contains('open'))return;
-  if(document.getElementById('notesOverlay').classList.contains('open'))return;
-  if(document.getElementById('statsOverlay').classList.contains('open'))return;
-  if(document.getElementById('calOverlay').classList.contains('open'))return;
-  if(e.key==='ArrowLeft'||e.key==='j'){document.getElementById('prevBtn').click();}
-  else if(e.key==='ArrowRight'||e.key==='k'){document.getElementById('nextBtn').click();}
-  else if(e.key==='t'||e.key==='T'){document.getElementById('todayBtn').click();}
-  else if(e.key==='n'||e.key==='N'){openNew(null);}
-  else if(e.key==='s'||e.key==='S'){openStats();}
-  else if(e.key==='f'||e.key==='F'){document.getElementById('searchInput').focus();}
-  else if(e.key==='0'){document.getElementById('btnToday').click();}
-  else if(e.key==='1'){document.getElementById('btnMonth').click();}
-  else if(e.key==='2'){document.getElementById('btnWeek').click();}
-  else if(e.key==='3'){document.getElementById('btnUpcoming').click();}
-  else if(e.key==='4'){document.getElementById('btnRoutines').click();}
-  else if(e.key==='5'){document.getElementById('btnReview').click();}
-});
 
 /* ═══════ SUPABASE SYNC ═══════ */
 /*

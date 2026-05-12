@@ -100,7 +100,6 @@ Quando quiser sincronizar entre computadores ou acessar pelo celular, basta conf
 ### Interface
 - 5 temas visuais: Oceano, Sereno, Aurora, Marfim, Ardósia
 - Modo compacto e normal
-- Atalhos de teclado (0–5, ←/→, T, N, S, F)
 - Feriados nacionais brasileiros automáticos (fixos + móveis via algoritmo da Páscoa)
 
 ### Mobile
@@ -591,26 +590,6 @@ Você perde a sincronização em nuvem, mas seus dados continuam locais no `loca
 | Local + Supabase | 🟢 Alto | Padrão recomendado |
 | GitHub Pages Public | 🟡 Bom | Código exposto, dados não |
 | + Google Calendar | 🟡 Bom | Google acessa eventos sincronizados |
-
----
-
-## ⌨️ Atalhos de Teclado
-
-| Tecla | Ação |
-|---|---|
-| `0` | Vista Hoje |
-| `1` | Vista Mês |
-| `2` | Vista Semana |
-| `3` | Vista Próximos Eventos |
-| `4` | Rotinas |
-| `5` | Revisão Diária |
-| `←` ou `J` | Mês/semana anterior |
-| `→` ou `K` | Próximo mês/semana |
-| `T` | Ir para Hoje |
-| `N` | Novo evento |
-| `S` | Estatísticas |
-| `F` | Focar na busca |
-| `ESC` | Fechar menu de contexto |
 
 ---
 
