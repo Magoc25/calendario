@@ -6,7 +6,7 @@
    3. Periodic Background Sync (Android Chrome)
 ═══════════════════════════════════════════════════════ */
 
-const CACHE_NAME = 'cal-mgc-v97';
+const CACHE_NAME = 'cal-mgc-v98';
 const DB_NAME = 'cal-mgc-sw';
 const DB_VERSION = 1;
 const STORE_ALERTS = 'pending_alerts';
@@ -50,7 +50,7 @@ self.addEventListener('fetch', event => {
   event.respondWith(
     caches.match(event.request).then(cached => {
       return cached || fetch(event.request).then(response => {
-        if (event.request.url.includes('calendario_marlon.html') ||
+        if (event.request.url.includes('calendario-mgc.html') ||
             event.request.url.includes('manifest.json') ||
             event.request.url.includes('icon-')) {
           const clone = response.clone();
@@ -119,9 +119,9 @@ self.addEventListener('notificationclick', event => {
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then(cs => {
       for (const c of cs) {
-        if (c.url.includes('calendario_marlon') && 'focus' in c) return c.focus();
+        if (c.url.includes('calendario-mgc') && 'focus' in c) return c.focus();
       }
-      return clients.openWindow(self.registration.scope + 'calendario_marlon.html');
+      return clients.openWindow(self.registration.scope + 'calendario-mgc.html');
     })
   );
 });

@@ -2,7 +2,7 @@
   "name": "Calendário MGC",
   "short_name": "Cal MGC",
   "description": "Calendário pessoal com agenda, rotinas, notas e sincronização em nuvem",
-  "start_url": "./calendario_marlon.html",
+  "start_url": "./calendario-mgc.html",
   "scope": "./",
   "display": "standalone",
   "display_override": ["window-controls-overlay", "standalone"],
@@ -30,14 +30,14 @@
       "name": "Novo Evento",
       "short_name": "Novo",
       "description": "Criar novo evento",
-      "url": "./calendario_marlon.html?action=new",
+      "url": "./calendario-mgc.html?action=new",
       "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
     },
     {
       "name": "Vista Hoje",
       "short_name": "Hoje",
       "description": "Ver agenda de hoje",
-      "url": "./calendario_marlon.html?view=today",
+      "url": "./calendario-mgc.html?view=today",
       "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
     }
   ]

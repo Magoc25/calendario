@@ -36,7 +36,7 @@ Para você, o que importa é simples:
 
 | Cenário | O que você precisa |
 |---|---|
-| **Usar no computador** (sem nuvem) | Baixar apenas `calendario_marlon.html` e abrir no navegador |
+| **Usar no computador** (sem nuvem) | Baixar apenas `calendario-mgc.html` e abrir no navegador |
 | **Acessar por URL em qualquer dispositivo** | Criar uma conta no GitHub, fazer upload dos arquivos deste repositório uma única vez — depois acessa de qualquer lugar pela URL, sem guardar nada no computador |
 
 👉 Vá direto para [**Como usar**](#-como-usar--4-cenários) para o passo a passo do seu cenário.
@@ -128,7 +128,7 @@ Quando quiser sincronizar entre computadores ou acessar pelo celular, basta conf
 ┌─────────────────────────────┐
 │  Seu computador             │
 │  ┌───────────────────────┐  │
-│  │ calendario_marlon.html│  │
+│  │ calendario-mgc.html│  │
 │  │  + localStorage       │  │
 │  └───────────────────────┘  │
 │   Dados ficam no navegador  │
@@ -136,7 +136,7 @@ Quando quiser sincronizar entre computadores ou acessar pelo celular, basta conf
 ```
 
 **Passos:**
-1. Baixe `calendario_marlon.html` e abra no Chrome, Edge ou Safari
+1. Baixe `calendario-mgc.html` e abra no Chrome, Edge ou Safari
 2. Pronto — use normalmente
 
 **Backup:** clique em 💾 Backup → Exportar JSON regularmente e guarde o arquivo.
@@ -219,7 +219,7 @@ Quando quiser sincronizar entre computadores ou acessar pelo celular, basta conf
 
 ### Nível 1 — Só o arquivo no navegador _(zero configuração)_
 
-**Como começar:** baixe `calendario_marlon.html` e abra no Chrome ou Edge. É só isso.
+**Como começar:** baixe `calendario-mgc.html` e abra no Chrome ou Edge. É só isso.
 
 | ✅ O que você tem | ❌ O que ainda não tem |
 |---|---|
@@ -298,7 +298,7 @@ O Calendário MGC também pode ser instalado como aplicativo no computador, sem 
 
 #### 🔄 Como usar o Google Agenda no dia a dia
 
-> ⚠️ **Regra fundamental:** se você usa sincronização com Google Agenda, **não use o arquivo local** (`calendario_marlon.html` aberto direto no PC). Use sempre o **link do GitHub Pages** ou o **app no celular**. O Google bloqueia autenticação OAuth em arquivos locais (`file://`).
+> ⚠️ **Regra fundamental:** se você usa sincronização com Google Agenda, **não use o arquivo local** (`calendario-mgc.html` aberto direto no PC). Use sempre o **link do GitHub Pages** ou o **app no celular**. O Google bloqueia autenticação OAuth em arquivos locais (`file://`).
 
 **Comportamento por plataforma:**
 
@@ -426,7 +426,7 @@ Vá em **Settings → Data API**:
 
 #### 2. Upload dos arquivos
 No repositório → **Add file → Upload files** → arraste os arquivos:
-- `calendario_marlon.html`
+- `calendario-mgc.html`
 - `README.md`
 - `TERMS.md`
 - `CHANGELOG.md`
@@ -441,7 +441,7 @@ Clique em **Commit changes**.
 
 #### 4. Sua URL
 ```
-https://seunome.github.io/calendario/calendario_marlon.html
+https://seunome.github.io/calendario/calendario-mgc.html
 ```
 > ⚠️ **Importante:** a URL base (`/calendario/`) abre erro 404. Sempre use a URL com o nome do arquivo no final.
 
@@ -554,7 +554,7 @@ Na primeira sincronização, eventos recorrentes podem gerar cópias. Para remov
 
 | Arquivo | Função | Cenário |
 |---|---|---|
-| `calendario_marlon.html` | Arquivo principal do app — interface, lógica e estilos | Todos |
+| `calendario-mgc.html` | Arquivo principal do app — interface, lógica e estilos | Todos |
 | `sw.js` | Service Worker — cache offline, alertas e notificações em segundo plano | Todos |
 | `manifest.json` | Define o app como PWA: nome, ícones e modo de exibição ao instalar no celular, Windows e macOS | Cenários 2, 3 e 4 |
 | `icon-192.png` / `icon-512.png` | Ícones do app usados na tela inicial do celular e em notificações | Cenários 2, 3 e 4 |
