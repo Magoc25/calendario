@@ -1104,6 +1104,15 @@ body.large .sidebar-year{font-size:22px}
 .ntb-color input[type=color]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;border:none;padding:0}
 .ntb-color-btn{width:28px;height:28px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:13px;pointer-events:none;border:1px solid var(--border);background:var(--surface)}
 .ntb-color:hover .ntb-color-btn{background:var(--border)}
+.emoji-popup{display:none;position:fixed;z-index:9000;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);box-shadow:0 4px 20px rgba(0,0,0,.15);width:224px;padding:6px}
+.emoji-popup.open{display:block}
+.emoji-tabs{display:flex;gap:2px;margin-bottom:5px;padding-bottom:4px;border-bottom:1px solid var(--border);flex-wrap:nowrap;overflow-x:auto}
+.emoji-tab{background:none;border:none;font-size:10px;color:var(--muted);cursor:pointer;padding:2px 7px;border-radius:4px;white-space:nowrap;font-family:'DM Sans',sans-serif}
+.emoji-tab:hover{background:var(--surface2);color:var(--text)}
+.emoji-tab.active{background:var(--accent);color:#fff}
+.emoji-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:1px}
+.emoji-item{background:none;border:none;font-size:17px;cursor:pointer;padding:4px 2px;border-radius:4px;line-height:1;text-align:center;width:100%}
+.emoji-item:hover{background:var(--surface2)}
 .notes-editor{flex:1;min-height:280px;padding:12px 14px;border:1px solid var(--border);border-radius:0 0 var(--radius-sm) var(--radius-sm);outline:none;font-family:'DM Sans',sans-serif;font-size:13px;line-height:1.7;color:var(--text);background:var(--input-bg);overflow-y:auto;resize:vertical}
 .notes-editor:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(59,91,219,.07)}
 .notes-editor[placeholder]:empty::before{content:attr(placeholder);color:var(--hint);pointer-events:none}
@@ -2343,6 +2352,7 @@ body.large .sidebar-year{font-size:22px}
         <div class="ntb-color-btn" style="font-size:11px">HL</div>
         <input type="color" id="neHighlight" value="#fef08a">
       </div>
+      <button class="ntb" id="neEmojiBtn" title="Inserir emoji">🔣</button>
       <span class="ntb-sep"></span>
       <button class="ntb" data-necmd="undo" title="Desfazer">↩</button>
       <button class="ntb" data-necmd="redo" title="Refazer">↪</button>
@@ -2397,6 +2407,7 @@ body.large .sidebar-year{font-size:22px}
         <div class="ntb-color-btn" style="font-size:11px">HL</div>
         <input type="color" id="notesHighlight" value="#fef08a">
       </div>
+      <button class="ntb" id="notesEmojiBtn" title="Inserir emoji">🔣</button>
       <span class="ntb-sep"></span>
       <button class="ntb" data-cmd="undo" title="Desfazer">↩</button>
       <button class="ntb" data-cmd="redo" title="Refazer">↪</button>
@@ -7339,6 +7350,77 @@ document.getElementById('deleteBtn').addEventListener('click',_patchedSyncAlerts
     localStorage.setItem(PING_KEY,today);
   }catch(e){}
 })();
+</script>
+
+<!-- EMOJI PICKER POPUP -->
+<div id="emojiPopup" class="emoji-popup">
+  <div class="emoji-tabs" id="emojiTabs"></div>
+  <div class="emoji-grid" id="emojiGrid"></div>
+</div>
+
+<script>
+/* ═══════ EMOJI PICKER ═══════ */
+const EMOJI_CATS=[
+  {label:'Status',  emojis:['✅','❌','⚠️','ℹ️','🔴','🟡','🟢','🔵','💡','🚫','❗','❓']},
+  {label:'Ações',   emojis:['👉','📌','🔗','➡️','⬆️','⬇️','🔄','✏️','📎','📋','🔍','🖊️']},
+  {label:'Objetos', emojis:['📁','📄','📝','💾','🔧','⚙️','📱','💻','🗓️','📊','🔒','🔓']},
+  {label:'Celebra', emojis:['🎉','✨','🚀','⭐','🏆','🎯','💪','☕','🌟','🎊','👏','🙌']},
+  {label:'Pessoas', emojis:['👤','👥','💬','🤝','👋','📢','🧑‍💻','👨‍🏫','🙋','💁','🤔','😊']},
+];
+let _emojiEditorId=null,_emojiSavedRange=null,_emojiCat=0;
+
+function _buildEmojiGrid(){
+  const tabs=document.getElementById('emojiTabs');
+  const grid=document.getElementById('emojiGrid');
+  tabs.innerHTML=EMOJI_CATS.map((c,i)=>`<button class="emoji-tab${i===_emojiCat?' active':''}" data-i="${i}">${c.label}</button>`).join('');
+  grid.innerHTML=EMOJI_CATS[_emojiCat].emojis.map(e=>`<button class="emoji-item" data-e="${e}">${e}</button>`).join('');
+  tabs.querySelectorAll('.emoji-tab').forEach(btn=>btn.addEventListener('mousedown',ev=>{ev.preventDefault();_emojiCat=parseInt(btn.dataset.i);_buildEmojiGrid();}));
+  grid.querySelectorAll('.emoji-item').forEach(btn=>btn.addEventListener('mousedown',ev=>{ev.preventDefault();_insertEmoji(btn.dataset.e);}));
+}
+
+function _insertEmoji(emoji){
+  const editor=document.getElementById(_emojiEditorId);
+  if(!editor)return;
+  editor.focus();
+  const sel=window.getSelection();
+  if(_emojiSavedRange){sel.removeAllRanges();sel.addRange(_emojiSavedRange);}
+  document.execCommand('insertText',false,emoji);
+  _emojiSavedRange=null;
+  document.getElementById('emojiPopup').classList.remove('open');
+  editor.dispatchEvent(new Event('input'));
+}
+
+function _openEmojiPicker(btn,editorId){
+  const popup=document.getElementById('emojiPopup');
+  const isOpen=popup.classList.contains('open')&&_emojiEditorId===editorId;
+  popup.classList.remove('open');
+  if(isOpen)return;
+  _emojiEditorId=editorId;
+  // Salva seleção atual antes de perder o foco
+  const sel=window.getSelection();
+  _emojiSavedRange=sel&&sel.rangeCount>0?sel.getRangeAt(0).cloneRange():null;
+  _buildEmojiGrid();
+  // Posiciona acima do botão
+  const rect=btn.getBoundingClientRect();
+  popup.style.left=Math.min(rect.left,window.innerWidth-232)+'px';
+  popup.style.top=Math.max(8,rect.top-popup.offsetHeight-6)+'px';
+  popup.classList.add('open');
+  // Recalcula top após render (offsetHeight correto)
+  requestAnimationFrame(()=>{
+    popup.style.top=Math.max(8,rect.top-popup.offsetHeight-6)+'px';
+  });
+}
+
+document.getElementById('notesEmojiBtn').addEventListener('mousedown',e=>{e.preventDefault();_openEmojiPicker(e.currentTarget,'notesEditor');});
+document.getElementById('neEmojiBtn').addEventListener('mousedown',e=>{e.preventDefault();_openEmojiPicker(e.currentTarget,'neEditor');});
+
+document.addEventListener('mousedown',e=>{
+  const popup=document.getElementById('emojiPopup');
+  if(!popup.contains(e.target)&&e.target.id!=='notesEmojiBtn'&&e.target.id!=='neEmojiBtn'){
+    popup.classList.remove('open');
+  }
+});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')document.getElementById('emojiPopup').classList.remove('open');});
 </script>
 </body>
 </html>
