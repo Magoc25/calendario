@@ -1776,6 +1776,12 @@ body.large .sidebar-year{font-size:22px}
               <button class="hbtn" id="btnComfort" style="flex:1;padding:3px 0;font-size:10px">Normal</button>
               <button class="hbtn" id="btnLarge" style="flex:1;padding:3px 0;font-size:10px">Grande</button>
             </div>
+            <div class="divider"></div>
+            <div style="font-size:10px;color:var(--muted);margin-bottom:4px">Início da semana</div>
+            <div style="display:flex;gap:4px">
+              <button class="hbtn" id="btnWeekSun" style="flex:1;padding:3px 0;font-size:10px">Dom</button>
+              <button class="hbtn" id="btnWeekMon" style="flex:1;padding:3px 0;font-size:10px">Seg</button>
+            </div>
           </div>
         </div>
         <button class="hbtn hbtn-accent" id="notifBtn" title="Alertas">🔔<span class="notif-badge nb-default" id="notifBadge"></span></button>
@@ -2458,6 +2464,7 @@ const THEMES={
   ardosia:{name:'Ardósia',desc:'Moderno e minimalista',icon:'🪨',sw:['#1e2433','#38bdf8','#3a4460'],v:{'--bg':'#1e2433','--surface':'#252d40','--surface2':'#1a2130','--border':'#3a4460','--text':'#e2e8f0','--muted':'#94a3b8','--hint':'#475569','--accent':'#38bdf8','--accent-dark':'#0ea5e9','--accent-light':'#0c1a2e','--dow-bg':'#334155','--dow-color':'rgba(255,255,255,.9)','--today-bg':'#0c1a2e','--today-dot':'#38bdf8','--input-bg':'#252d40'}}
 };
 let currentTheme=localStorage.getItem('cal_theme')||'oceano';
+let weekStart=parseInt(localStorage.getItem('cal_week_start')||'0'); // 0=Dom, 1=Seg
 function applyTheme(id){const t=THEMES[id];if(!t)return;Object.entries(t.v).forEach(([k,v])=>document.documentElement.style.setProperty(k,v));currentTheme=id;localStorage.setItem('cal_theme',id);document.querySelectorAll('.theme-item').forEach(el=>el.classList.toggle('active',el.dataset.theme===id));}
 function buildThemeUI(){const g=document.getElementById('themeGrid');g.innerHTML=Object.entries(THEMES).map(([id,t])=>`<div class="theme-item${id===currentTheme?' active':''}" data-theme="${id}"><div class="theme-swatch"><span style="background:${t.sw[0]}"></span><span style="background:${t.sw[1]}"></span><span style="background:${t.sw[2]}"></span></div><div><div class="theme-name">${t.icon} ${t.name}</div><div class="theme-desc">${t.desc}</div></div></div>`).join('');g.querySelectorAll('.theme-item').forEach(el=>el.addEventListener('click',()=>applyTheme(el.dataset.theme)));}
 
@@ -2842,7 +2849,7 @@ function makePill(ev,dateStr,forWeek=false){
 /* ═══════ MONTH VIEW ═══════ */
 function renderMonth(){
   const y=AppState.cur.getFullYear(),m=AppState.cur.getMonth();
-  const today=todayDs(),first=new Date(y,m,1).getDay(),days=new Date(y,m+1,0).getDate(),prevDays=new Date(y,m,0).getDate();
+  const today=todayDs(),rawFirst=new Date(y,m,1).getDay(),first=(rawFirst-weekStart+7)%7,days=new Date(y,m+1,0).getDate(),prevDays=new Date(y,m,0).getDate();
   const rs=ds(y,m-1,Math.max(1,prevDays-(first-1))),re=ds(y,m+1,14);
   const evMap=buildEvMap(rs,re);
   const yearsInView=new Set([y]);if(m===0)yearsInView.add(y-1);if(m===11)yearsInView.add(y+1);
@@ -2863,7 +2870,7 @@ function renderMonth(){
   }
 
   let html='';
-  DOWS.forEach(d=>{html+=`<div class="dow">${d}</div>`});
+  [...DOWS.slice(weekStart),...DOWS.slice(0,weekStart)].forEach(d=>{html+=`<div class="dow">${d}</div>`});
   for(let i=first-1;i>=0;i--)html+=cell(ds(y,m-1,prevDays-i),prevDays-i,true);
   for(let d=1;d<=days;d++)html+=cell(ds(y,m,d),d,false);
   const rem=42-(first+days);for(let d=1;d<=rem;d++)html+=cell(ds(y,m+1,d),d,true);
@@ -3038,7 +3045,7 @@ document.getElementById('dpClose').addEventListener('click',()=>{
 const WEEK_START_H=6,WEEK_END_H=23;
 const HOUR_H_MAP={compact:36,comfortable:56,large:64,normal:48};
 function getHourH(){const d=localStorage.getItem('cal_density')||'normal';return HOUR_H_MAP[d]||48;}
-function getWeekDates(){const d=new Date(AppState.cur);d.setDate(d.getDate()-d.getDay());return Array.from({length:7},(_,i)=>{const x=new Date(d);x.setDate(x.getDate()+i);return x;});}
+function getWeekDates(){const d=new Date(AppState.cur);d.setDate(d.getDate()-((d.getDay()-weekStart+7)%7));return Array.from({length:7},(_,i)=>{const x=new Date(d);x.setDate(x.getDate()+i);return x;});}
 
 /* Qual dia da semana está selecionado no mobile (0=Dom … 6=Sáb) */
 let mobileWeekDay=new Date().getDay();
@@ -3309,8 +3316,8 @@ function renderSidebar(){
   let html='';
   for(let m=0;m<12;m++){
     const y=AppState.sidebarYear,isActive=AppState.cur.getFullYear()===y&&AppState.cur.getMonth()===m;
-    const first=new Date(y,m,1).getDay(),days=new Date(y,m+1,0).getDate(),prevDays=new Date(y,m,0).getDate();
-    let g='';DOWS_M.forEach(d=>{g+=`<div class="mini-dow">${d}</div>`});
+    const rawFirst=new Date(y,m,1).getDay(),first=(rawFirst-weekStart+7)%7,days=new Date(y,m+1,0).getDate(),prevDays=new Date(y,m,0).getDate();
+    let g='';[...DOWS_M.slice(weekStart),...DOWS_M.slice(0,weekStart)].forEach(d=>{g+=`<div class="mini-dow">${d}</div>`});
     const addC=(dstr,num,other)=>{
       const evs=evMap[dstr]||[],isT=dstr===today,isHol=!!yearHols[dstr];
       const dots=evs.slice(0,3).map(e=>`<span class="mini-dot" style="background:${e.color||'#3b5bdb'};opacity:${isDoneOn(e,dstr)?.4:1}"></span>`).join('');
@@ -4123,6 +4130,18 @@ const _applyDensity=d=>{
 document.getElementById('btnCompact').addEventListener('click',()=>_applyDensity('compact'));
 document.getElementById('btnComfort').addEventListener('click',()=>_applyDensity('comfortable'));
 document.getElementById('btnLarge').addEventListener('click',()=>_applyDensity('large'));
+
+function applyWeekStart(v){
+  weekStart=v;
+  localStorage.setItem('cal_week_start',v);
+  document.getElementById('btnWeekSun').classList.toggle('density-active',v===0);
+  document.getElementById('btnWeekMon').classList.toggle('density-active',v===1);
+  document.getElementById('themePopup').classList.remove('open');
+  render();renderSidebar();
+}
+document.getElementById('btnWeekSun').addEventListener('click',()=>applyWeekStart(0));
+document.getElementById('btnWeekMon').addEventListener('click',()=>applyWeekStart(1));
+document.getElementById(weekStart===0?'btnWeekSun':'btnWeekMon').classList.add('density-active');
 
 /* ═══════ PRINT ═══════ */
 document.getElementById('printBtn').addEventListener('click',()=>{if(AppState.viewMode!=='month')toast('Dica: alterne para Mês antes de imprimir.');window.print();});
