@@ -4340,28 +4340,51 @@ document.getElementById('notesEditor').addEventListener('input',()=>{
   },800);
 });
 
+// Rastreia seleção ativa em cada editor (compatibilidade Safari)
+let _notesRange=null,_neRange=null;
+document.addEventListener('selectionchange',()=>{
+  const sel=window.getSelection();
+  if(!sel||sel.rangeCount===0)return;
+  try{
+    const notesEd=document.getElementById('notesEditor');
+    const neEd=document.getElementById('neEditor');
+    if(notesEd&&notesEd.contains(sel.anchorNode))_notesRange=sel.getRangeAt(0).cloneRange();
+    else if(neEd&&neEd.contains(sel.anchorNode))_neRange=sel.getRangeAt(0).cloneRange();
+  }catch(e){}
+});
+
+function _execInEditor(editorId,cmd,value){
+  const editor=document.getElementById(editorId);
+  if(!editor)return;
+  const saved=editorId==='notesEditor'?_notesRange:_neRange;
+  editor.focus();
+  if(saved){try{const sel=window.getSelection();sel.removeAllRanges();sel.addRange(saved);}catch(e){}}
+  document.execCommand(cmd,false,value||null);
+}
+
 // Toolbar commands
 document.querySelectorAll('.ntb[data-cmd]').forEach(btn=>{
   btn.addEventListener('mousedown',e=>{
-    e.preventDefault(); // prevent losing focus from editor
-    document.execCommand(btn.dataset.cmd,false,null);
+    e.preventDefault();
+    _execInEditor('notesEditor',btn.dataset.cmd);
     updateToolbarState();
   });
 });
 
+document.getElementById('notesFontSize').addEventListener('mousedown',()=>{
+  const sel=window.getSelection();
+  if(sel&&sel.rangeCount>0){const e=document.getElementById('notesEditor');if(e&&e.contains(sel.anchorNode))_notesRange=sel.getRangeAt(0).cloneRange();}
+});
 document.getElementById('notesFontSize').addEventListener('change',function(){
-  document.getElementById('notesEditor').focus();
-  document.execCommand('fontSize',false,this.value);
+  _execInEditor('notesEditor','fontSize',this.value);
 });
 
 document.getElementById('notesFontColor').addEventListener('input',function(){
-  document.getElementById('notesEditor').focus();
-  document.execCommand('foreColor',false,this.value);
+  _execInEditor('notesEditor','foreColor',this.value);
 });
 
 document.getElementById('notesHighlight').addEventListener('input',function(){
-  document.getElementById('notesEditor').focus();
-  document.execCommand('hiliteColor',false,this.value);
+  _execInEditor('notesEditor','hiliteColor',this.value);
 });
 
 document.getElementById('notesClear').addEventListener('click',()=>{
@@ -6055,20 +6078,23 @@ document.getElementById('nePinBtn').addEventListener('click',()=>{
 });
 // Toolbar commands for note editor
 document.querySelectorAll('[data-necmd]').forEach(btn=>{
-  btn.addEventListener('mousedown',e=>{e.preventDefault();
-    document.execCommand(btn.dataset.necmd,false,null);
-    document.getElementById('neEditor').focus();
+  btn.addEventListener('mousedown',e=>{
+    e.preventDefault();
+    _execInEditor('neEditor',btn.dataset.necmd);
   });
 });
+document.getElementById('neFontSize').addEventListener('mousedown',()=>{
+  const sel=window.getSelection();
+  if(sel&&sel.rangeCount>0){const e=document.getElementById('neEditor');if(e&&e.contains(sel.anchorNode))_neRange=sel.getRangeAt(0).cloneRange();}
+});
 document.getElementById('neFontSize').addEventListener('change',function(){
-  document.execCommand('fontSize',false,this.value);
-  document.getElementById('neEditor').focus();
+  _execInEditor('neEditor','fontSize',this.value);
 });
 document.getElementById('neFontColor').addEventListener('input',function(){
-  document.execCommand('foreColor',false,this.value);
+  _execInEditor('neEditor','foreColor',this.value);
 });
 document.getElementById('neHighlight').addEventListener('input',function(){
-  document.execCommand('hiliteColor',false,this.value);
+  _execInEditor('neEditor','hiliteColor',this.value);
 });
 // Keyboard shortcuts in note editor
 document.getElementById('neEditor').addEventListener('keydown',e=>{
