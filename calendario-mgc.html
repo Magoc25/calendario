@@ -7374,8 +7374,8 @@ function _buildEmojiGrid(){
   const grid=document.getElementById('emojiGrid');
   tabs.innerHTML=EMOJI_CATS.map((c,i)=>`<button class="emoji-tab${i===_emojiCat?' active':''}" data-i="${i}">${c.label}</button>`).join('');
   grid.innerHTML=EMOJI_CATS[_emojiCat].emojis.map(e=>`<button class="emoji-item" data-e="${e}">${e}</button>`).join('');
-  tabs.querySelectorAll('.emoji-tab').forEach(btn=>btn.addEventListener('mousedown',ev=>{ev.preventDefault();_emojiCat=parseInt(btn.dataset.i);_buildEmojiGrid();}));
-  grid.querySelectorAll('.emoji-item').forEach(btn=>btn.addEventListener('mousedown',ev=>{ev.preventDefault();_insertEmoji(btn.dataset.e);}));
+  tabs.querySelectorAll('.emoji-tab').forEach(btn=>btn.addEventListener('mousedown',ev=>{ev.preventDefault();ev.stopPropagation();_emojiCat=parseInt(btn.dataset.i);_buildEmojiGrid();}));
+  grid.querySelectorAll('.emoji-item').forEach(btn=>btn.addEventListener('mousedown',ev=>{ev.preventDefault();ev.stopPropagation();_insertEmoji(btn.dataset.e);}));
 }
 
 function _insertEmoji(emoji){
