@@ -80,6 +80,11 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);hei
 .hbtn-primary{background:var(--accent);border:none;color:#fff;box-shadow:0 2px 8px rgba(0,0,0,.12)}
 .hbtn-primary:hover{background:var(--accent-dark);transform:translateY(-1px);color:#fff}
 .hbtn.density-active{border-color:var(--accent)!important;color:var(--accent)!important;background:var(--accent-light)!important;font-weight:700}
+.quick-add-wrap{position:relative}
+.quick-add-input{background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);padding:4px 10px;font-size:11px;font-family:'DM Sans',sans-serif;width:150px;transition:width .2s ease,border-color .15s;outline:none}
+.quick-add-input:focus{width:230px;border-color:var(--accent)}
+.quick-add-input::placeholder{color:var(--muted)}
+@media(max-width:768px){.quick-add-wrap{display:none}}
 
 /* Sync status */
 .sync-dot{width:7px;height:7px;border-radius:50%;display:inline-block;margin-left:3px;vertical-align:middle;transition:background .3s}
@@ -1805,6 +1810,10 @@ body.large .sidebar-year{font-size:22px}
         <button class="hbtn" id="gcalBtn" title="Google Agenda">
           <span id="gcalBtnIcon">📆</span><span id="gcalBtnLabel" style="font-size:10px;margin-left:3px">Google</span><span class="sync-dot sync-warn" id="gcalDot" style="margin-left:3px"></span>
         </button>
+        <!-- Quick add — desktop only -->
+        <div class="quick-add-wrap">
+          <input type="text" id="quickAddInput" class="quick-add-input" placeholder="⚡ evento rápido…" title="Ex: amanhã 14h reunião com João (Enter para abrir formulário)">
+        </div>
         <!-- Botão ⋯ visível apenas no mobile — abre o more-sheet -->
         <button class="hbtn" id="mobileMoreBtn" style="display:none;font-size:18px;padding:4px 10px;letter-spacing:1px" title="Mais opções">⋯</button>
         <button class="hbtn hbtn-primary" id="addBtn">+ Novo</button>
@@ -4736,6 +4745,77 @@ document.addEventListener('keydown',e=>{
       case 'ArrowRight':  e.preventDefault(); document.getElementById('nextBtn').click(); break;
       case '?':           e.preventDefault(); overlay.classList.add('open'); break;
     }
+  });
+})();
+
+/* ═══════ QUICK ADD ═══════ */
+(function initQuickAdd(){
+  const DOW_MAP={domingo:0,segunda:1,'terça':1,terca:1,quarta:3,quinta:4,sexta:5,'sábado':6,sabado:6};
+
+  function parseQuickAdd(text){
+    let str=text.trim();
+    let date=null,startTime=null;
+
+    // Relative: hoje / amanhã
+    const relRx=/\b(hoje|amanhã|amanha)\b/i;
+    const relM=str.match(relRx);
+    if(relM){
+      const d=new Date();d.setDate(d.getDate()+(relM[1].toLowerCase()==='hoje'?0:1));
+      date=ds(d.getFullYear(),d.getMonth(),d.getDate());
+      str=str.replace(relM[0],'').trim();
+    }
+
+    // Weekday: segunda, terça-feira, …
+    if(!date){
+      const dowRx=/\b(domingo|segunda|terça|terca|quarta|quinta|sexta|sábado|sabado)(-feira)?\b/i;
+      const dowM=str.match(dowRx);
+      if(dowM){
+        const target=DOW_MAP[dowM[1].toLowerCase()];
+        const today=new Date(),cur=today.getDay();
+        let diff=target-cur;if(diff<=0)diff+=7;
+        const d=new Date(today);d.setDate(d.getDate()+diff);
+        date=ds(d.getFullYear(),d.getMonth(),d.getDate());
+        str=str.replace(dowM[0],'').trim();
+      }
+    }
+
+    // Time: 14h, 14h30, 14h30m, 14:30
+    const timeRx=/\b(\d{1,2})h(\d{2})?m?\b|\b(\d{1,2}):(\d{2})\b/i;
+    const timeM=str.match(timeRx);
+    if(timeM){
+      let h,m;
+      if(timeM[1]!==undefined){h=parseInt(timeM[1]);m=parseInt(timeM[2]||'0');}
+      else{h=parseInt(timeM[3]);m=parseInt(timeM[4]);}
+      if(h>=0&&h<=23&&m>=0&&m<=59)startTime=pad(h)+':'+pad(m);
+      str=str.replace(timeM[0],'').trim();
+    }
+
+    return{date,startTime,title:str.replace(/\s+/g,' ').trim()};
+  }
+
+  function triggerQuickAdd(text){
+    if(!text.trim())return;
+    const{date,startTime,title}=parseQuickAdd(text);
+    openNew(date||todayDs());
+    // Aplica após o ctsSync interno do openNew (60ms)
+    setTimeout(()=>{
+      if(title)document.getElementById('evTitle').value=title;
+      if(startTime){
+        document.getElementById('evStart').value=startTime;
+        const[sh,sm]=startTime.split(':').map(Number);
+        const em=(sh*60+sm+60)%(24*60);
+        document.getElementById('evEnd').value=pad(Math.floor(em/60))+':'+pad(em%60);
+        if(window.ctsSync){ctsSync('evStart');ctsSync('evEnd');}
+      }
+      document.getElementById('evTitle').focus();
+    },80);
+  }
+
+  const inp=document.getElementById('quickAddInput');
+  if(!inp)return;
+  inp.addEventListener('keydown',e=>{
+    if(e.key==='Enter'){e.preventDefault();const v=inp.value;inp.value='';inp.blur();triggerQuickAdd(v);}
+    else if(e.key==='Escape'){inp.value='';inp.blur();}
   });
 })();
 
