@@ -4340,41 +4340,53 @@ document.getElementById('notesEditor').addEventListener('input',()=>{
   },800);
 });
 
-// Rastreia seleção ativa em cada editor (compatibilidade Safari)
+// Rastreia seleção ativa em cada editor — múltiplos eventos para cobrir Safari
 let _notesRange=null,_neRange=null;
-document.addEventListener('selectionchange',()=>{
-  const sel=window.getSelection();
-  if(!sel||sel.rangeCount===0)return;
+function _saveRange(editorId){
   try{
-    const notesEd=document.getElementById('notesEditor');
-    const neEd=document.getElementById('neEditor');
-    if(notesEd&&notesEd.contains(sel.anchorNode))_notesRange=sel.getRangeAt(0).cloneRange();
-    else if(neEd&&neEd.contains(sel.anchorNode))_neRange=sel.getRangeAt(0).cloneRange();
+    const sel=window.getSelection();
+    if(!sel||sel.rangeCount===0)return;
+    const ed=document.getElementById(editorId);
+    if(ed&&ed.contains(sel.anchorNode)){
+      const r=sel.getRangeAt(0).cloneRange();
+      if(editorId==='notesEditor')_notesRange=r;else _neRange=r;
+    }
   }catch(e){}
+}
+document.addEventListener('selectionchange',()=>{_saveRange('notesEditor');_saveRange('neEditor');});
+['mouseup','keyup','click','touchend'].forEach(evt=>{
+  document.getElementById('notesEditor').addEventListener(evt,()=>_saveRange('notesEditor'),{passive:true});
+  document.getElementById('neEditor').addEventListener(evt,()=>_saveRange('neEditor'),{passive:true});
 });
 
-function _execInEditor(editorId,cmd,value){
+// Safari: execCommand deve rodar APÓS o browser terminar de processar o mousedown
+function _execInEditor(editorId,cmd,value,cb){
   const editor=document.getElementById(editorId);
   if(!editor)return;
   const saved=editorId==='notesEditor'?_notesRange:_neRange;
-  editor.focus();
-  if(saved){try{const sel=window.getSelection();sel.removeAllRanges();sel.addRange(saved);}catch(e){}}
-  document.execCommand(cmd,false,value||null);
+  setTimeout(()=>{
+    editor.focus();
+    if(saved){
+      try{const s=window.getSelection();s.removeAllRanges();s.addRange(saved.cloneRange());}catch(e){}
+    }else{
+      // Fallback: cursor no final do editor
+      try{const s=window.getSelection();const r=document.createRange();r.selectNodeContents(editor);r.collapse(false);s.removeAllRanges();s.addRange(r);}catch(e){}
+    }
+    document.execCommand(cmd,false,value||null);
+    editor.dispatchEvent(new Event('input',{bubbles:true}));
+    if(cb)cb();
+  },0);
 }
 
 // Toolbar commands
 document.querySelectorAll('.ntb[data-cmd]').forEach(btn=>{
   btn.addEventListener('mousedown',e=>{
     e.preventDefault();
-    _execInEditor('notesEditor',btn.dataset.cmd);
-    updateToolbarState();
+    _execInEditor('notesEditor',btn.dataset.cmd,null,updateToolbarState);
   });
 });
 
-document.getElementById('notesFontSize').addEventListener('mousedown',()=>{
-  const sel=window.getSelection();
-  if(sel&&sel.rangeCount>0){const e=document.getElementById('notesEditor');if(e&&e.contains(sel.anchorNode))_notesRange=sel.getRangeAt(0).cloneRange();}
-});
+document.getElementById('notesFontSize').addEventListener('mousedown',()=>_saveRange('notesEditor'));
 document.getElementById('notesFontSize').addEventListener('change',function(){
   _execInEditor('notesEditor','fontSize',this.value);
 });
@@ -6083,10 +6095,7 @@ document.querySelectorAll('[data-necmd]').forEach(btn=>{
     _execInEditor('neEditor',btn.dataset.necmd);
   });
 });
-document.getElementById('neFontSize').addEventListener('mousedown',()=>{
-  const sel=window.getSelection();
-  if(sel&&sel.rangeCount>0){const e=document.getElementById('neEditor');if(e&&e.contains(sel.anchorNode))_neRange=sel.getRangeAt(0).cloneRange();}
-});
+document.getElementById('neFontSize').addEventListener('mousedown',()=>_saveRange('neEditor'));
 document.getElementById('neFontSize').addEventListener('change',function(){
   _execInEditor('neEditor','fontSize',this.value);
 });
