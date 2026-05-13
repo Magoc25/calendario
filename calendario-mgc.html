@@ -3402,29 +3402,30 @@ let statsMode='month';
 function buildStatsData(rs,re,label){
   const evMap=buildEvMap(rs,re);
   let total=0,done=0,totalMins=0;
-  const byCat={},byDow=[0,0,0,0,0,0,0];
+  const byCat={},byCatMins={},byDow=[0,0,0,0,0,0,0];
   const bySlot={'Manhã (6-12)':0,'Tarde (12-18)':0,'Noite (18-23)':0,'Sem hora':0};
   Object.entries(evMap).forEach(([dStr,evs])=>{
     const dow=new Date(dStr+'T12:00:00').getDay();
     evs.forEach(ev=>{
       total++;if(isDoneOn(ev,dStr))done++;
-      if(ev.start&&ev.end){const[sh,sm]=ev.start.split(':').map(Number);const[eh,em]=ev.end.split(':').map(Number);totalMins+=(eh*60+em)-(sh*60+sm);}
       const cat=ev.category||'Sem categoria';byCat[cat]=(byCat[cat]||0)+1;
+      if(ev.start&&ev.end){const[sh,sm]=ev.start.split(':').map(Number);const[eh,em]=ev.end.split(':').map(Number);const evMins=(eh*60+em)-(sh*60+sm);if(evMins>0){totalMins+=evMins;byCatMins[cat]=(byCatMins[cat]||0)+evMins;}}
       byDow[dow]++;
       if(ev.start){const h=parseInt(ev.start);if(h<12)bySlot['Manhã (6-12)']++;else if(h<18)bySlot['Tarde (12-18)']++;else bySlot['Noite (18-23)']++;}
       else bySlot['Sem hora']++;
     });
   });
-  return{total,done,totalMins,byCat,byDow,bySlot,label};
+  return{total,done,totalMins,byCat,byCatMins,byDow,bySlot,label};
 }
 
 function renderStatsContent(data){
-  const{total,done,totalMins,byCat,byDow,bySlot,label}=data;
+  const{total,done,totalMins,byCat,byCatMins,byDow,bySlot,label}=data;
   const pct=total?Math.round(done/total*100):0;
   const hrs=Math.floor(totalMins/60),mins=totalMins%60;
   const maxCat=Math.max(...Object.values(byCat),1);
   const maxDow=Math.max(...byDow,1);
   const maxSlot=Math.max(...Object.values(bySlot),1);
+  const maxCatMins=Math.max(...Object.values(byCatMins),1);
   const DOW_LABELS=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
   document.getElementById('statsContent').innerHTML=`
     <div style="font-size:10px;color:var(--muted);margin-bottom:10px;font-weight:600;text-transform:uppercase;letter-spacing:.05em">${label}</div>
@@ -3462,6 +3463,12 @@ function renderStatsContent(data){
             <span class="chart-val">${n}</span>
           </div>`).join('')}</div>
       </div>
+    </div>
+    <div style="margin-top:14px;border-top:1px solid var(--border);padding-top:12px">
+      <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">⏱ Horas por categoria</div>
+      ${Object.keys(byCatMins).length
+        ? `<div class="chart-bar-wrap">${Object.entries(byCatMins).sort((a,b)=>b[1]-a[1]).map(([cat,mins])=>{const h=Math.floor(mins/60),m=mins%60;return`<div class="chart-row"><span class="chart-label">${CAT_ICONS[cat]||''} ${cat}</span><div class="chart-track"><div class="chart-fill" style="width:${Math.round(mins/maxCatMins*100)}%"></div></div><span class="chart-val">${h}h${m?m+'m':''}&thinsp;<span style="color:var(--muted);font-size:9px">(${byCat[cat]}ev)</span></span></div>`;}).join('')}</div>`
+        : `<div style="font-size:11px;color:var(--muted);padding:4px 0">Nenhum evento com horário definido neste período.</div>`}
     </div>`;
 }
 
