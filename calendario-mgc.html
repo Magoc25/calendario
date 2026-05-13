@@ -4359,17 +4359,71 @@ document.addEventListener('selectionchange',()=>{_saveRange('notesEditor');_save
   document.getElementById('neEditor').addEventListener(evt,()=>_saveRange('neEditor'),{passive:true});
 });
 
-// Safari: execCommand deve rodar APÓS o browser terminar de processar o mousedown
+// Inserção manual de lista — execCommand('insertOrderedList') falha silenciosamente no Safari
+function _insertListManual(editorId,tag){
+  const editor=document.getElementById(editorId);
+  if(!editor)return;
+  const saved=editorId==='notesEditor'?_notesRange:_neRange;
+  editor.focus();
+  if(saved){try{const s=window.getSelection();s.removeAllRanges();s.addRange(saved.cloneRange());}catch(e){}}
+  const sel=window.getSelection();
+  // Nó atual
+  let node=sel&&sel.rangeCount>0?sel.getRangeAt(0).commonAncestorContainer:editor;
+  if(node.nodeType===Node.TEXT_NODE)node=node.parentElement;
+  // Verifica se já está dentro de uma lista deste tipo → toggle off
+  const existingList=node.closest&&node.closest(tag);
+  if(existingList&&editor.contains(existingList)){
+    const frag=document.createDocumentFragment();
+    Array.from(existingList.children).forEach(li=>{
+      const div=document.createElement('div');
+      while(li.firstChild)div.appendChild(li.firstChild);
+      frag.appendChild(div);
+    });
+    existingList.parentNode.insertBefore(frag,existingList);
+    existingList.parentNode.removeChild(existingList);
+  }else{
+    // Sobe até filho direto do editor (bloco atual)
+    let block=node;
+    while(block&&block.parentElement!==editor)block=block.parentElement;
+    const list=document.createElement(tag);
+    const li=document.createElement('li');
+    if(block&&block!==editor){
+      while(block.firstChild)li.appendChild(block.firstChild);
+      list.appendChild(li);
+      block.parentNode.replaceChild(list,block);
+    }else{
+      // Sem bloco — insere no final do editor
+      li.appendChild(document.createElement('br'));
+      list.appendChild(li);
+      editor.appendChild(list);
+    }
+    // Posiciona cursor dentro do li
+    try{
+      const r=document.createRange();
+      const last=li.lastChild;
+      if(last&&last.nodeType===Node.TEXT_NODE)r.setStart(last,last.length);
+      else if(last)r.setStartAfter(last);
+      else r.setStart(li,0);
+      r.collapse(true);sel.removeAllRanges();sel.addRange(r);
+    }catch(e){}
+  }
+  editor.dispatchEvent(new Event('input',{bubbles:true}));
+}
+
+// execCommand com setTimeout(0) para Safari; listas usam implementação manual
 function _execInEditor(editorId,cmd,value,cb){
   const editor=document.getElementById(editorId);
   if(!editor)return;
+  if(cmd==='insertOrderedList'||cmd==='insertUnorderedList'){
+    setTimeout(()=>{_insertListManual(editorId,cmd==='insertOrderedList'?'OL':'UL');if(cb)cb();},0);
+    return;
+  }
   const saved=editorId==='notesEditor'?_notesRange:_neRange;
   setTimeout(()=>{
     editor.focus();
     if(saved){
       try{const s=window.getSelection();s.removeAllRanges();s.addRange(saved.cloneRange());}catch(e){}
     }else{
-      // Fallback: cursor no final do editor
       try{const s=window.getSelection();const r=document.createRange();r.selectNodeContents(editor);r.collapse(false);s.removeAllRanges();s.addRange(r);}catch(e){}
     }
     document.execCommand(cmd,false,value||null);
