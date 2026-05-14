@@ -3784,6 +3784,7 @@ document.addEventListener('click',e=>{if(!e.target.closest('.search-wrap'))docum
     .srp-row{display:flex;align-items:flex-start;gap:7px;font-size:12px;color:var(--muted);margin-bottom:5px;line-height:1.5}
     .srp-row strong{color:var(--text)}
     .srp-note-hint{color:var(--accent);font-weight:600}
+    .srp-notes-active{background:#fff3bf!important;color:#7c5500!important;border-color:#f0c000!important;font-weight:700!important}
     @media(min-width:769px){#srpSheet{width:400px}}`;
   document.head.appendChild(css);
 
@@ -3867,12 +3868,13 @@ document.addEventListener('click',e=>{if(!e.target.closest('.search-wrap'))docum
     // Rodapé
     const footer=document.getElementById('srpFooter');
     footer.innerHTML=`
-      <button class="mds-add-btn" id="srpBtnNotes"${!hasNote?' style="opacity:.5"':''}>📝 Notas</button>
+      <button class="mds-add-btn${hasNote?' srp-notes-active':''}" id="srpBtnNotes"${!hasNote?' style="opacity:.4"':''}>📝 Notas</button>
       <button class="mds-open-btn" id="srpBtnEdit" style="flex:1">✏️ Editar</button>
       <button class="mds-open-btn" id="srpBtnMore"
         style="flex:0 0 auto;padding:12px 14px;background:var(--surface2);color:var(--text);border-left:1px solid var(--border)">⋯</button>`;
-    document.getElementById('srpBtnNotes').addEventListener('click',()=>{closeSrp();openNotes(_srpEvId,_srpDate);});
-    document.getElementById('srpBtnEdit').addEventListener('click',()=>{closeSrp();openEdit(_srpEvId,_srpDate);});
+    // Salva id/date antes de closeSrp() zerá-los
+    document.getElementById('srpBtnNotes').addEventListener('click',()=>{const id=_srpEvId,dt=_srpDate;closeSrp();openNotes(id,dt);});
+    document.getElementById('srpBtnEdit').addEventListener('click',()=>{const id=_srpEvId,dt=_srpDate;closeSrp();openEdit(id,dt);});
     document.getElementById('srpBtnMore').addEventListener('click',e=>{openCtxMenu(e,_srpEvId,_srpDate);});
 
     // Hook para que ações do ctx menu (Editar, Excluir…) fechem o SRP
