@@ -3355,13 +3355,21 @@ function renderSidebar(){
   const c=document.getElementById('sidebarMonths');c.innerHTML=html;
   c.querySelectorAll('.mini-month').forEach(el=>{el.addEventListener('click',()=>{
     const tm=parseInt(el.dataset.m),ty=parseInt(el.dataset.y);
-    AppState.lastNavDir=tm>=AppState.cur.getMonth()?1:-1;
-    AppState.cur=new Date(ty,tm,1);
-    document.getElementById('btnMonth')?.click(); // muda para aba Mês e faz render()
-    // Fecha sidebar mobile se estiver aberto
+    const target=new Date(ty,tm,1);
+    // Compara data completa (não só mês) para navDir correto ao cruzar anos
+    AppState.lastNavDir=target>=AppState.cur?1:-1;
+    AppState.cur=target;
+    // Troca para aba Mês diretamente (sem .click() para evitar side effects)
+    AppState.viewMode='month';
+    document.querySelectorAll('.view-btn').forEach(b=>b.classList.remove('active'));
+    document.getElementById('btnMonth')?.classList.add('active');
+    syncBottomNav();
+    invalidateEvMapCache(); // garante eventos frescos para o mês clicado
+    render();
+    // Fecha sidebar mobile se aberto
     document.getElementById('sidebar').classList.remove('mobile-open');
     document.getElementById('sidebarOverlay').classList.remove('open');
-    // Rola até o mês clicado no sidebar (busca o elemento novo após re-render)
+    // Rola até o mês clicado (busca elemento novo após re-render)
     setTimeout(()=>{
       const fresh=document.querySelector(`.mini-month[data-y="${ty}"][data-m="${tm}"]`);
       if(fresh)fresh.scrollIntoView({block:'nearest',behavior:'smooth'});
