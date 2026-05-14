@@ -2872,7 +2872,10 @@ function makePill(ev,dateStr,forWeek=false){
 function renderMonth(){
   const y=AppState.cur.getFullYear(),m=AppState.cur.getMonth();
   const today=todayDs(),rawFirst=new Date(y,m,1).getDay(),first=(rawFirst-weekStart+7)%7,days=new Date(y,m+1,0).getDate(),prevDays=new Date(y,m,0).getDate();
-  const rs=ds(y,m-1,Math.max(1,prevDays-(first-1))),re=ds(y,m+1,14);
+  // Usa o construtor Date (lida com overflow) para evitar strings inválidas como
+  // "2026-05-32" (first=0) ou "2026-13-14" (dezembro) que quebram Date.parse no Chrome/Windows
+  const rsD=new Date(y,m,1-first),reD=new Date(y,m+1,14);
+  const rs=ds(rsD.getFullYear(),rsD.getMonth(),rsD.getDate()),re=ds(reD.getFullYear(),reD.getMonth(),reD.getDate());
   const evMap=buildEvMap(rs,re);
   const yearsInView=new Set([y]);if(m===0)yearsInView.add(y-1);if(m===11)yearsInView.add(y+1);
   const allHols={};yearsInView.forEach(yr=>Object.assign(allHols,getHolidaysForYear(yr)));
