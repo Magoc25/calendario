@@ -84,14 +84,13 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);hei
 .quick-add-input{background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);padding:4px 10px;font-size:11px;font-family:'DM Sans',sans-serif;width:150px;transition:width .2s ease,border-color .15s;outline:none}
 .quick-add-input:focus{width:230px;border-color:var(--accent)}
 .quick-add-input::placeholder{color:var(--muted)}
-.quick-add-send{display:none;padding:3px 9px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);cursor:pointer;font-size:13px;flex-shrink:0}
+.quick-add-send{padding:3px 9px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);cursor:pointer;font-size:13px;flex-shrink:0;line-height:1.4}
 .quick-add-send:active{opacity:.8}
-@media(max-width:768px){
-  .quick-add-wrap{order:99;flex:1;min-width:0}
-  #mobileMoreBtn{order:100}
-  .quick-add-input{width:100%;font-size:13px;padding:6px 10px}
-  .quick-add-send{display:flex;align-items:center;justify-content:center}
-}
+.mobile-qa-bar{display:none;padding:6px 10px;background:var(--surface);border-bottom:1px solid var(--border);gap:6px;align-items:center}
+.mobile-qa-input{flex:1;padding:7px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface2);color:var(--text);font-size:13px;font-family:'DM Sans',sans-serif;outline:none;min-width:0}
+.mobile-qa-input:focus{border-color:var(--accent)}
+.mobile-qa-input::placeholder{color:var(--muted)}
+@media(max-width:768px){.quick-add-wrap{display:none}.mobile-qa-bar{display:flex}}
 
 /* Sync status */
 .sync-dot{width:7px;height:7px;border-radius:50%;display:inline-block;margin-left:3px;vertical-align:middle;transition:background .3s}
@@ -1828,6 +1827,11 @@ body.large .sidebar-year{font-size:22px}
       </div>
     </div>
 
+    <!-- Mobile quick add bar — below header, hidden on desktop -->
+    <div class="mobile-qa-bar" id="mobileQaBar">
+      <input type="text" id="mobileQaInput" class="mobile-qa-input" placeholder="⚡ evento rápido… (Enter cria direto)" autocomplete="off">
+      <button id="mobileQaSend" class="quick-add-send" title="Criar evento">⚡</button>
+    </div>
     <!-- Tag filter bar -->
     <div id="syncConfigBanner" class="sync-config-banner" style="display:none">
       ⚠️ Supabase não configurado. <a id="syncConfigLink">Clique aqui para configurar a sincronização em nuvem</a> ou use normalmente (dados salvos localmente).
@@ -4760,13 +4764,17 @@ document.addEventListener('keydown',e=>{
 (function initQuickAdd(){
   const DOW_MAP={domingo:0,segunda:1,'terça':1,terca:1,quarta:3,quinta:4,sexta:5,'sábado':6,sabado:6};
   const escRx=s=>s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+  // Lookahead/lookbehind que inclui chars acentuados (À-ÿ) — evita falsos \b em "ã","ç",etc.
+  const LNLT='(?<![a-zA-Z\\u00C0-\\u00FF])';
+  const RNLT='(?![a-zA-Z\\u00C0-\\u00FF])';
 
   function parseQuickAdd(text){
     let str=text.trim();
     let date=null,startTime=null,endTime=null,category='',calendarId='';
 
-    // Data relativa: hoje / amanhã
-    const relM=str.match(/\b(hoje|amanhã|amanha)\b/i);
+    // Data relativa: hoje / amanhã — usa lookahead/lookbehind em vez de \b
+    // para lidar com chars acentuados no final de "amanhã"
+    const relM=str.match(new RegExp(LNLT+'(hoje|amanhã|amanha)'+RNLT,'i'));
     if(relM){
       const d=new Date();d.setDate(d.getDate()+(relM[1].toLowerCase()==='hoje'?0:1));
       date=ds(d.getFullYear(),d.getMonth(),d.getDate());
@@ -4786,8 +4794,9 @@ document.addEventListener('keydown',e=>{
       }
     }
 
-    // Hora: 14h, 14h30, 14h30m, 14:30
-    const timeM=str.match(/\b(\d{1,2})h(\d{2})?m?\b|\b(\d{1,2}):(\d{2})\b/i);
+    // Hora: 14h, 14h30, 14h30m, 14hs, 14:30
+    // "s?" aceita "10hs" (abreviatura de "horas" em pt-BR)
+    const timeM=str.match(/\b(\d{1,2})hs?(\d{2})?m?\b|\b(\d{1,2}):(\d{2})\b/i);
     if(timeM){
       let h,m;
       if(timeM[1]!==undefined){h=parseInt(timeM[1]);m=parseInt(timeM[2]||'0');}
@@ -4796,17 +4805,34 @@ document.addEventListener('keydown',e=>{
       str=str.replace(timeM[0],'').trim();
     }
 
-    // Categoria — match case-insensitive contra AppState.categories
+    // Categoria — encontra TODOS os matches e prefere o mais à direita no texto
+    // (contexto/categoria costuma vir depois do título em linguagem natural)
+    let catPos=-1;
     for(const cat of AppState.categories){
-      const rx=new RegExp('\\b'+escRx(cat.name)+'\\b','i');
-      if(rx.test(str)){category=cat.name;str=str.replace(rx,'').trim();break;}
+      const rx=new RegExp(LNLT+escRx(cat.name)+RNLT,'ig');
+      let m;
+      while((m=rx.exec(str))!==null){
+        if(m.index>catPos){catPos=m.index;category=cat.name;}
+      }
+    }
+    if(category){
+      const rx=new RegExp(LNLT+escRx(category)+RNLT,'i');
+      str=str.replace(rx,'').trim();
     }
 
-    // Calendário — match case-insensitive contra names dos calendars (ignora 'Geral')
+    // Calendário — mesmo critério: match mais à direita, ignora calendário padrão
+    let calPos=-1;
     for(const cal of calendars){
       if(cal.id==='default')continue;
-      const rx=new RegExp('\\b'+escRx(cal.name)+'\\b','i');
-      if(rx.test(str)){calendarId=cal.id;str=str.replace(rx,'').trim();break;}
+      const rx=new RegExp(LNLT+escRx(cal.name)+RNLT,'ig');
+      let m;
+      while((m=rx.exec(str))!==null){
+        if(m.index>calPos){calPos=m.index;calendarId=cal.id;}
+      }
+    }
+    if(calendarId){
+      const calName=calendars.find(c=>c.id===calendarId)?.name||'';
+      if(calName){const rx=new RegExp(LNLT+escRx(calName)+RNLT,'i');str=str.replace(rx,'').trim();}
     }
 
     // Duração via template da categoria; fallback 60min
@@ -4850,15 +4876,31 @@ document.addEventListener('keydown',e=>{
     });
   }
 
-  function submit(){const v=inp.value.trim();if(!v)return;inp.value='';inp.blur();triggerQuickAdd(v);}
+  function makeSubmit(inp){
+    return function submit(){const v=inp.value.trim();if(!v)return;inp.value='';inp.blur();triggerQuickAdd(v);};
+  }
 
+  // Desktop input
   const inp=document.getElementById('quickAddInput');
-  if(!inp)return;
-  inp.addEventListener('keydown',e=>{
-    if(e.key==='Enter'){e.preventDefault();submit();}
-    else if(e.key==='Escape'){inp.value='';inp.blur();}
-  });
-  document.getElementById('quickAddSend')?.addEventListener('click',submit);
+  if(inp){
+    const submit=makeSubmit(inp);
+    inp.addEventListener('keydown',e=>{
+      if(e.key==='Enter'){e.preventDefault();submit();}
+      else if(e.key==='Escape'){inp.value='';inp.blur();}
+    });
+    document.getElementById('quickAddSend')?.addEventListener('click',submit);
+  }
+
+  // Mobile input (barra abaixo do header)
+  const mInp=document.getElementById('mobileQaInput');
+  if(mInp){
+    const mSubmit=makeSubmit(mInp);
+    mInp.addEventListener('keydown',e=>{
+      if(e.key==='Enter'){e.preventDefault();mSubmit();}
+      else if(e.key==='Escape'){mInp.value='';mInp.blur();}
+    });
+    document.getElementById('mobileQaSend')?.addEventListener('click',mSubmit);
+  }
 })();
 
 /* ═══════ PDF VISUAL EXPORT ═══════ */
