@@ -2954,9 +2954,9 @@ function renderMonth(){
         return;
       }
       const pill=e.target.closest('.ev-pill');
-      // Desktop: clique na pílula abre edição direto
+      // Desktop: clique na pílula abre popup do evento (SRP) com a data exata do grid
       // Mobile: ignora e abre o painel do dia (toque na grade é impreciso)
-      if(pill&&window.innerWidth>768){openEdit(pill.dataset.id,pill.dataset.date);return;}
+      if(pill&&window.innerWidth>768){window.openSearchResultPanel?.(pill.dataset.id,pill.dataset.date);return;}
       const d=el.dataset.date;
       openMobileDaySheet(d);
     });
@@ -3814,14 +3814,15 @@ document.addEventListener('click',e=>{if(!e.target.closest('.search-wrap'))docum
     _srpEvId=null;_srpDate=null;window._srpClose=null;
   }
 
-  function openSrp(evId){
+  function openSrp(evId,dateOverride){
     _create();
     const ev=AppState.events.find(e=>e.id===evId);if(!ev)return;
     _srpEvId=evId;
 
-    // Determina data — próxima ocorrência para recorrentes
-    let dStr=ev.date;
-    if(ev.rrule){
+    // dateOverride: data explícita (ex: pílula do mês sabe o dia exato)
+    // sem override: próxima ocorrência para recorrentes, ev.date para outros
+    let dStr=dateOverride||ev.date;
+    if(!dateOverride&&ev.rrule){
       const today=todayDs();
       const far=new Date();far.setFullYear(far.getFullYear()+2);
       const nxt=getOccurrences(ev,today,ds(far.getFullYear(),far.getMonth(),far.getDate()))[0];
