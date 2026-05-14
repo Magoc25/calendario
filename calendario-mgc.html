@@ -789,15 +789,6 @@ body.large .sidebar-year{font-size:22px}
   .upcoming-body{padding:8px}
   .sidebar-months{padding:4px 4px 16px}
 }
-/* ── Quick Capture sidebar ── */
-.qc-wrap{padding:8px 8px 4px;border-bottom:1px solid var(--border);flex-shrink:0}
-.qc-label{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px}
-.qc-row{display:flex;gap:4px}
-.qc-input{flex:1;border:1px solid var(--border);border-radius:var(--radius-sm);padding:4px 7px;font-size:11px;background:var(--input-bg);color:var(--text);font-family:'DM Sans',sans-serif;outline:none;min-width:0}
-.qc-input:focus{border-color:var(--accent)}
-.qc-btn{background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);width:26px;height:26px;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:600;transition:background .15s}
-.qc-btn:hover{background:var(--accent-dark)}
-
 /* ── Today view ── */
 .today-view{padding:0!important}
 .tv-wrap{padding:18px 20px;display:grid;grid-template-columns:1fr 1fr;gap:16px}
@@ -1724,14 +1715,6 @@ body.large .sidebar-year{font-size:22px}
       <div class="sidebar-nav">
         <button class="snav" id="sYearPrev">‹</button>
         <button class="snav" id="sYearNext">›</button>
-      </div>
-    </div>
-    <!-- Quick capture -->
-    <div class="qc-wrap">
-      <div class="qc-label">⚡ Captura rápida</div>
-      <div class="qc-row">
-        <input type="text" id="qcInput" class="qc-input" placeholder="Nova tarefa ou evento…">
-        <button id="qcBtn" class="qc-btn">+</button>
       </div>
     </div>
     <!-- Multi-calendar list -->
@@ -6481,21 +6464,6 @@ document.getElementById('noteEditOverlay').addEventListener('click',e=>{
     saveNoteEdit();
   }
 });
-
-/* ═══════ QUICK CAPTURE ═══════ */
-document.getElementById('qcBtn').addEventListener('click',()=>{
-  const input=document.getElementById('qcInput');
-  const val=input.value.trim();if(!val)return;
-  // Smart detection: starts with time (08:00) or @ → event, otherwise → task
-  const isEvent=/^(\d{1,2}[:h]\d{0,2})|@/.test(val);
-  if(isEvent){openNew(todayDs());setTimeout(()=>{document.getElementById('evTitle').value=val;},80);}
-  else{addQuickTask(val);if(AppState.viewMode==='today')renderToday();}
-  input.value='';toast(isEvent?'Abrindo novo evento…':'Tarefa adicionada!');
-});
-document.getElementById('qcInput').addEventListener('keydown',e=>{
-  if(e.key==='Enter'){document.getElementById('qcBtn').click();}
-});
-
 
 /* ═══════ SUPABASE SYNC ═══════ */
 /*
