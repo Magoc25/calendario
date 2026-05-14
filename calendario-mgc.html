@@ -3353,7 +3353,20 @@ function renderSidebar(){
     html+=`<div class="mini-month${isActive?' active':''}" data-y="${y}" data-m="${m}"><div class="mini-label">${MONTHS_S[m]}</div><div class="mini-grid">${g}</div></div>`;
   }
   const c=document.getElementById('sidebarMonths');c.innerHTML=html;
-  c.querySelectorAll('.mini-month').forEach(el=>{el.addEventListener('click',()=>{AppState.lastNavDir=parseInt(el.dataset.m)>=AppState.cur.getMonth()?1:-1;AppState.cur=new Date(parseInt(el.dataset.y),parseInt(el.dataset.m),1);render();setTimeout(()=>el.scrollIntoView({block:'nearest',behavior:'smooth'}),50);});});
+  c.querySelectorAll('.mini-month').forEach(el=>{el.addEventListener('click',()=>{
+    const tm=parseInt(el.dataset.m),ty=parseInt(el.dataset.y);
+    AppState.lastNavDir=tm>=AppState.cur.getMonth()?1:-1;
+    AppState.cur=new Date(ty,tm,1);
+    document.getElementById('btnMonth')?.click(); // muda para aba Mês e faz render()
+    // Fecha sidebar mobile se estiver aberto
+    document.getElementById('sidebar').classList.remove('mobile-open');
+    document.getElementById('sidebarOverlay').classList.remove('open');
+    // Rola até o mês clicado no sidebar (busca o elemento novo após re-render)
+    setTimeout(()=>{
+      const fresh=document.querySelector(`.mini-month[data-y="${ty}"][data-m="${tm}"]`);
+      if(fresh)fresh.scrollIntoView({block:'nearest',behavior:'smooth'});
+    },60);
+  });});
   const active=c.querySelector('.mini-month.active');if(active)setTimeout(()=>active.scrollIntoView({block:'center',behavior:'smooth'}),80);
 }
 
