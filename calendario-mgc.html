@@ -1726,6 +1726,9 @@ body.large .sidebar-year{font-size:22px}
       <div id="calendarItems"></div>
     </div>
     <div class="sidebar-months" id="sidebarMonths"></div>
+    <div class="sidebar-foot">
+      <button id="onboardReopenBtn" class="sidebar-guide-btn">📖 Guia rápido</button>
+    </div>
   </aside>
   <div class="sidebar-overlay" id="sidebarOverlay"></div>
 
@@ -4908,6 +4911,108 @@ document.addEventListener('keydown',e=>{
     });
     document.getElementById('mobileQaSend')?.addEventListener('click',mSubmit);
   }
+})();
+
+/* ═══════ ONBOARDING ═══════ */
+(function initOnboarding(){
+  const DONE_KEY='cal_onboarding_done';
+  const SLIDES=[
+    {
+      icon:'📅',
+      title:'Bem-vindo ao Calendário MGC',
+      body:'Seu organizador pessoal completo —<br><b>gratuito</b>, funciona <b>offline</b> e não precisa de conta.',
+      extra:`<div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:16px">
+        <span style="padding:4px 14px;border-radius:20px;border:1.5px solid var(--accent);color:var(--accent);font-size:11px;font-weight:700">✓ Gratuito</span>
+        <span style="padding:4px 14px;border-radius:20px;border:1.5px solid var(--accent);color:var(--accent);font-size:11px;font-weight:700">✓ Offline</span>
+        <span style="padding:4px 14px;border-radius:20px;border:1.5px solid var(--accent);color:var(--accent);font-size:11px;font-weight:700">✓ Sem conta</span>
+      </div>`
+    },
+    {
+      icon:'🗓️',
+      title:'Tudo integrado em um só lugar',
+      body:`<div style="text-align:left;line-height:2.1;margin:0 auto;max-width:300px">
+        ⚡ <b>Hoje</b> — foco diário, Top 3 prioridades<br>
+        📅 <b>Mês / Semana / Próximos</b> — seus compromissos<br>
+        🔄 <b>Rotinas</b> — hábitos com streaks e heatmap<br>
+        📋 <b>Revisão</b> — mood tracking e reflexão diária<br>
+        📝 <b>Notas</b> — anotações com editor de texto rico
+      </div>`
+    },
+    {
+      icon:'⚡',
+      title:'Criação rápida de eventos',
+      body:`Use o campo <b>⚡</b> no topo para criar sem abrir formulário:<br><br>
+        <code style="background:var(--surface2);padding:6px 12px;border-radius:6px;font-size:12px;display:inline-block;margin-bottom:14px">amanhã 14h reunião IFMA</code><br>
+        Pressione <kbd style="border:1px solid var(--border);border-radius:4px;padding:1px 6px;font-size:11px;background:var(--surface2)">?</kbd> a qualquer momento para ver todos os atalhos.`
+    }
+  ];
+
+  let cur=0;
+
+  // CSS injetado dinamicamente — não polui o stylesheet principal
+  const css=document.createElement('style');
+  css.textContent=
+    `.ob-wrap{background:var(--surface);border-radius:18px;padding:36px 32px 28px;max-width:420px;width:92vw;box-shadow:var(--shadow-modal);text-align:center}
+    .ob-icon{font-size:52px;margin-bottom:14px;line-height:1}
+    .ob-title{font-family:'DM Serif Display',serif;font-size:21px;color:var(--text);margin-bottom:12px;line-height:1.3}
+    .ob-body{font-size:13px;color:var(--muted);line-height:1.7}
+    .ob-dots{display:flex;gap:7px;justify-content:center;margin-bottom:26px}
+    .ob-dot{height:7px;border-radius:4px;background:var(--border);transition:all .25s}
+    .ob-dot.active{background:var(--accent);width:22px!important}
+    .ob-nav{display:flex;justify-content:space-between;align-items:center;margin-top:22px}
+    .ob-skip{background:none;border:none;color:var(--muted);cursor:pointer;font-size:12px;font-family:'DM Sans',sans-serif;padding:4px 6px}
+    .ob-skip:hover{color:var(--text)}
+    .ob-btn{background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);padding:9px 22px;font-size:13px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;transition:background .15s}
+    .ob-btn:hover{background:var(--accent-dark)}
+    .sidebar-foot{padding:8px 10px;border-top:1px solid var(--border);flex-shrink:0}
+    .sidebar-guide-btn{width:100%;background:none;border:1px solid var(--border);color:var(--muted);border-radius:var(--radius-sm);padding:5px 8px;font-size:10px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s;letter-spacing:.04em}
+    .sidebar-guide-btn:hover{border-color:var(--accent);color:var(--accent)}`;
+  document.head.appendChild(css);
+
+  // Overlay criado dinamicamente
+  const ov=document.createElement('div');
+  ov.className='overlay';
+  ov.id='onboardOverlay';
+  ov.innerHTML=`<div class="ob-wrap">
+    <div class="ob-dots" id="obDots"></div>
+    <div id="obContent"></div>
+    <div class="ob-nav">
+      <button class="ob-skip" id="obSkip">Pular</button>
+      <button class="ob-btn" id="obNext">Próximo →</button>
+    </div>
+  </div>`;
+  document.body.appendChild(ov);
+
+  function paint(){
+    const s=SLIDES[cur];
+    document.getElementById('obContent').innerHTML=
+      `<div class="ob-icon">${s.icon}</div>
+       <div class="ob-title">${s.title}</div>
+       <div class="ob-body">${s.body}</div>
+       ${s.extra||''}`;
+    document.getElementById('obDots').innerHTML=
+      SLIDES.map((_,i)=>`<div class="ob-dot${i===cur?' active':''}" style="width:${i===cur?22:7}px"></div>`).join('');
+    const last=cur===SLIDES.length-1;
+    document.getElementById('obNext').textContent=last?'Começar 🚀':'Próximo →';
+    document.getElementById('obSkip').style.visibility=last?'hidden':'visible';
+  }
+
+  function close(){ov.classList.remove('open');localStorage.setItem(DONE_KEY,'1');}
+
+  document.getElementById('obNext').addEventListener('click',()=>{
+    if(cur<SLIDES.length-1){cur++;paint();}else close();
+  });
+  document.getElementById('obSkip').addEventListener('click',close);
+  ov.addEventListener('click',e=>{if(e.target===ov)close();});
+
+  // Re-abertura via botão no sidebar
+  document.getElementById('onboardReopenBtn')?.addEventListener('click',()=>{
+    cur=0;paint();ov.classList.add('open');
+  });
+
+  // Exibe automaticamente na primeira visita
+  window._openOnboarding=()=>{cur=0;paint();ov.classList.add('open');};
+  if(!localStorage.getItem(DONE_KEY))setTimeout(()=>{paint();ov.classList.add('open');},600);
 })();
 
 /* ═══════ PDF VISUAL EXPORT ═══════ */
