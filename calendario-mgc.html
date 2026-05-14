@@ -2836,7 +2836,9 @@ function makePill(ev,dateStr,forWeek=false){
   const base=ev.rrule?RRULE_CLS[ev.rrule]:'ev-single';
   const done=isDoneOn(ev,dateStr);
   const calColor=getCalColor(ev);
-  const bc=calColor;
+  const bc=calColor; // borda esquerda — sempre cor do calendário
+  // Cor da categoria para fundo e texto; fallback: cor própria do evento → cor do calendário
+  const catColor=categoryColors[ev.category]||ev.color||bc;
   const rotina=(ev.category||'').toLowerCase()==='rotina';
   const icon=CAT_ICONS[ev.category]||'';
   const recurIcon=ev.rrule&&ev.rrule!=='CUSTOM'?' ↻':ev.rrule==='CUSTOM'?' ⟳':'';
@@ -2846,7 +2848,7 @@ function makePill(ev,dateStr,forWeek=false){
   if(forWeek){
     const doneClass=done?' done-pill':'';
     const titleStyle=done?'text-decoration:line-through;opacity:.6':'';
-    return `<div class="week-ev ${base}${rotina?' is-rotina':''}${doneClass}" data-id="${ev.id}" data-date="${dateStr}" style="border-left-color:${bc};background:${bc}18${done?';opacity:.55':''};display:flex;align-items:flex-start;gap:3px;overflow:hidden;padding-top:2px" title="${esc(ev.title)}${ev.start?' · '+ev.start:''}${ev.end?' – '+ev.end:''}${done?' ✓ Concluído':''}">
+    return `<div class="week-ev ${base}${rotina?' is-rotina':''}${doneClass}" data-id="${ev.id}" data-date="${dateStr}" style="border-left-color:${bc};background:${catColor}18${done?';opacity:.55':''};display:flex;align-items:flex-start;gap:3px;overflow:hidden;padding-top:2px" title="${esc(ev.title)}${ev.start?' · '+ev.start:''}${ev.end?' – '+ev.end:''}${done?' ✓ Concluído':''}">
       <span class="ev-check${done?' checked':''}" data-check-id="${ev.id}" data-check-date="${dateStr}" style="width:9px;height:9px;flex-shrink:0;border-radius:2px;border:1.5px solid ${bc};display:inline-flex;align-items:center;justify-content:center;font-size:6px;cursor:pointer;background:${done?bc:'transparent'};color:#fff"></span>
       <span class="week-ev-time" style="${done?'opacity:.5':''}">${ev.start||''}</span>
       <span class="week-ev-title" style="${titleStyle}">${icon?icon+' ':''}${esc(ev.title)}${recurIcon}</span>
@@ -2863,7 +2865,7 @@ function makePill(ev,dateStr,forWeek=false){
   }
   const timeStr=ev.start?`<span class="ev-time">${ev.start}</span>`:'';
   const noteIcon=hasNotes(ev.id,dateStr)?`<span style="font-size:11px;flex-shrink:0;line-height:1" title="Tem notas">📝</span>`:'';
-  return `<div class="ev-pill ${base}${done?' done-pill':''}${rotina?' is-rotina':''}${mdClass}" data-id="${ev.id}" data-date="${dateStr}" style="border-left-color:${bc};--pill-ev-color:${bc}" draggable="true" title="${esc(ev.title)}${ev.category?' ['+esc(ev.category)+']':''}${hasNotes(ev.id,dateStr)?' · tem notas':''}">
+  return `<div class="ev-pill ${base}${done?' done-pill':''}${rotina?' is-rotina':''}${mdClass}" data-id="${ev.id}" data-date="${dateStr}" style="border-left-color:${bc};--pill-ev-color:${catColor};background:${catColor}22;color:${catColor}" draggable="true" title="${esc(ev.title)}${ev.category?' ['+esc(ev.category)+']':''}${hasNotes(ev.id,dateStr)?' · tem notas':''}">
     <span class="ev-check${done?' checked':''}" data-check-id="${ev.id}" data-check-date="${dateStr}"></span>
     ${timeStr}${icon?`<span class="ev-cat-icon">${icon}</span>`:''}
     <span class="ev-title-text">${esc(ev.title)}${recurIcon}</span>
