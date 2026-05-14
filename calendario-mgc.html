@@ -80,11 +80,18 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);hei
 .hbtn-primary{background:var(--accent);border:none;color:#fff;box-shadow:0 2px 8px rgba(0,0,0,.12)}
 .hbtn-primary:hover{background:var(--accent-dark);transform:translateY(-1px);color:#fff}
 .hbtn.density-active{border-color:var(--accent)!important;color:var(--accent)!important;background:var(--accent-light)!important;font-weight:700}
-.quick-add-wrap{position:relative}
+.quick-add-wrap{display:flex;align-items:center;gap:4px;position:relative}
 .quick-add-input{background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);padding:4px 10px;font-size:11px;font-family:'DM Sans',sans-serif;width:150px;transition:width .2s ease,border-color .15s;outline:none}
 .quick-add-input:focus{width:230px;border-color:var(--accent)}
 .quick-add-input::placeholder{color:var(--muted)}
-@media(max-width:768px){.quick-add-wrap{display:none}}
+.quick-add-send{display:none;padding:3px 9px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);cursor:pointer;font-size:13px;flex-shrink:0}
+.quick-add-send:active{opacity:.8}
+@media(max-width:768px){
+  .quick-add-wrap{order:99;flex:1;min-width:0}
+  #mobileMoreBtn{order:100}
+  .quick-add-input{width:100%;font-size:13px;padding:6px 10px}
+  .quick-add-send{display:flex;align-items:center;justify-content:center}
+}
 
 /* Sync status */
 .sync-dot{width:7px;height:7px;border-radius:50%;display:inline-block;margin-left:3px;vertical-align:middle;transition:background .3s}
@@ -1810,9 +1817,10 @@ body.large .sidebar-year{font-size:22px}
         <button class="hbtn" id="gcalBtn" title="Google Agenda">
           <span id="gcalBtnIcon">📆</span><span id="gcalBtnLabel" style="font-size:10px;margin-left:3px">Google</span><span class="sync-dot sync-warn" id="gcalDot" style="margin-left:3px"></span>
         </button>
-        <!-- Quick add — desktop only -->
+        <!-- Quick add — desktop header / mobile second row -->
         <div class="quick-add-wrap">
-          <input type="text" id="quickAddInput" class="quick-add-input" placeholder="⚡ evento rápido…" title="Ex: amanhã 14h reunião com João (Enter para abrir formulário)">
+          <input type="text" id="quickAddInput" class="quick-add-input" placeholder="⚡ evento rápido…" title="Ex: amanhã 14h reunião IFMA CPA (Enter cria direto)">
+          <button id="quickAddSend" class="quick-add-send" title="Criar evento">⚡</button>
         </div>
         <!-- Botão ⋯ visível apenas no mobile — abre o more-sheet -->
         <button class="hbtn" id="mobileMoreBtn" style="display:none;font-size:18px;padding:4px 10px;letter-spacing:1px" title="Mais opções">⋯</button>
@@ -4751,24 +4759,23 @@ document.addEventListener('keydown',e=>{
 /* ═══════ QUICK ADD ═══════ */
 (function initQuickAdd(){
   const DOW_MAP={domingo:0,segunda:1,'terça':1,terca:1,quarta:3,quinta:4,sexta:5,'sábado':6,sabado:6};
+  const escRx=s=>s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
 
   function parseQuickAdd(text){
     let str=text.trim();
-    let date=null,startTime=null;
+    let date=null,startTime=null,endTime=null,category='',calendarId='';
 
-    // Relative: hoje / amanhã
-    const relRx=/\b(hoje|amanhã|amanha)\b/i;
-    const relM=str.match(relRx);
+    // Data relativa: hoje / amanhã
+    const relM=str.match(/\b(hoje|amanhã|amanha)\b/i);
     if(relM){
       const d=new Date();d.setDate(d.getDate()+(relM[1].toLowerCase()==='hoje'?0:1));
       date=ds(d.getFullYear(),d.getMonth(),d.getDate());
       str=str.replace(relM[0],'').trim();
     }
 
-    // Weekday: segunda, terça-feira, …
+    // Dia da semana: segunda, terça-feira, …
     if(!date){
-      const dowRx=/\b(domingo|segunda|terça|terca|quarta|quinta|sexta|sábado|sabado)(-feira)?\b/i;
-      const dowM=str.match(dowRx);
+      const dowM=str.match(/\b(domingo|segunda|terça|terca|quarta|quinta|sexta|sábado|sabado)(-feira)?\b/i);
       if(dowM){
         const target=DOW_MAP[dowM[1].toLowerCase()];
         const today=new Date(),cur=today.getDay();
@@ -4779,9 +4786,8 @@ document.addEventListener('keydown',e=>{
       }
     }
 
-    // Time: 14h, 14h30, 14h30m, 14:30
-    const timeRx=/\b(\d{1,2})h(\d{2})?m?\b|\b(\d{1,2}):(\d{2})\b/i;
-    const timeM=str.match(timeRx);
+    // Hora: 14h, 14h30, 14h30m, 14:30
+    const timeM=str.match(/\b(\d{1,2})h(\d{2})?m?\b|\b(\d{1,2}):(\d{2})\b/i);
     if(timeM){
       let h,m;
       if(timeM[1]!==undefined){h=parseInt(timeM[1]);m=parseInt(timeM[2]||'0');}
@@ -4790,33 +4796,69 @@ document.addEventListener('keydown',e=>{
       str=str.replace(timeM[0],'').trim();
     }
 
-    return{date,startTime,title:str.replace(/\s+/g,' ').trim()};
+    // Categoria — match case-insensitive contra AppState.categories
+    for(const cat of AppState.categories){
+      const rx=new RegExp('\\b'+escRx(cat.name)+'\\b','i');
+      if(rx.test(str)){category=cat.name;str=str.replace(rx,'').trim();break;}
+    }
+
+    // Calendário — match case-insensitive contra names dos calendars (ignora 'Geral')
+    for(const cal of calendars){
+      if(cal.id==='default')continue;
+      const rx=new RegExp('\\b'+escRx(cal.name)+'\\b','i');
+      if(rx.test(str)){calendarId=cal.id;str=str.replace(rx,'').trim();break;}
+    }
+
+    // Duração via template da categoria; fallback 60min
+    if(startTime){
+      const tpl=category?getCatTemplates()[category]:null;
+      const dur=(tpl?.duration>0)?tpl.duration:60;
+      const[sh,sm]=startTime.split(':').map(Number);
+      const em=(sh*60+sm+dur)%(24*60);
+      endTime=pad(Math.floor(em/60))+':'+pad(em%60);
+    }
+
+    return{date,startTime,endTime,title:str.replace(/\s+/g,' ').trim(),category,calendarId};
   }
 
   function triggerQuickAdd(text){
     if(!text.trim())return;
-    const{date,startTime,title}=parseQuickAdd(text);
-    openNew(date||todayDs());
-    // Aplica após o ctsSync interno do openNew (60ms)
-    setTimeout(()=>{
-      if(title)document.getElementById('evTitle').value=title;
-      if(startTime){
-        document.getElementById('evStart').value=startTime;
-        const[sh,sm]=startTime.split(':').map(Number);
-        const em=(sh*60+sm+60)%(24*60);
-        document.getElementById('evEnd').value=pad(Math.floor(em/60))+':'+pad(em%60);
-        if(window.ctsSync){ctsSync('evStart');ctsSync('evEnd');}
-      }
-      document.getElementById('evTitle').focus();
-    },80);
+    const{date,startTime,endTime,title,category,calendarId}=parseQuickAdd(text);
+    const tpl=category?getCatTemplates()[category]:null;
+    const ev={
+      id:uid(),
+      title:title||'Novo evento',
+      date:date||todayDs(),
+      dateEnd:date||todayDs(),
+      start:startTime||'',
+      end:endTime||'',
+      category,
+      calendarId:calendarId||(calendars[0]?.id||'default'),
+      color:category?(categoryColors[category]||''):'',
+      location:tpl?.location||'',
+      rrule:'',
+      alert:'15',
+      tags:[],
+      done:false,
+    };
+    AppState.events.push(ev);
+    save();
+    render();
+    toastUndo(`✓ "${ev.title}" adicionado`,()=>{
+      AppState.events=AppState.events.filter(e=>e.id!==ev.id);
+      save();render();
+    });
   }
+
+  function submit(){const v=inp.value.trim();if(!v)return;inp.value='';inp.blur();triggerQuickAdd(v);}
 
   const inp=document.getElementById('quickAddInput');
   if(!inp)return;
   inp.addEventListener('keydown',e=>{
-    if(e.key==='Enter'){e.preventDefault();const v=inp.value;inp.value='';inp.blur();triggerQuickAdd(v);}
+    if(e.key==='Enter'){e.preventDefault();submit();}
     else if(e.key==='Escape'){inp.value='';inp.blur();}
   });
+  document.getElementById('quickAddSend')?.addEventListener('click',submit);
 })();
 
 /* ═══════ PDF VISUAL EXPORT ═══════ */
