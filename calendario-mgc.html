@@ -280,11 +280,11 @@ body.design-extra .dow{font-weight:800;letter-spacing:.1em;font-size:8.5px;borde
 /* Cabeçalho das colunas da semana — colunas flutuantes */
 body.design-extra .week-header-row{background:transparent;column-gap:6px}
 body.design-extra .week-body{column-gap:6px}
-/* Cabeçalho de cada coluna de dia — topo do card flutuante */
-body.design-extra .week-day-head{background:var(--surface-glass);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid var(--border);border-bottom:none;border-radius:12px 12px 0 0;padding:6px 4px;margin-bottom:0}
-body.design-extra .week-day-head .wdow{color:var(--muted)}
-body.design-extra .week-day-head .wdnum{color:var(--text);font-size:15px}
-body.design-extra .week-day-head .wdnum.today-w{background:var(--accent);color:#fff;font-size:13px}
+/* Card tag do dia — cor principal do tema, completamente separado */
+body.design-extra .week-day-head{background:var(--dow-bg);border:1px solid transparent;border-radius:12px;padding:7px 4px;margin-bottom:5px;box-shadow:0 4px 14px rgba(0,0,0,.18)}
+body.design-extra .week-day-head .wdow{color:var(--dow-color)}
+body.design-extra .week-day-head .wdnum{color:var(--dow-color);font-size:15px}
+body.design-extra .week-day-head .wdnum.today-w{background:rgba(255,255,255,.28);border-radius:50%;width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center;font-size:13px;outline:2px solid rgba(255,255,255,.55);outline-offset:1px}
 body.design-extra .wdnum{border-radius:10px;padding:2px 5px}
 
 /* Grid do mês — gap sutil entre células-card */
@@ -308,10 +308,10 @@ body.design-extra #monthCard{background:transparent;border:none;box-shadow:none;
 body.design-extra #weekCard{background:transparent;border:none;box-shadow:none;border-radius:0}
 /* Coluna de horas — minimalista/transparente */
 body.design-extra .week-time-col{background:transparent;border-right:none}
-/* Corpo de cada coluna de dia — base do card flutuante */
-body.design-extra .week-day-col{background:var(--surface-glass);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid var(--border);border-top:none;border-right:none;border-radius:0 0 12px 12px;box-shadow:0 6px 20px rgba(0,0,0,.08)}
-/* Coluna de hoje — borda de destaque */
-body.design-extra .week-day-col.today-col{border-color:var(--accent)}
+/* Card coluna de eventos — glass standalone, completamente separado do card-tag */
+body.design-extra .week-day-col{background:var(--surface-glass);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid var(--border);border-radius:12px;overflow:hidden;box-shadow:0 6px 20px rgba(0,0,0,.08)}
+/* Coluna de hoje — borda accent para destaque */
+body.design-extra .week-day-col.today-col{border-color:var(--accent);box-shadow:0 6px 20px rgba(0,0,0,.12)}
 body.design-extra .week-day-col.today-col .week-slot{background:transparent}
 /* Hover em slot */
 body.design-extra .week-slot:hover{background:rgba(0,0,0,.05)!important}
