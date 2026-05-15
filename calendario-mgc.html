@@ -236,6 +236,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);hei
 .week-ev-title{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0}
 .now-line{position:absolute;left:0;right:0;height:2px;background:#e03131;z-index:5;pointer-events:none}
 .now-line::before{content:'';position:absolute;left:-4px;top:-4px;width:10px;height:10px;border-radius:50%;background:#e03131}
+.now-line-time{position:absolute;left:12px;top:-8px;font-size:9px;font-weight:800;color:#e03131;background:var(--surface);padding:0 3px;border-radius:3px;line-height:1.6;white-space:nowrap;letter-spacing:.02em}
 
 /* ── UPCOMING VIEW ── */
 .upcoming-view{flex:1;display:none;flex-direction:column;overflow:hidden}
@@ -3075,6 +3076,17 @@ document.getElementById('dpClose').addEventListener('click',()=>{
 const WEEK_START_H=6,WEEK_END_H=23;
 const HOUR_H_MAP={compact:36,comfortable:56,large:64,normal:48};
 function getHourH(){const d=localStorage.getItem('cal_density')||'normal';return HOUR_H_MAP[d]||48;}
+
+let _nowLineTimer=null;
+function updateNowLineTime(){
+  const now=new Date();
+  const top=(now.getHours()+now.getMinutes()/60-WEEK_START_H)*getHourH();
+  document.querySelectorAll('.now-line').forEach(line=>{
+    if(top>=0)line.style.top=top+'px';
+    const lbl=line.querySelector('.now-line-time');
+    if(lbl)lbl.textContent=pad(now.getHours())+':'+pad(now.getMinutes());
+  });
+}
 function getWeekDates(){const d=new Date(AppState.cur);d.setDate(d.getDate()-((d.getDay()-weekStart+7)%7));return Array.from({length:7},(_,i)=>{const x=new Date(d);x.setDate(x.getDate()+i);return x;});}
 
 /* Qual dia da semana está selecionado no mobile (0=Dom … 6=Sáb) */
@@ -3160,7 +3172,8 @@ function renderWeekMobile(){
     if(top>=0){
       const line=document.createElement('div');
       line.className='now-line';line.style.top=top+'px';
-      col.appendChild(line);
+      const lbl=document.createElement('span');lbl.className='now-line-time';lbl.textContent=pad(now.getHours())+':'+pad(now.getMinutes());
+      line.appendChild(lbl);col.appendChild(line);
     }
   }
 
@@ -3233,7 +3246,20 @@ function renderWeek(){
   });
   const now=new Date();const nowDs=ds(now.getFullYear(),now.getMonth(),now.getDate());
   const tc=body.querySelector(`.week-day-col[data-date="${nowDs}"]`);
-  if(tc){const top=(now.getHours()+now.getMinutes()/60-WEEK_START_H)*HOUR_H;if(top>=0){const line=document.createElement('div');line.className='now-line';line.style.top=top+'px';tc.appendChild(line);}}
+  if(tc){
+    const top=(now.getHours()+now.getMinutes()/60-WEEK_START_H)*HOUR_H;
+    if(top>=0){
+      const line=document.createElement('div');line.className='now-line';line.style.top=top+'px';
+      const lbl=document.createElement('span');lbl.className='now-line-time';lbl.textContent=pad(now.getHours())+':'+pad(now.getMinutes());
+      line.appendChild(lbl);tc.appendChild(line);
+    }
+  }
+  // Timer vivo: atualiza posição e hora a cada minuto; auto-cancela ao sair da aba Semana
+  clearInterval(_nowLineTimer);
+  _nowLineTimer=setInterval(()=>{
+    if(AppState.viewMode!=='week'){clearInterval(_nowLineTimer);_nowLineTimer=null;return;}
+    updateNowLineTime();
+  },60000);
   body.querySelectorAll('.week-slot').forEach(slot=>{
     slot.addEventListener('click',e=>{
       if(e.target.closest('.week-ev'))return;
