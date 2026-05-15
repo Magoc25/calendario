@@ -288,8 +288,10 @@ body.design-extra .sidebar-head{border-bottom-color:color-mix(in srgb,var(--bord
 body.design-extra .snav{border-radius:10px}
 body.design-extra .sidebar-guide-btn{border-radius:20px}
 
-/* 3. Header principal */
-body.design-extra .main-header{background:color-mix(in srgb,var(--surface) 85%,transparent);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid color-mix(in srgb,var(--border) 60%,transparent);box-shadow:0 2px 16px rgba(0,0,0,.07)}
+/* 3. Header principal
+   position+z-index necessários: backdrop-filter cria novo stacking context;
+   sem z-index explícito, o popup ficaria preso atrás do conteúdo do calendário */
+body.design-extra .main-header{position:relative;z-index:50;background:color-mix(in srgb,var(--surface) 85%,transparent);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid color-mix(in srgb,var(--border) 60%,transparent);box-shadow:0 2px 16px rgba(0,0,0,.07)}
 
 /* 4. Botões do header */
 body.design-extra .hbtn{border-radius:20px;transition:transform .12s ease,background .12s,box-shadow .12s}
