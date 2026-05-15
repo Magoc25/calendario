@@ -271,9 +271,9 @@ body.design-extra .cal-card{
   background:var(--surface);
 }
 body.design-extra .cal-footer{
-  background:var(--surface-glass);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
-  border:1px solid var(--border);border-radius:12px;
-  margin:4px 0 8px;box-shadow:0 4px 14px rgba(0,0,0,.08)
+  background:var(--surface-glass)!important;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+  border:1px solid var(--border)!important;border-radius:12px!important;overflow:hidden;
+  margin:4px 0 8px!important;box-shadow:0 4px 14px rgba(0,0,0,.08)!important
 }
 /* Elementos internos do rodapé */
 body.design-extra .legend-rotina{border-radius:20px;border:1px dashed var(--muted);padding:2px 9px 2px 6px;font-style:italic;font-size:9.5px}
@@ -3767,6 +3767,8 @@ function render(){
   if(AppState.viewMode!=='notes')DOM.notesViewContent.innerHTML='';
   // Also hide footer on non-calendar views
   if(DOM.calFooter)DOM.calFooter.style.display=['today','routines','review','notes'].includes(AppState.viewMode)?'none':'flex';
+  const _rotLbl=document.querySelector('.legend-rotina');
+  if(_rotLbl)_rotLbl.style.display=AppState.viewMode==='month'?'':'none';
   if(AppState.viewMode==='month')renderMonth();
   else if(AppState.viewMode==='week')renderWeek();
   else if(AppState.viewMode==='upcoming')renderUpcoming();
