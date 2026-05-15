@@ -37,6 +37,7 @@
   --shadow:0 4px 24px rgba(59,91,219,.10);
   --shadow-modal:0 12px 56px rgba(26,31,54,.24);
   --input-bg:#fff;
+  --surface-glass:rgba(255,255,255,.82); /* overridden per-theme via JS applyTheme() */
   --cell-size:1; /* comfortable=1, compact=0.8 */
 }
 body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);height:100vh;overflow:hidden;display:flex;flex-direction:column;transition:background .3s,color .3s}
@@ -307,14 +308,18 @@ body.design-extra{background:
   radial-gradient(ellipse 700px 500px at 98% 98%,rgba(130,99,200,.07),transparent 60%),
   var(--bg)}
 
-/* 2. Sidebar */
-body.design-extra .sidebar{background:var(--surface);border-right:2px solid var(--accent);box-shadow:4px 0 20px rgba(0,0,0,.08)}
-body.design-extra .sidebar-head{border-bottom:1px solid var(--border)}
+/* 2. Sidebar — fundo transparente + 4 cards flutuantes */
+body.design-extra .sidebar{background:transparent;border-right:none;box-shadow:none;padding:8px;gap:8px;overflow:visible}
+body.design-extra .sidebar-head{background:var(--surface-glass);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-radius:14px;border:1px solid var(--border);box-shadow:0 4px 16px rgba(0,0,0,.10);padding:12px 10px;flex-shrink:0}
+body.design-extra .sidebar-head .sidebar-nav{gap:5px}
+body.design-extra .cal-list{background:var(--surface-glass);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-radius:14px;border:1px solid var(--border);border-bottom:1px solid var(--border);box-shadow:0 4px 16px rgba(0,0,0,.10);padding:10px 8px;flex-shrink:0}
+body.design-extra .sidebar-months{background:var(--surface-glass);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-radius:14px;border:1px solid var(--border);box-shadow:0 4px 16px rgba(0,0,0,.10);padding:8px;overflow-y:auto}
+body.design-extra .sidebar-foot{background:var(--surface-glass);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-radius:14px;border:1px solid var(--border);box-shadow:0 4px 16px rgba(0,0,0,.10);padding:6px 8px;flex-shrink:0}
 body.design-extra .snav{border-radius:10px}
 body.design-extra .sidebar-guide-btn{border-radius:20px}
 
-/* 3. Header principal — position+z-index obrigatórios para popup aparecer sobre o conteúdo */
-body.design-extra .main-header{position:relative;z-index:50;background:var(--surface);border-bottom:2px solid var(--accent);box-shadow:0 3px 18px rgba(0,0,0,.09)}
+/* 3. Header principal — floating card com vidro; position+z-index obrigatórios */
+body.design-extra .main-header{position:relative;z-index:50;background:var(--surface-glass);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid var(--border);border-radius:18px;margin:8px 12px 6px;box-shadow:0 8px 32px rgba(0,0,0,.18),0 2px 8px rgba(0,0,0,.08)}
 
 /* 4. Botões do header */
 body.design-extra .hbtn{border-radius:20px;transition:transform .12s ease,background .12s,box-shadow .12s}
@@ -512,6 +517,8 @@ body.design-extra ::-webkit-scrollbar-thumb:hover{background:var(--muted)}
 
 /* ── CAMADA 1: MOBILE ── */
 @media(max-width:768px){
+  /* Sidebar mobile: fundo sólido (evita ver conteúdo do calendário por trás) */
+  body.design-extra .sidebar{background:var(--surface);overflow:hidden}
   body.design-extra .bottom-nav{background:var(--surface);border-top:1px solid var(--border);box-shadow:0 -4px 22px rgba(0,0,0,.14)}
   body.design-extra .mobile-fab{box-shadow:0 8px 24px rgba(0,0,0,.22),0 4px 12px rgba(0,0,0,.18);transition:transform .15s ease,box-shadow .15s}
   body.design-extra .mobile-qa-bar{background:var(--surface);border-bottom:1px solid var(--border)}
@@ -2769,11 +2776,11 @@ body.large .sidebar-year{font-size:22px}
 <script>
 /* ═══════ THEMES ═══════ */
 const THEMES={
-  oceano:{name:'Oceano',desc:'Claro e profissional',icon:'🌊',sw:['#eef1f8','#3b5bdb','#dde3f5'],v:{'--bg':'#eef1f8','--surface':'#fff','--surface2':'#f4f6fc','--border':'#dde3f5','--text':'#1a1f36','--muted':'#6b7280','--hint':'#b0b8d0','--accent':'#3b5bdb','--accent-dark':'#2748c2','--accent-light':'#eef2ff','--dow-bg':'#3b5bdb','--dow-color':'rgba(255,255,255,.92)','--today-bg':'#eef2ff','--today-dot':'#3b5bdb','--input-bg':'#fff'}},
-  sereno:{name:'Sereno',desc:'Natural e tranquilo',icon:'🌿',sw:['#f0f5ef','#2e7d32','#d4e8d4'],v:{'--bg':'#f0f5ef','--surface':'#fff','--surface2':'#f5faf4','--border':'#cde4cd','--text':'#1a2e1a','--muted':'#52785a','--hint':'#9dc09d','--accent':'#2e7d32','--accent-dark':'#1b5e20','--accent-light':'#e8f5e9','--dow-bg':'#2e7d32','--dow-color':'rgba(255,255,255,.92)','--today-bg':'#e8f5e9','--today-dot':'#2e7d32','--input-bg':'#fff'}},
-  aurora:{name:'Aurora',desc:'Escuro e sofisticado',icon:'✨',sw:['#0f1117','#7c4dff','#2d3154'],v:{'--bg':'#0f1117','--surface':'#1a1d2e','--surface2':'#13161f','--border':'#2d3154','--text':'#e8eaf6','--muted':'#9fa8da','--hint':'#3d4275','--accent':'#7c4dff','--accent-dark':'#651fff','--accent-light':'#1a1040','--dow-bg':'#2d3154','--dow-color':'rgba(200,210,255,.95)','--today-bg':'#1a1040','--today-dot':'#7c4dff','--input-bg':'#1a1d2e'}},
-  marfim:{name:'Marfim',desc:'Elegante e refinado',icon:'🏛️',sw:['#faf8f3','#b8860b','#e8dfc8'],v:{'--bg':'#faf8f3','--surface':'#fff','--surface2':'#f6f2e8','--border':'#e2d9c4','--text':'#2c2416','--muted':'#8b7355','--hint':'#c4aa80','--accent':'#b8860b','--accent-dark':'#8b6914','--accent-light':'#fdf8e8','--dow-bg':'#b8860b','--dow-color':'rgba(255,255,255,.95)','--today-bg':'#fdf8e8','--today-dot':'#b8860b','--input-bg':'#fff'}},
-  ardosia:{name:'Ardósia',desc:'Moderno e minimalista',icon:'🪨',sw:['#1e2433','#38bdf8','#3a4460'],v:{'--bg':'#1e2433','--surface':'#252d40','--surface2':'#1a2130','--border':'#3a4460','--text':'#e2e8f0','--muted':'#94a3b8','--hint':'#475569','--accent':'#38bdf8','--accent-dark':'#0ea5e9','--accent-light':'#0c1a2e','--dow-bg':'#334155','--dow-color':'rgba(255,255,255,.9)','--today-bg':'#0c1a2e','--today-dot':'#38bdf8','--input-bg':'#252d40'}}
+  oceano:{name:'Oceano',desc:'Claro e profissional',icon:'🌊',sw:['#eef1f8','#3b5bdb','#dde3f5'],v:{'--bg':'#eef1f8','--surface':'#fff','--surface2':'#f4f6fc','--border':'#dde3f5','--text':'#1a1f36','--muted':'#6b7280','--hint':'#b0b8d0','--accent':'#3b5bdb','--accent-dark':'#2748c2','--accent-light':'#eef2ff','--dow-bg':'#3b5bdb','--dow-color':'rgba(255,255,255,.92)','--today-bg':'#eef2ff','--today-dot':'#3b5bdb','--input-bg':'#fff','--surface-glass':'rgba(255,255,255,.82)'}},
+  sereno:{name:'Sereno',desc:'Natural e tranquilo',icon:'🌿',sw:['#f0f5ef','#2e7d32','#d4e8d4'],v:{'--bg':'#f0f5ef','--surface':'#fff','--surface2':'#f5faf4','--border':'#cde4cd','--text':'#1a2e1a','--muted':'#52785a','--hint':'#9dc09d','--accent':'#2e7d32','--accent-dark':'#1b5e20','--accent-light':'#e8f5e9','--dow-bg':'#2e7d32','--dow-color':'rgba(255,255,255,.92)','--today-bg':'#e8f5e9','--today-dot':'#2e7d32','--input-bg':'#fff','--surface-glass':'rgba(255,255,255,.82)'}},
+  aurora:{name:'Aurora',desc:'Escuro e sofisticado',icon:'✨',sw:['#0f1117','#7c4dff','#2d3154'],v:{'--bg':'#0f1117','--surface':'#1a1d2e','--surface2':'#13161f','--border':'#2d3154','--text':'#e8eaf6','--muted':'#9fa8da','--hint':'#3d4275','--accent':'#7c4dff','--accent-dark':'#651fff','--accent-light':'#1a1040','--dow-bg':'#2d3154','--dow-color':'rgba(200,210,255,.95)','--today-bg':'#1a1040','--today-dot':'#7c4dff','--input-bg':'#1a1d2e','--surface-glass':'rgba(26,29,46,.84)'}},
+  marfim:{name:'Marfim',desc:'Elegante e refinado',icon:'🏛️',sw:['#faf8f3','#b8860b','#e8dfc8'],v:{'--bg':'#faf8f3','--surface':'#fff','--surface2':'#f6f2e8','--border':'#e2d9c4','--text':'#2c2416','--muted':'#8b7355','--hint':'#c4aa80','--accent':'#b8860b','--accent-dark':'#8b6914','--accent-light':'#fdf8e8','--dow-bg':'#b8860b','--dow-color':'rgba(255,255,255,.95)','--today-bg':'#fdf8e8','--today-dot':'#b8860b','--input-bg':'#fff','--surface-glass':'rgba(255,255,255,.82)'}},
+  ardosia:{name:'Ardósia',desc:'Moderno e minimalista',icon:'🪨',sw:['#1e2433','#38bdf8','#3a4460'],v:{'--bg':'#1e2433','--surface':'#252d40','--surface2':'#1a2130','--border':'#3a4460','--text':'#e2e8f0','--muted':'#94a3b8','--hint':'#475569','--accent':'#38bdf8','--accent-dark':'#0ea5e9','--accent-light':'#0c1a2e','--dow-bg':'#334155','--dow-color':'rgba(255,255,255,.9)','--today-bg':'#0c1a2e','--today-dot':'#38bdf8','--input-bg':'#252d40','--surface-glass':'rgba(37,45,64,.84)'}}
 };
 let currentTheme=localStorage.getItem('cal_theme')||'oceano';
 let weekStart=parseInt(localStorage.getItem('cal_week_start')||'0'); // 0=Dom, 1=Seg
