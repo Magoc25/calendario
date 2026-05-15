@@ -243,8 +243,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);hei
    Ativado por: body.design-extra
    Compatível com todos os 5 temas de cor.
    ════════════════════════════════════════ */
-/* Pílulas — forma + dock */
-body.design-extra .ev-pill{border-radius:999px!important;transform-origin:left center;will-change:transform;transition:transform .14s ease,box-shadow .14s ease,opacity .14s ease,filter .14s ease!important;backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px)}
+/* Pílulas — forma + dock (sem backdrop-filter: cria artefato retangular em alguns browsers) */
+body.design-extra .ev-pill{border-radius:999px!important;transform-origin:left center;will-change:transform;transition:transform .14s ease,box-shadow .14s ease,opacity .14s ease,filter .14s ease!important}
 body.design-extra .ev-pill:hover{transform:scale(1.08);z-index:4;filter:saturate(1.14)}
 /* Fade sutil nas vizinhas durante hover — efeito dock */
 body.design-extra .day-events:hover .ev-pill{opacity:.72}
@@ -3104,7 +3104,7 @@ function makePill(ev,dateStr,forWeek=false){
   const timeStr=ev.start?`<span class="ev-time">${ev.start}</span>`:'';
   const noteIcon=hasNotes(ev.id,dateStr)?`<span style="font-size:11px;flex-shrink:0;line-height:1" title="Tem notas">📝</span>`:'';
   const _pillStyle=_xd
-    ?`border:1px solid ${catColor}44;border-left:3px solid ${bc};--pill-ev-color:${catColor};background:linear-gradient(160deg,${catColor}3c,${catColor}1e);color:${catColor};box-shadow:0 4px 14px rgba(0,0,0,.13)`
+    ?`border:1px solid ${catColor}44;border-left:3px solid ${bc};--pill-ev-color:${catColor};background:linear-gradient(160deg,${catColor}3c,${catColor}1e);color:${catColor}`
     :`border-left-color:${bc};--pill-ev-color:${catColor};background:${catColor}22;color:${catColor}`;
   return `<div class="ev-pill ${base}${done?' done-pill':''}${rotina?' is-rotina':''}${mdClass}" data-id="${ev.id}" data-date="${dateStr}" style="${_pillStyle}" draggable="true" title="${esc(ev.title)}${ev.category?' ['+esc(ev.category)+']':''}${hasNotes(ev.id,dateStr)?' · tem notas':''}">
     <span class="ev-check${done?' checked':''}" data-check-id="${ev.id}" data-check-date="${dateStr}"></span>
