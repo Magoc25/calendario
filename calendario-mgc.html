@@ -259,6 +259,27 @@ body.design-extra .ev-multiday{border-radius:0!important}
 body.design-extra .ev-multiday.md-start{border-radius:6px 0 0 6px!important}
 body.design-extra .ev-multiday.md-end{border-radius:0 6px 6px 0!important}
 body.design-extra .ev-multiday.md-single{border-radius:6px!important}
+/* ── Container principal de cada aba — efeito "floating card" ── */
+/* É a mudança de maior impacto visual: a aba inteira vira um card flutuante */
+body.design-extra .cal-main{padding-right:12px} /* simetria com o left:12px */
+body.design-extra .cal-card{
+  border-radius:18px 18px 0 0;
+  border:1px solid color-mix(in srgb,var(--border) 75%,transparent);
+  border-bottom:none;
+  box-shadow:0 6px 28px rgba(0,0,0,.10),0 2px 8px rgba(0,0,0,.06);
+  background:color-mix(in srgb,var(--surface) 94%,transparent);
+}
+body.design-extra .cal-footer{
+  border-left:1px solid color-mix(in srgb,var(--border) 75%,transparent);
+  border-right:1px solid color-mix(in srgb,var(--border) 75%,transparent);
+  border-bottom:1px solid color-mix(in srgb,var(--border) 75%,transparent);
+}
+/* Labels Dom/Seg/Ter... — mais destaque */
+body.design-extra .dow{font-weight:800;letter-spacing:.1em;font-size:8.5px}
+/* Cabeçalho das colunas da semana — leve destaque */
+body.design-extra .week-day-head{border-radius:10px;padding:4px 2px;margin-bottom:2px}
+body.design-extra .wdnum{border-radius:10px;padding:2px 5px}
+
 /* Grid do mês — gap sutil entre células-card */
 body.design-extra .cal-grid{gap:4px}
 /* Células do mês */
@@ -3359,8 +3380,8 @@ function updateNowLineTime(){
 }
 function getWeekDates(){const d=new Date(AppState.cur);d.setDate(d.getDate()-((d.getDay()-weekStart+7)%7));return Array.from({length:7},(_,i)=>{const x=new Date(d);x.setDate(x.getDate()+i);return x;});}
 
-/* Qual dia da semana está selecionado no mobile (0=Dom … 6=Sáb) */
-let mobileWeekDay=new Date().getDay();
+/* Índice do dia selecionado no mobile — relativo ao weekStart (não ao getDay() absoluto) */
+let mobileWeekDay=(new Date().getDay()-weekStart+7)%7;
 
 /* ── Mobile Week View — 1 dia por vez ── */
 function renderWeekMobile(){
@@ -4614,7 +4635,8 @@ function deleteEventById(id){
       const todayStr=todayDs();
       // Verifica se hoje está na semana atual
       const todayInWeek=dates.some(d=>ds(d.getFullYear(),d.getMonth(),d.getDate())===todayStr);
-      mobileWeekDay=todayInWeek?todayDow:0;
+      // Índice relativo ao weekStart — não usar getDay() direto (aponta dia errado quando weekStart=1)
+      mobileWeekDay=todayInWeek?(todayDow-weekStart+7)%7:0;
     }
     document.querySelectorAll('.view-btn').forEach(b=>b.classList.remove('active'));
     btn.classList.add('active');
@@ -8228,6 +8250,10 @@ function syncAlertsToSW(){
 
 // Register SW on load
 registerSW();
+
+// Suprime o prompt automático do Chrome "toque para copiar URL / adicionar à tela inicial"
+// O app já é uma PWA instalável — o usuário instala manualmente se quiser
+window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();});
 
 // Re-sync when app becomes visible (user returns to app after minimizing)
 document.addEventListener('visibilitychange',()=>{
