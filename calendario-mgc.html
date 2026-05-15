@@ -274,6 +274,84 @@ body.design-extra .week-ev:hover{box-shadow:0 6px 18px rgba(0,0,0,.18);opacity:.
 body.design-extra .holiday-label{border-radius:999px;box-shadow:0 2px 6px rgba(194,65,12,.15);transition:box-shadow .14s ease,filter .14s ease}
 body.design-extra .holiday-label:hover{box-shadow:0 4px 12px rgba(194,65,12,.28);filter:saturate(1.15)}
 
+/* ── CAMADA 1: ESTRUTURA GLOBAL ────────────────────────────── */
+
+/* 1. Aurora no fundo — gradiente radial usando cor do tema ativo */
+body.design-extra{background:
+  radial-gradient(ellipse 900px 600px at 2% 2%,color-mix(in srgb,var(--accent) 9%,transparent),transparent 65%),
+  radial-gradient(ellipse 700px 500px at 98% 98%,color-mix(in srgb,var(--accent) 7%,transparent),transparent 60%),
+  var(--bg)}
+
+/* 2. Sidebar */
+body.design-extra .sidebar{background:color-mix(in srgb,var(--surface) 88%,transparent);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-right:1px solid color-mix(in srgb,var(--border) 65%,transparent)}
+body.design-extra .sidebar-head{border-bottom-color:color-mix(in srgb,var(--border) 60%,transparent)}
+body.design-extra .snav{border-radius:10px}
+body.design-extra .sidebar-guide-btn{border-radius:20px}
+
+/* 3. Header principal */
+body.design-extra .main-header{background:color-mix(in srgb,var(--surface) 85%,transparent);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid color-mix(in srgb,var(--border) 60%,transparent);box-shadow:0 2px 16px rgba(0,0,0,.07)}
+
+/* 4. Botões do header */
+body.design-extra .hbtn{border-radius:20px;transition:transform .12s ease,background .12s,box-shadow .12s}
+body.design-extra .hbtn:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,.12)}
+body.design-extra .hbtn-primary{border-radius:20px;box-shadow:0 4px 16px rgba(0,0,0,.20)}
+body.design-extra .hbtn-primary:hover{transform:translateY(-2px);box-shadow:0 7px 20px rgba(0,0,0,.26)}
+body.design-extra .nav-btn{border-radius:12px;transition:transform .12s ease,background .12s}
+body.design-extra .nav-btn:hover{transform:translateY(-1px)}
+
+/* 5. View toggle */
+body.design-extra .view-toggle{border-radius:20px}
+
+/* 6. Search + Quick add */
+body.design-extra .search-input{border-radius:20px!important}
+body.design-extra .search-results{border-radius:16px;background:color-mix(in srgb,var(--surface) 92%,transparent);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);box-shadow:0 12px 32px rgba(0,0,0,.20)}
+body.design-extra .quick-add-input{border-radius:20px!important}
+body.design-extra .quick-add-send{border-radius:20px!important}
+
+/* 7. Tag chips */
+body.design-extra .tag-chip-filter{transition:transform .12s ease,background .15s,border-color .15s,box-shadow .15s}
+body.design-extra .tag-chip-filter:hover{transform:translateY(-1px);box-shadow:0 3px 8px rgba(0,0,0,.10)}
+body.design-extra .tag-chip-filter.active{box-shadow:0 3px 10px color-mix(in srgb,var(--accent) 35%,transparent)}
+
+/* 8. Overlay + Modais */
+body.design-extra .overlay{backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+body.design-extra .modal{border-radius:22px;background:color-mix(in srgb,var(--surface) 90%,transparent);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid color-mix(in srgb,var(--border) 70%,transparent);box-shadow:0 28px 64px rgba(0,0,0,.28),0 8px 24px rgba(0,0,0,.16)}
+body.design-extra .modal-close{transition:background .15s,color .15s,transform .12s}
+body.design-extra .modal-close:hover{transform:scale(1.1)}
+
+/* 9. Botões do formulário */
+body.design-extra .btn-save{border-radius:20px;transition:transform .12s ease,box-shadow .12s,background .15s}
+body.design-extra .btn-save:hover{transform:translateY(-1px);box-shadow:0 4px 14px rgba(0,0,0,.18)}
+body.design-extra .btn-cancel{border-radius:20px;transition:transform .12s ease,background .15s}
+body.design-extra .btn-cancel:hover{transform:translateY(-1px)}
+body.design-extra .btn-del{border-radius:20px;transition:transform .12s ease,background .15s,color .15s}
+body.design-extra .btn-del:hover{transform:translateY(-1px)}
+
+/* 10. Popups */
+body.design-extra .popup{border-radius:18px;background:color-mix(in srgb,var(--surface) 90%,transparent);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);box-shadow:0 16px 42px rgba(0,0,0,.22)}
+body.design-extra .popup-btn{border-radius:12px}
+
+/* 11. Menu de contexto */
+body.design-extra .ctx-menu{border-radius:16px;background:color-mix(in srgb,var(--surface) 92%,transparent);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);box-shadow:0 12px 32px rgba(0,0,0,.22);padding:6px 0}
+body.design-extra .ctx-item{border-radius:8px;margin:0 4px;padding:8px 12px}
+
+/* 12. Day Sheet (MDS) e SRP */
+body.design-extra .mds-sheet{background:color-mix(in srgb,var(--surface) 90%,transparent);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid color-mix(in srgb,var(--border) 60%,transparent)}
+body.design-extra .mds-add-btn{border-radius:20px}
+body.design-extra .mds-open-btn{border-radius:20px}
+body.design-extra #srpSheet{background:color-mix(in srgb,var(--surface) 90%,transparent);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid color-mix(in srgb,var(--border) 60%,transparent)}
+
+/* 13. Cal footer */
+body.design-extra .cal-footer{border-radius:0 0 14px 14px}
+
+/* ── CAMADA 1: MOBILE ── */
+@media(max-width:768px){
+  body.design-extra .bottom-nav{background:color-mix(in srgb,var(--surface) 82%,transparent);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-top:1px solid color-mix(in srgb,var(--border) 50%,transparent);box-shadow:0 -4px 22px rgba(0,0,0,.14)}
+  body.design-extra .mobile-fab{box-shadow:0 8px 24px color-mix(in srgb,var(--accent) 40%,transparent),0 4px 12px rgba(0,0,0,.18);transition:transform .15s ease,box-shadow .15s}
+  body.design-extra .mobile-qa-bar{background:color-mix(in srgb,var(--surface) 85%,transparent);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-bottom:1px solid color-mix(in srgb,var(--border) 55%,transparent)}
+  body.design-extra .mobile-qa-input{border-radius:20px!important}
+}
+
 /* ── UPCOMING VIEW ── */
 .upcoming-view{flex:1;display:none;flex-direction:column;overflow:hidden}
 .upcoming-view.show{display:flex}
