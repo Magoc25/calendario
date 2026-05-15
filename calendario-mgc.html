@@ -346,6 +346,62 @@ body.design-extra #srpSheet{background:color-mix(in srgb,var(--surface) 90%,tran
 /* 13. Cal footer */
 body.design-extra .cal-footer{border-radius:0 0 14px 14px}
 
+/* ── CAMADA 2: ABAS INTERNAS ──────────────────────────────── */
+
+/* ── ABA HOJE ── */
+/* Painéis */
+body.design-extra .tv-panel{border-radius:18px;background:color-mix(in srgb,var(--surface2) 90%,transparent);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);box-shadow:0 4px 18px rgba(0,0,0,.08);border:1px solid color-mix(in srgb,var(--border) 70%,transparent)}
+/* Top 3 items */
+body.design-extra .top3-item{border-radius:14px;transition:transform .12s ease,box-shadow .12s,border-color .15s,background .15s}
+body.design-extra .top3-item:hover{transform:translateY(-2px);box-shadow:0 6px 16px rgba(0,0,0,.10)}
+body.design-extra .top3-num{border-radius:50%}
+/* Tarefas rápidas */
+body.design-extra .qt-add-input{border-radius:14px}
+body.design-extra .qt-add-btn{border-radius:14px;transition:transform .12s ease,box-shadow .12s}
+body.design-extra .qt-add-btn:hover{transform:translateY(-1px);box-shadow:0 4px 10px rgba(0,0,0,.14)}
+body.design-extra .qt-check{border-radius:6px}
+
+/* ── ABA PRÓXIMOS ── */
+body.design-extra .upcoming-ev{border-radius:14px;transition:transform .12s ease,box-shadow .12s,background .15s;background:color-mix(in srgb,var(--surface) 90%,transparent)}
+body.design-extra .upcoming-ev:hover{transform:translateY(-2px);box-shadow:0 6px 18px rgba(0,0,0,.10)}
+body.design-extra .upcoming-day-hol{border-radius:999px}
+body.design-extra .countdown-badge{border-radius:999px}
+
+/* ── ABA ROTINAS ── */
+/* Cards de rotina */
+body.design-extra .routine-card{border-radius:16px;background:color-mix(in srgb,var(--surface2) 90%,transparent);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);transition:transform .12s ease,box-shadow .12s,border-color .15s,background .15s}
+body.design-extra .routine-card:hover{transform:translateY(-2px);box-shadow:0 8px 22px rgba(0,0,0,.12)}
+/* Botão adicionar */
+body.design-extra .rv-add-btn{border-radius:20px;box-shadow:0 3px 10px rgba(0,0,0,.14);transition:transform .12s ease,box-shadow .12s}
+body.design-extra .rv-add-btn:hover{transform:translateY(-1px);box-shadow:0 5px 14px rgba(0,0,0,.20)}
+/* Metric cards (dashboard) */
+body.design-extra .rv-metric-card{border-radius:16px;background:color-mix(in srgb,var(--surface2) 90%,transparent);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);box-shadow:0 3px 12px rgba(0,0,0,.07)}
+/* Filter chips */
+body.design-extra .rv-filter-chip{border-radius:999px;transition:transform .12s ease,background .15s,border-color .15s}
+body.design-extra .rv-filter-chip:hover{transform:translateY(-1px)}
+body.design-extra .rv-filter-chip.sel{box-shadow:0 3px 8px color-mix(in srgb,var(--accent) 28%,transparent)}
+/* Chips de dia da semana no form */
+body.design-extra .rv-day-chip{border-radius:999px}
+/* Formulário de rotina */
+body.design-extra .rv-form{border-radius:18px}
+
+/* ── ABA REVISÃO ── */
+body.design-extra .rew-nav-btn{border-radius:12px}
+body.design-extra .rew-field textarea{border-radius:14px}
+body.design-extra .rew-save-btn{border-radius:20px;box-shadow:0 3px 10px rgba(0,0,0,.14);transition:transform .12s ease,box-shadow .12s,background .15s}
+body.design-extra .rew-save-btn:hover{transform:translateY(-1px);box-shadow:0 5px 14px rgba(0,0,0,.20)}
+/* Stat cards dentro do modal Stats */
+body.design-extra .stat-card{border-radius:16px;background:color-mix(in srgb,var(--surface2) 90%,transparent);box-shadow:0 3px 10px rgba(0,0,0,.07)}
+
+/* ── ABA NOTAS ── */
+body.design-extra .note-card{border-radius:20px;transition:transform .18s ease,box-shadow .18s}
+body.design-extra .note-card:hover{transform:translateY(-4px);box-shadow:0 12px 30px rgba(0,0,0,.14)}
+body.design-extra .note-card-btn{border-radius:8px}
+
+/* Campos de input e select em geral (formulário de evento, etc.) */
+body.design-extra .field input,body.design-extra .field select,body.design-extra .field textarea{border-radius:12px}
+body.design-extra .field input:focus,body.design-extra .field select:focus,body.design-extra .field textarea:focus{box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 20%,transparent)}
+
 /* ── CAMADA 1: MOBILE ── */
 @media(max-width:768px){
   body.design-extra .bottom-nav{background:color-mix(in srgb,var(--surface) 82%,transparent);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-top:1px solid color-mix(in srgb,var(--border) 50%,transparent);box-shadow:0 -4px 22px rgba(0,0,0,.14)}
