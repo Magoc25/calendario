@@ -2189,7 +2189,6 @@ body.large .sidebar-year{font-size:22px}
             <span id="progressLabel"></span>
             <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
           </div>
-          <span class="ev-count" id="evCount"></span>
           <span style="margin-left:auto;display:flex;align-items:center;gap:6px">
             <button class="footer-link-btn" id="reviewsBtn" title="Ver avaliações">⭐ Avaliações</button>
             <button class="footer-link-btn pix-btn" id="pixBtn" title="Apoiar o projeto">☕ Apoiar</button>
@@ -2985,7 +2984,6 @@ const DOM={
   reviewCard:   document.getElementById('reviewCard'),
   notesCard:    document.getElementById('notesCard'),
   notesViewContent: document.getElementById('notesViewContent'),
-  evCount:      document.getElementById('evCount'),
   tagBar:       document.getElementById('tagBar'),
   tagChips:     document.getElementById('tagChips'),
   progressWrap: document.getElementById('progressWrap'),
@@ -3135,6 +3133,7 @@ function suggestFreeSlot(dateStr){
 
 /* ═══════ PROGRESS ═══════ */
 function updateProgress(){
+  if(AppState.viewMode!=='month'){DOM.progressWrap.style.display='none';return;}
   const y=AppState.cur.getFullYear(),m=AppState.cur.getMonth();
   const evMap=buildEvMap(ds(y,m,1),ds(y,m,new Date(y,m+1,0).getDate()));
   let total=0,done=0;
@@ -3776,7 +3775,6 @@ function render(){
   else if(AppState.viewMode==='review')renderReviewView();
   else if(AppState.viewMode==='notes')renderNotesView();
   renderSidebar();updateProgress();renderTodayPreview();updateTagBar();
-  const n=AppState.events.length;DOM.evCount.textContent=`${n} evento${n!==1?'s':''}`;
   syncBottomNav();
 }
 
