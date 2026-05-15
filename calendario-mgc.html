@@ -5415,6 +5415,88 @@ document.addEventListener('keydown',e=>{
   if(!localStorage.getItem(DONE_KEY))setTimeout(()=>{paint();ov.classList.add('open');},600);
 })();
 
+/* ═══════ WEEK SLOT TOOLTIP ═══════ */
+(function initWeekSlotTip(){
+  // CSS injetado — inclui estilo Design Extra
+  const css=document.createElement('style');
+  css.textContent=
+    `.week-slot-tip{display:none;position:fixed;z-index:480;pointer-events:none;
+      background:var(--surface);border:1px solid var(--border);
+      border-radius:var(--radius);box-shadow:var(--shadow-modal);
+      padding:10px 14px;min-width:178px;max-width:224px}
+    .week-slot-tip.visible{display:block;animation:_wstin .13s ease}
+    @keyframes _wstin{from{opacity:0;transform:translateY(-5px)}to{opacity:1;transform:translateY(0)}}
+    .wst-time{font-size:15px;font-weight:700;color:var(--text);line-height:1.2}
+    .wst-date{font-size:10px;color:var(--muted);margin-top:3px}
+    .wst-count{font-size:10px;color:var(--accent);margin-top:2px;font-weight:600}
+    .wst-div{height:1px;background:var(--border);margin:8px 0 7px}
+    .wst-cta{font-size:10px;font-weight:700;color:var(--accent)}
+    /* Design Extra — glass */
+    body.design-extra .week-slot-tip{
+      border-radius:16px;
+      background:color-mix(in srgb,var(--surface) 94%,transparent);
+      backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+      border:1px solid color-mix(in srgb,var(--border) 60%,transparent);
+      box-shadow:0 8px 28px rgba(0,0,0,.18),0 2px 8px rgba(0,0,0,.10)}`;
+  document.head.appendChild(css);
+
+  // Elemento único — reposicionado em cada slot
+  const tip=document.createElement('div');
+  tip.id='weekSlotTip';tip.className='week-slot-tip';
+  document.body.appendChild(tip);
+
+  let _timer=null,_cur=null;
+
+  // Conta eventos que começam no horário h do dia dateStr
+  function evCount(dateStr,h){
+    try{
+      const m=buildEvMap(dateStr,dateStr);
+      return (m[dateStr]||[]).filter(ev=>{
+        if(!ev.start)return false;
+        const[sh]=ev.start.split(':').map(Number);return sh===h;
+      }).length;
+    }catch(e){return 0;}
+  }
+
+  function show(slot){
+    const h=parseInt(slot.dataset.h);
+    const dateStr=slot.dataset.date;
+    if(!dateStr||isNaN(h))return;
+    const d=new Date(dateStr+'T12:00:00');
+    const dayLabel=`${DOWS[d.getDay()]}, ${d.getDate()} de ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+    const n=evCount(dateStr,h);
+    tip.innerHTML=
+      `<div class="wst-time">${pad(h)}:00 – ${pad(h+1)}:00</div>`+
+      `<div class="wst-date">${dayLabel}</div>`+
+      (n>0?`<div class="wst-count">📌 ${n} evento${n>1?'s':''} neste horário</div>`:'')+
+      `<div class="wst-div"></div>`+
+      `<div class="wst-cta">⊕ Clique para criar evento</div>`;
+    // Posiciona à direita do slot; se não couber, vai à esquerda
+    const r=slot.getBoundingClientRect();
+    const tw=200,th=n>0?106:88;
+    let left=r.right+10,top=r.top+(r.height/2)-(th/2);
+    if(left+tw>window.innerWidth-8)left=r.left-tw-10;
+    if(top+th>window.innerHeight-8)top=window.innerHeight-th-8;
+    if(top<8)top=8;
+    tip.style.left=left+'px';tip.style.top=top+'px';
+    tip.classList.add('visible');
+  }
+
+  function hide(){clearTimeout(_timer);_cur=null;tip.classList.remove('visible');}
+
+  const wb=document.getElementById('weekBody');if(!wb)return;
+
+  wb.addEventListener('mouseover',e=>{
+    if(window.innerWidth<=768)return; // touch-only no mobile
+    const slot=e.target.closest('.week-slot');
+    if(slot===_cur)return; // mesmo slot — sem mudança
+    _cur=slot;clearTimeout(_timer);
+    if(!slot){hide();return;}
+    _timer=setTimeout(()=>show(slot),90);
+  });
+  wb.addEventListener('mouseleave',hide);
+})();
+
 /* ═══════ PDF VISUAL EXPORT ═══════ */
 document.getElementById('pdfBtn').addEventListener('click',async()=>{
   if(AppState.viewMode!=='month'){toast('Alterne para a vista Mês para exportar PDF.');return;}
