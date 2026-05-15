@@ -271,16 +271,20 @@ body.design-extra .cal-card{
   background:var(--surface);
 }
 body.design-extra .cal-footer{
-  border-left:1px solid var(--border);
-  border-right:1px solid var(--border);
-  border-bottom:1px solid var(--border);
+  background:var(--surface-glass);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+  border:1px solid var(--border);border-radius:12px;
+  margin:4px 0 8px;box-shadow:0 4px 14px rgba(0,0,0,.08)
 }
 /* Labels Dom/Seg/Ter... — mais destaque */
 body.design-extra .dow{font-weight:800;letter-spacing:.1em;font-size:8.5px;border-radius:8px;padding:2px 4px}
-/* Cabeçalho das colunas da semana — leve destaque + gap entre colunas */
-body.design-extra .week-header-row{column-gap:3px}
-body.design-extra .week-body{column-gap:3px}
-body.design-extra .week-day-head{border-radius:10px;padding:4px 2px;margin-bottom:2px}
+/* Cabeçalho das colunas da semana — colunas flutuantes */
+body.design-extra .week-header-row{background:transparent;column-gap:6px}
+body.design-extra .week-body{column-gap:6px}
+/* Cabeçalho de cada coluna de dia — topo do card flutuante */
+body.design-extra .week-day-head{background:var(--surface-glass);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid var(--border);border-bottom:none;border-radius:12px 12px 0 0;padding:6px 4px;margin-bottom:0}
+body.design-extra .week-day-head .wdow{color:var(--muted)}
+body.design-extra .week-day-head .wdnum{color:var(--text);font-size:15px}
+body.design-extra .week-day-head .wdnum.today-w{background:var(--accent);color:#fff;font-size:13px}
 body.design-extra .wdnum{border-radius:10px;padding:2px 5px}
 
 /* Grid do mês — gap sutil entre células-card */
@@ -296,6 +300,22 @@ body.design-extra .day.other-month .dnum-s{background:transparent;border-color:t
 /* Blocos da semana */
 body.design-extra .week-ev{border-radius:10px!important;box-shadow:0 3px 10px rgba(0,0,0,.10);transition:opacity .14s ease,box-shadow .14s ease}
 body.design-extra .week-ev:hover{box-shadow:0 6px 18px rgba(0,0,0,.18);opacity:.88}
+
+/* ── MÊS: cal-card transparente — aurora visível entre os dias ── */
+body.design-extra #monthCard{background:transparent;border:none;box-shadow:none;border-radius:0;overflow:visible}
+
+/* ── SEMANA: cal-card transparente + colunas flutuantes ── */
+body.design-extra #weekCard{background:transparent;border:none;box-shadow:none;border-radius:0}
+/* Coluna de horas — minimalista/transparente */
+body.design-extra .week-time-col{background:transparent;border-right:none}
+/* Corpo de cada coluna de dia — base do card flutuante */
+body.design-extra .week-day-col{background:var(--surface-glass);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid var(--border);border-top:none;border-right:none;border-radius:0 0 12px 12px;box-shadow:0 6px 20px rgba(0,0,0,.08)}
+/* Coluna de hoje — borda de destaque */
+body.design-extra .week-day-col.today-col{border-color:var(--accent)}
+body.design-extra .week-day-col.today-col .week-slot{background:transparent}
+/* Hover em slot */
+body.design-extra .week-slot:hover{background:rgba(0,0,0,.05)!important}
+
 /* Feriados — badge redondo */
 body.design-extra .holiday-label{border-radius:999px;box-shadow:0 2px 6px rgba(194,65,12,.15);transition:box-shadow .14s ease,filter .14s ease}
 body.design-extra .holiday-label:hover{box-shadow:0 4px 12px rgba(194,65,12,.28);filter:saturate(1.15)}
