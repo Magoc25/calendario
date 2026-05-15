@@ -275,11 +275,18 @@ body.design-extra .cal-footer{
   border:1px solid var(--border);border-radius:12px;
   margin:4px 0 8px;box-shadow:0 4px 14px rgba(0,0,0,.08)
 }
+/* Elementos internos do rodapé */
+body.design-extra .legend-rotina{border-radius:20px;border:1px dashed var(--muted);padding:2px 9px 2px 6px;font-style:italic;font-size:9.5px}
+body.design-extra .ev-count{font-size:10px;font-weight:600;color:var(--text);background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:2px 10px}
+body.design-extra .footer-link-btn{border-radius:20px;font-size:10px;transition:transform .12s ease,box-shadow .12s,border-color .12s}
+body.design-extra .footer-link-btn:hover{transform:translateY(-1px);box-shadow:0 3px 10px rgba(0,0,0,.12);border-color:var(--accent);color:var(--accent)}
 /* Labels Dom/Seg/Ter... — mais destaque */
 body.design-extra .dow{font-weight:800;letter-spacing:.1em;font-size:8.5px;border-radius:8px;padding:2px 4px}
 /* Cabeçalho das colunas da semana — colunas flutuantes */
 body.design-extra .week-header-row{background:transparent;column-gap:6px}
 body.design-extra .week-body{column-gap:6px}
+/* Espaçador de horas no header — transparent (sem o bloquinho branco) */
+body.design-extra .week-time-spacer{background:transparent;border-right:none}
 /* Card tag do dia — cor principal do tema, completamente separado */
 body.design-extra .week-day-head{background:var(--dow-bg);border:1px solid transparent;border-radius:12px;padding:7px 4px;margin-bottom:5px;box-shadow:0 4px 14px rgba(0,0,0,.18)}
 body.design-extra .week-day-head .wdow{color:var(--dow-color)}
@@ -2177,13 +2184,6 @@ body.large .sidebar-year{font-size:22px}
         </div>
         <!-- Footer -->
         <div class="cal-footer">
-          <span class="legend"><span class="ldot ls"></span>Único</span>
-          <span class="legend"><span class="ldot ld"></span>Diário</span>
-          <span class="legend"><span class="ldot lw"></span>Semanal</span>
-          <span class="legend"><span class="ldot lb"></span>Quinzenal</span>
-          <span class="legend"><span class="ldot lm"></span>Mensal</span>
-          <span class="legend"><span class="ldot ly"></span>Anual</span>
-          <span class="legend"><span class="ldot lc"></span>Person.</span>
           <span class="legend-rotina">🔄 Rotina</span>
           <div class="progress-wrap" id="progressWrap" style="display:none">
             <span id="progressLabel"></span>
