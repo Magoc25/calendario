@@ -402,6 +402,58 @@ body.design-extra .note-card-btn{border-radius:8px}
 body.design-extra .field input,body.design-extra .field select,body.design-extra .field textarea{border-radius:12px}
 body.design-extra .field input:focus,body.design-extra .field select:focus,body.design-extra .field textarea:focus{box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 20%,transparent)}
 
+/* ── CAMADA 3: MICRO-ELEMENTOS E REFINAMENTOS ─────────────── */
+
+/* Day Panel — painel lateral do dia (desktop) */
+body.design-extra .day-panel{background:color-mix(in srgb,var(--surface) 90%,transparent);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-left:1px solid color-mix(in srgb,var(--border) 60%,transparent)}
+body.design-extra .dp-head{border-bottom:1px solid color-mix(in srgb,var(--border) 55%,transparent)}
+body.design-extra .dp-ev{border-radius:14px;transition:transform .12s ease,box-shadow .12s,background .15s}
+body.design-extra .dp-ev:hover{transform:translateY(-2px);box-shadow:0 6px 16px rgba(0,0,0,.10)}
+
+/* MDS Sheet — eventos dentro da folha do dia */
+body.design-extra .mds-event{transition:background .12s ease,transform .12s ease}
+body.design-extra .mds-event:hover{transform:translateX(3px)}
+
+/* Notificação in-app */
+body.design-extra .notif-card{border-radius:20px;background:color-mix(in srgb,var(--surface) 92%,transparent);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);box-shadow:0 14px 40px rgba(0,0,0,.22),0 4px 14px rgba(0,0,0,.12)}
+
+/* Toast — pill com glass */
+body.design-extra .toast{backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+body.design-extra .toast-undo{backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+
+/* Charts (Stats modal) — barras mais arredondadas */
+body.design-extra .chart-track{border-radius:999px;height:10px}
+body.design-extra .chart-fill{border-radius:999px}
+body.design-extra .wk-bar{border-radius:4px 4px 0 0}
+body.design-extra .chart-bar-wrap{gap:6px}
+
+/* Calendar list no sidebar */
+body.design-extra .cal-item{border-radius:10px;transition:background .12s ease,transform .12s}
+body.design-extra .cal-item:hover{transform:translateX(3px)}
+
+/* Mini-month ativo — glow sutil */
+body.design-extra .mini-month.active{box-shadow:0 3px 14px color-mix(in srgb,var(--accent) 25%,transparent)}
+body.design-extra .mini-month{border-radius:10px;transition:background .12s,border-color .12s,box-shadow .12s}
+
+/* Sync config banner */
+body.design-extra .sync-config-banner{border-radius:14px}
+
+/* Botões de alerta (acento) — glow no anel */
+body.design-extra .hbtn-accent{box-shadow:0 0 0 1px color-mix(in srgb,var(--accent) 35%,transparent)}
+body.design-extra .hbtn-accent:hover{box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 20%,transparent);transform:translateY(-1px)}
+
+/* Onboarding modal */
+body.design-extra .ob-wrap{background:color-mix(in srgb,var(--surface) 90%,transparent);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid color-mix(in srgb,var(--border) 65%,transparent);box-shadow:0 28px 64px rgba(0,0,0,.28)}
+
+/* Selects em geral */
+body.design-extra select{border-radius:12px!important}
+
+/* Scrollbars finos e suaves */
+body.design-extra ::-webkit-scrollbar{width:4px;height:4px}
+body.design-extra ::-webkit-scrollbar-track{background:transparent}
+body.design-extra ::-webkit-scrollbar-thumb{background:color-mix(in srgb,var(--border) 80%,transparent);border-radius:999px}
+body.design-extra ::-webkit-scrollbar-thumb:hover{background:var(--muted)}
+
 /* ── CAMADA 1: MOBILE ── */
 @media(max-width:768px){
   body.design-extra .bottom-nav{background:color-mix(in srgb,var(--surface) 82%,transparent);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-top:1px solid color-mix(in srgb,var(--border) 50%,transparent);box-shadow:0 -4px 22px rgba(0,0,0,.14)}
