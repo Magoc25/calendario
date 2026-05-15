@@ -66,19 +66,21 @@ Quando quiser sincronizar entre computadores ou acessar pelo celular, basta conf
 
 ### Organização
 - **Multi-calendário** — crie agendas separadas (IFMA, Pessoal, CPA…) com cores individuais
-- **Rotinas** — gerencie hábitos e compromissos fixos com check-in diário
-- **Bloco de Notas por evento** — editor rico com negrito, itálico, listas, cores, marca-texto
+- **Rotinas** — gerencie hábitos e compromissos fixos com check-in diário, streaks e heatmap anual
+- **Bloco de Notas por evento** — editor rico com negrito, itálico, listas, cores, emoji picker
 - **Tags livres** com filtro instantâneo
-- **Busca em tempo real** por título, categoria, local e tags
-- **Categorias** com ícone automático (Aula, Reunião, Rotina, Pessoal, CPA)
+- **Busca em tempo real** por título, categoria, local e tags — clique no resultado abre painel de detalhes
+- **Categorias** com emoji personalizado; templates de duração e local padrão por categoria
+- **Onboarding** — guia rápido de 3 slides para novos usuários; re-acessível no rodapé do sidebar
 
 ### Produtividade
 - **Top 3 prioridades do dia** — arraste eventos, rotinas ou tarefas para definir o foco
-- **Tarefas do dia** — lista leve de afazeres com adição rápida
-- **Captura rápida** na barra lateral — qualquer texto vira tarefa; com horário, vira evento
+- **Tarefas do dia** — lista leve de afazeres com adição rápida e histórico (90 dias)
+- **⚡ Criação rápida** — campo no header (desktop) e barra mobile; cria evento direto ao pressionar Enter; parser detecta hora, data relativa, dia da semana, categoria e calendário pelo nome
 - **Revisão diária** — avaliação por emoji, "o que foi bem", "o que melhorar", histórico
-- **Estatísticas** Mês e Semana — taxa de conclusão, horas, por categoria, dia da semana e turno
+- **Estatísticas** Mês e Semana — taxa de conclusão, horas por categoria, por dia da semana e turno
 - **Anel de progresso** diário em tempo real
+- **Atalhos de teclado** — `N` novo evento, `T` hoje, `←→` navegar, `Esc` fechar, `?` lista de atalhos
 
 ### Alertas
 - Notificações do sistema operacional (Windows Action Center / macOS Notification Center)
@@ -98,8 +100,9 @@ Quando quiser sincronizar entre computadores ou acessar pelo celular, basta conf
 - **Impressão** com CSS otimizado
 
 ### Interface
-- 5 temas visuais: Oceano, Sereno, Aurora, Marfim, Ardósia
-- Modo compacto e normal
+- 5 temas visuais: Oceano, Sereno, Aurora, Marfim, Ardósia + cor personalizada
+- **Design Extra** — modo glass morphism com aurora gradient, floating cards, sidebar em cards separados e colunas flutuantes na Semana
+- 3 densidades: Compacto, Normal, Grande
 - Feriados nacionais brasileiros automáticos (fixos + móveis via algoritmo da Páscoa)
 
 ### Mobile
