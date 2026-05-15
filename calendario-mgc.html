@@ -238,6 +238,39 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);hei
 .now-line::before{content:'';position:absolute;left:-4px;top:-4px;width:10px;height:10px;border-radius:50%;background:#e03131}
 .now-line-time{position:absolute;left:12px;top:-8px;font-size:9px;font-weight:800;color:#e03131;background:var(--surface);padding:0 3px;border-radius:3px;line-height:1.6;white-space:nowrap;letter-spacing:.02em}
 
+/* ════════════════════════════════════════
+   DESIGN EXTRA
+   Ativado por: body.design-extra
+   Compatível com todos os 5 temas de cor.
+   ════════════════════════════════════════ */
+/* Pílulas — forma + dock */
+body.design-extra .ev-pill{border-radius:999px!important;transform-origin:left center;will-change:transform;transition:transform .14s ease,box-shadow .14s ease,opacity .14s ease,filter .14s ease!important;backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px)}
+body.design-extra .ev-pill:hover{transform:scale(1.08);z-index:4;filter:saturate(1.14)}
+/* Fade sutil nas vizinhas durante hover — efeito dock */
+body.design-extra .day-events:hover .ev-pill{opacity:.72}
+body.design-extra .day-events:hover .ev-pill:hover{opacity:1!important;filter:saturate(1.14)}
+/* Pílulas concluídas não escalam */
+body.design-extra .ev-pill.done-pill{transform:none!important}
+body.design-extra .day-events:hover .ev-pill.done-pill{opacity:.35}
+/* +N mais — pill redonda tracejada */
+body.design-extra .ev-more{border-radius:999px;border-style:dashed}
+/* Barras multi-dia mantêm cantos menores */
+body.design-extra .ev-multiday{border-radius:0!important}
+body.design-extra .ev-multiday.md-start{border-radius:6px 0 0 6px!important}
+body.design-extra .ev-multiday.md-end{border-radius:0 6px 6px 0!important}
+body.design-extra .ev-multiday.md-single{border-radius:6px!important}
+/* Células do mês */
+body.design-extra .day{border-radius:16px;border:1px solid var(--border);transition:transform .12s ease,box-shadow .12s ease,border-color .12s ease}
+body.design-extra .day:hover{transform:translateY(-2px);box-shadow:0 8px 22px rgba(0,0,0,.11);border-color:var(--accent)}
+body.design-extra .day.today{border-color:var(--accent)}
+/* Número do dia — badge */
+body.design-extra .dnum-s{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:8px;background:var(--surface2);border:1px solid var(--border);font-weight:800;font-size:11px}
+body.design-extra .day.today .dnum-s{width:22px;height:22px;border-radius:50%;background:var(--today-dot);color:#fff;border-color:transparent;font-size:11px}
+body.design-extra .day.other-month .dnum-s{background:transparent;border-color:transparent;font-weight:600}
+/* Blocos da semana */
+body.design-extra .week-ev{border-radius:10px!important;box-shadow:0 3px 10px rgba(0,0,0,.10);transition:opacity .14s ease,box-shadow .14s ease}
+body.design-extra .week-ev:hover{box-shadow:0 6px 18px rgba(0,0,0,.18);opacity:.88}
+
 /* ── UPCOMING VIEW ── */
 .upcoming-view{flex:1;display:none;flex-direction:column;overflow:hidden}
 .upcoming-view.show{display:flex}
@@ -1780,9 +1813,9 @@ body.large .sidebar-year{font-size:22px}
           </div>
         </div>
         <div id="themeWrap" style="position:relative">
-          <button class="hbtn" id="themeBtn">🎨 Tema</button>
+          <button class="hbtn" id="themeBtn">🎨 Tema & Design</button>
           <div class="popup" id="themePopup" style="width:225px">
-            <h4>Tema</h4>
+            <h4>Tema & Design</h4>
             <div id="themeGrid"></div>
             <div class="divider"></div>
             <div style="display:flex;gap:4px;justify-content:space-between">
@@ -1795,6 +1828,12 @@ body.large .sidebar-year{font-size:22px}
             <div style="display:flex;gap:4px">
               <button class="hbtn" id="btnWeekSun" style="flex:1;padding:3px 0;font-size:10px">Dom</button>
               <button class="hbtn" id="btnWeekMon" style="flex:1;padding:3px 0;font-size:10px">Seg</button>
+            </div>
+            <div class="divider"></div>
+            <div style="font-size:10px;color:var(--muted);margin-bottom:4px">Design</div>
+            <div style="display:flex;gap:4px">
+              <button class="hbtn" id="btnDesignDefault" style="flex:1;padding:3px 0;font-size:10px">Padrão</button>
+              <button class="hbtn" id="btnDesignExtra" style="flex:1;padding:3px 0;font-size:10px">✨ Extra</button>
             </div>
           </div>
         </div>
@@ -2840,6 +2879,7 @@ function makePill(ev,dateStr,forWeek=false){
   const bc=calColor; // borda esquerda — sempre cor do calendário
   // Cor da categoria para fundo e texto; fallback: cor própria do evento → cor do calendário
   const catColor=categoryColors[ev.category]||ev.color||bc;
+  const _xd=document.body.classList.contains('design-extra');
   const rotina=(ev.category||'').toLowerCase()==='rotina';
   const icon=CAT_ICONS[ev.category]||'';
   const recurIcon=ev.rrule&&ev.rrule!=='CUSTOM'?' ↻':ev.rrule==='CUSTOM'?' ⟳':'';
@@ -2849,7 +2889,8 @@ function makePill(ev,dateStr,forWeek=false){
   if(forWeek){
     const doneClass=done?' done-pill':'';
     const titleStyle=done?'text-decoration:line-through;opacity:.6':'';
-    return `<div class="week-ev ${base}${rotina?' is-rotina':''}${doneClass}" data-id="${ev.id}" data-date="${dateStr}" style="border-left-color:${bc};background:${catColor}18${done?';opacity:.55':''};display:flex;align-items:flex-start;gap:3px;overflow:hidden;padding-top:2px" title="${esc(ev.title)}${ev.start?' · '+ev.start:''}${ev.end?' – '+ev.end:''}${done?' ✓ Concluído':''}">
+    const _weekBg=_xd?`linear-gradient(160deg,${catColor}32,${catColor}16)`:catColor+'18';
+    return `<div class="week-ev ${base}${rotina?' is-rotina':''}${doneClass}" data-id="${ev.id}" data-date="${dateStr}" style="border-left-color:${bc};background:${_weekBg}${done?';opacity:.55':''};display:flex;align-items:flex-start;gap:3px;overflow:hidden;padding-top:2px" title="${esc(ev.title)}${ev.start?' · '+ev.start:''}${ev.end?' – '+ev.end:''}${done?' ✓ Concluído':''}">
       <span class="ev-check${done?' checked':''}" data-check-id="${ev.id}" data-check-date="${dateStr}" style="width:9px;height:9px;flex-shrink:0;border-radius:2px;border:1.5px solid ${bc};display:inline-flex;align-items:center;justify-content:center;font-size:6px;cursor:pointer;background:${done?bc:'transparent'};color:#fff"></span>
       <span class="week-ev-time" style="${done?'opacity:.5':''}">${ev.start||''}</span>
       <span class="week-ev-title" style="${titleStyle}">${icon?icon+' ':''}${esc(ev.title)}${recurIcon}</span>
@@ -2866,7 +2907,10 @@ function makePill(ev,dateStr,forWeek=false){
   }
   const timeStr=ev.start?`<span class="ev-time">${ev.start}</span>`:'';
   const noteIcon=hasNotes(ev.id,dateStr)?`<span style="font-size:11px;flex-shrink:0;line-height:1" title="Tem notas">📝</span>`:'';
-  return `<div class="ev-pill ${base}${done?' done-pill':''}${rotina?' is-rotina':''}${mdClass}" data-id="${ev.id}" data-date="${dateStr}" style="border-left-color:${bc};--pill-ev-color:${catColor};background:${catColor}22;color:${catColor}" draggable="true" title="${esc(ev.title)}${ev.category?' ['+esc(ev.category)+']':''}${hasNotes(ev.id,dateStr)?' · tem notas':''}">
+  const _pillStyle=_xd
+    ?`border:1px solid ${catColor}44;border-left:3px solid ${bc};--pill-ev-color:${catColor};background:linear-gradient(160deg,${catColor}3c,${catColor}1e);color:${catColor};box-shadow:0 4px 14px rgba(0,0,0,.13)`
+    :`border-left-color:${bc};--pill-ev-color:${catColor};background:${catColor}22;color:${catColor}`;
+  return `<div class="ev-pill ${base}${done?' done-pill':''}${rotina?' is-rotina':''}${mdClass}" data-id="${ev.id}" data-date="${dateStr}" style="${_pillStyle}" draggable="true" title="${esc(ev.title)}${ev.category?' ['+esc(ev.category)+']':''}${hasNotes(ev.id,dateStr)?' · tem notas':''}">
     <span class="ev-check${done?' checked':''}" data-check-id="${ev.id}" data-check-date="${dateStr}"></span>
     ${timeStr}${icon?`<span class="ev-cat-icon">${icon}</span>`:''}
     <span class="ev-title-text">${esc(ev.title)}${recurIcon}</span>
@@ -4384,6 +4428,18 @@ const _applyDensity=d=>{
 document.getElementById('btnCompact').addEventListener('click',()=>_applyDensity('compact'));
 document.getElementById('btnComfort').addEventListener('click',()=>_applyDensity('comfortable'));
 document.getElementById('btnLarge').addEventListener('click',()=>_applyDensity('large'));
+
+/* ── Design toggle ── */
+function _applyDesign(d){
+  document.body.classList.toggle('design-extra',d==='extra');
+  localStorage.setItem('cal_design',d);
+  document.getElementById('themePopup').classList.remove('open');
+  document.getElementById('btnDesignDefault').classList.toggle('density-active',d==='default');
+  document.getElementById('btnDesignExtra').classList.toggle('density-active',d==='extra');
+  render();
+}
+document.getElementById('btnDesignDefault').addEventListener('click',()=>_applyDesign('default'));
+document.getElementById('btnDesignExtra').addEventListener('click',()=>_applyDesign('extra'));
 
 function applyWeekStart(v){
   weekStart=v;
@@ -7755,6 +7811,10 @@ updateNotifBadge();
 renderCalendarList();
 populateCalendarSelect();
 const density=localStorage.getItem('cal_density');if(density){document.body.classList.add(density);const _db=document.getElementById(_densityMap[density]);if(_db)_db.classList.add('density-active');}
+const _savedDesign=localStorage.getItem('cal_design')||'default';
+if(_savedDesign==='extra')document.body.classList.add('design-extra');
+document.getElementById('btnDesignDefault').classList.toggle('density-active',_savedDesign==='default');
+document.getElementById('btnDesignExtra').classList.toggle('density-active',_savedDesign==='extra');
 // Pre-fill Supabase config modal with stored values
 document.getElementById('sbUrl').value=localStorage.getItem(SB_URL_KEY)||'';
 document.getElementById('sbKey').value=localStorage.getItem(SB_KEY_KEY)||'';
