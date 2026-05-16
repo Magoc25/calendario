@@ -10,6 +10,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Calendário MGC</title>
+<!-- CSP — defesa em profundidade contra XSS (mesmo se o atacante injetar HTML, não consegue exfiltrar para domínio externo) -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://accounts.google.com https://apis.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co https://www.googleapis.com https://oauth2.googleapis.com https://accounts.google.com; frame-src https://accounts.google.com; worker-src 'self'; manifest-src 'self'; base-uri 'self'; form-action 'self'; object-src 'none';">
 <!-- PWA -->
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#3b5bdb">
@@ -8272,10 +8274,10 @@ function renderReviewsModal(){
       const badge=getUserBadge(r.name,appReviews);
       const badgeHtml=badge?`<span class="rev-badge ${badge.cls}">${badge.emoji} ${badge.label}</span>`:'';
       return`<div class="rev-item">
-        <div class="rev-item-header"><div class="rev-name">${r.name}</div>${badgeHtml}${r.donated?'<span class="rev-donated">✓ Apoiou</span>':''}
-        <div class="rev-date">${r.date?r.date.split('-').reverse().join('/'):'—'}</div></div>
+        <div class="rev-item-header"><div class="rev-name">${esc(r.name)}</div>${badgeHtml}${r.donated?'<span class="rev-donated">✓ Apoiou</span>':''}
+        <div class="rev-date">${r.date?esc(r.date).split('-').reverse().join('/'):'—'}</div></div>
         ${r.stars>0?`<div class="rev-stars-row">${'⭐'.repeat(r.stars)}${'☆'.repeat(5-r.stars)}</div>`:''}
-        ${r.comment?`<div class="rev-comment">"${r.comment}"</div>`:''}</div>`;
+        ${r.comment?`<div class="rev-comment">"${esc(r.comment)}"</div>`:''}</div>`;
     }).join('');
 
   document.getElementById('reviewsOverlay').classList.add('open');
