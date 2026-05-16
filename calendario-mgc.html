@@ -8165,6 +8165,12 @@ document.getElementById('reviewsBtn').addEventListener('click',()=>{
 document.getElementById('reviewsClose').addEventListener('click',()=>document.getElementById('reviewsOverlay').classList.remove('open'));
 document.getElementById('reviewsOverlay').addEventListener('click',e=>{if(e.target===document.getElementById('reviewsOverlay'))document.getElementById('reviewsOverlay').classList.remove('open');});
 
+// Mobile: respeita o bloqueio de rotação nativo do dispositivo
+// screen.orientation.lock só funciona em PWA instalado; em aba de browser falha silenciosamente
+if(/Mobi|Android/i.test(navigator.userAgent)&&'orientation' in screen&&screen.orientation.lock){
+  screen.orientation.lock('portrait').catch(()=>{});
+}
+
 applyTheme(currentTheme);
 buildThemeUI();
 updateNotifBadge();
