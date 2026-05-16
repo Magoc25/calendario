@@ -37,7 +37,8 @@
   --shadow:0 4px 24px rgba(59,91,219,.10);
   --shadow-modal:0 12px 56px rgba(26,31,54,.24);
   --input-bg:#fff;
-  --surface-glass:rgba(255,255,255,.82); /* overridden per-theme via JS applyTheme() */
+  --surface-glass:rgba(255,255,255,.82);   /* overridden per-theme via JS applyTheme() */
+  --surface-crystal:rgba(255,255,255,.12); /* Crystal: quase-transparente, por tema */
   --cell-size:1; /* comfortable=1, compact=0.8 */
 }
 body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);height:100vh;overflow:hidden;display:flex;flex-direction:column;transition:background .3s,color .3s}
@@ -554,6 +555,53 @@ body.design-extra ::-webkit-scrollbar-thumb:hover{background:var(--muted)}
   body.design-extra .mobile-fab{box-shadow:0 8px 24px rgba(0,0,0,.22),0 4px 12px rgba(0,0,0,.18);transition:transform .15s ease,box-shadow .15s}
   body.design-extra .mobile-qa-bar{background:var(--surface-glass);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid var(--border);border-radius:18px;margin:0 12px 6px;box-shadow:0 4px 14px rgba(0,0,0,.10)}
   body.design-extra .mobile-qa-input{border-radius:20px!important}
+}
+
+/* ══════════════════════════════════════════════════════
+   DESIGN CRYSTAL — Transparência máxima
+   Ativado por: body.design-extra.design-crystal
+   Herda estrutura do Lumina e sobrepõe backgrounds
+   com opacidade mínima + blur mais intenso.
+══════════════════════════════════════════════════════ */
+
+/* Header */
+body.design-extra.design-crystal .main-header{background:var(--surface-crystal);backdrop-filter:blur(28px);-webkit-backdrop-filter:blur(28px);box-shadow:0 8px 32px rgba(0,0,0,.08)}
+/* Sidebar — 4 cards */
+body.design-extra.design-crystal .sidebar-head,
+body.design-extra.design-crystal .cal-list,
+body.design-extra.design-crystal .sidebar-months,
+body.design-extra.design-crystal .sidebar-foot{background:var(--surface-crystal);backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px);box-shadow:0 4px 12px rgba(0,0,0,.06)}
+/* Cal-footer */
+body.design-extra.design-crystal .cal-footer{background:var(--surface-crystal)!important;backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px)}
+/* Aba Mês — dias do mês atual */
+body.design-extra.design-crystal .day:not(.other-month){background:var(--surface-crystal)}
+/* Aba Semana — tag do dia (perde cor sólida, vira cristal) */
+body.design-extra.design-crystal .week-day-head{background:var(--surface-crystal);backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px);border:1px solid var(--border);box-shadow:0 3px 10px rgba(0,0,0,.08)}
+body.design-extra.design-crystal .week-day-head .wdow{color:var(--muted)}
+body.design-extra.design-crystal .week-day-head .wdnum{color:var(--text)}
+body.design-extra.design-crystal .week-day-head .wdnum.today-w{background:var(--accent);color:#fff;outline:none}
+/* Aba Semana — coluna de eventos */
+body.design-extra.design-crystal .week-day-col{background:var(--surface-crystal);backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px)}
+/* Cal-cards (Hoje, Próximos, Rotinas, Revisão, Notas) */
+body.design-extra.design-crystal .cal-card{background:var(--surface-crystal);backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px)}
+/* Cards internos */
+body.design-extra.design-crystal .routine-card,
+body.design-extra.design-crystal .rv-metric-card,
+body.design-extra.design-crystal .rew-metric-card,
+body.design-extra.design-crystal .rew-mood-chart,
+body.design-extra.design-crystal .stat-card{background:transparent;border:1px solid var(--border)}
+/* Day panel */
+body.design-extra.design-crystal .day-panel{background:var(--surface-crystal);backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px)}
+/* Modais/popups — mantém --surface-glass para leitura */
+body.design-extra.design-crystal .modal,
+body.design-extra.design-crystal .popup,
+body.design-extra.design-crystal .ctx-menu{background:var(--surface-glass)}
+body.design-extra.design-crystal .mds-sheet,
+body.design-extra.design-crystal #srpSheet{background:var(--surface-glass)}
+/* Mobile */
+@media(max-width:768px){
+  body.design-extra.design-crystal .mobile-qa-bar{background:var(--surface-crystal);backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px)}
+  body.design-extra.design-crystal .bottom-nav{background:var(--surface-crystal);backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px)}
 }
 
 /* ── UPCOMING VIEW ── */
@@ -2117,8 +2165,9 @@ body.large .sidebar-year{font-size:22px}
             <div class="divider"></div>
             <div style="font-size:10px;color:var(--muted);margin-bottom:4px">Design</div>
             <div style="display:flex;gap:4px">
-              <button class="hbtn" id="btnDesignDefault" style="flex:1;padding:3px 0;font-size:10px">Padrão</button>
-              <button class="hbtn" id="btnDesignExtra" style="flex:1;padding:3px 0;font-size:10px">✨ Extra</button>
+              <button class="hbtn" id="btnDesignDefault" style="flex:1;padding:3px 0;font-size:10px">Classic</button>
+              <button class="hbtn" id="btnDesignExtra" style="flex:1;padding:3px 0;font-size:10px">✨ Lumina</button>
+              <button class="hbtn" id="btnDesignCrystal" style="flex:1;padding:3px 0;font-size:10px">💎 Crystal</button>
             </div>
           </div>
         </div>
@@ -2799,11 +2848,11 @@ body.large .sidebar-year{font-size:22px}
 <script>
 /* ═══════ THEMES ═══════ */
 const THEMES={
-  oceano:{name:'Oceano',desc:'Claro e profissional',icon:'🌊',sw:['#eef1f8','#3b5bdb','#dde3f5'],v:{'--bg':'#eef1f8','--surface':'#fff','--surface2':'#f4f6fc','--border':'#dde3f5','--text':'#1a1f36','--muted':'#6b7280','--hint':'#b0b8d0','--accent':'#3b5bdb','--accent-dark':'#2748c2','--accent-light':'#eef2ff','--dow-bg':'#3b5bdb','--dow-color':'rgba(255,255,255,.92)','--today-bg':'#eef2ff','--today-dot':'#3b5bdb','--input-bg':'#fff','--surface-glass':'rgba(255,255,255,.82)'}},
-  sereno:{name:'Sereno',desc:'Natural e tranquilo',icon:'🌿',sw:['#f0f5ef','#2e7d32','#d4e8d4'],v:{'--bg':'#f0f5ef','--surface':'#fff','--surface2':'#f5faf4','--border':'#cde4cd','--text':'#1a2e1a','--muted':'#52785a','--hint':'#9dc09d','--accent':'#2e7d32','--accent-dark':'#1b5e20','--accent-light':'#e8f5e9','--dow-bg':'#2e7d32','--dow-color':'rgba(255,255,255,.92)','--today-bg':'#e8f5e9','--today-dot':'#2e7d32','--input-bg':'#fff','--surface-glass':'rgba(255,255,255,.82)'}},
-  aurora:{name:'Aurora',desc:'Escuro e sofisticado',icon:'✨',sw:['#0f1117','#7c4dff','#2d3154'],v:{'--bg':'#0f1117','--surface':'#1a1d2e','--surface2':'#13161f','--border':'#2d3154','--text':'#e8eaf6','--muted':'#9fa8da','--hint':'#3d4275','--accent':'#7c4dff','--accent-dark':'#651fff','--accent-light':'#1a1040','--dow-bg':'#2d3154','--dow-color':'rgba(200,210,255,.95)','--today-bg':'#1a1040','--today-dot':'#7c4dff','--input-bg':'#1a1d2e','--surface-glass':'rgba(26,29,46,.84)'}},
-  marfim:{name:'Marfim',desc:'Elegante e refinado',icon:'🏛️',sw:['#faf8f3','#b8860b','#e8dfc8'],v:{'--bg':'#faf8f3','--surface':'#fff','--surface2':'#f6f2e8','--border':'#e2d9c4','--text':'#2c2416','--muted':'#8b7355','--hint':'#c4aa80','--accent':'#b8860b','--accent-dark':'#8b6914','--accent-light':'#fdf8e8','--dow-bg':'#b8860b','--dow-color':'rgba(255,255,255,.95)','--today-bg':'#fdf8e8','--today-dot':'#b8860b','--input-bg':'#fff','--surface-glass':'rgba(255,255,255,.82)'}},
-  ardosia:{name:'Ardósia',desc:'Moderno e minimalista',icon:'🪨',sw:['#1e2433','#38bdf8','#3a4460'],v:{'--bg':'#1e2433','--surface':'#252d40','--surface2':'#1a2130','--border':'#3a4460','--text':'#e2e8f0','--muted':'#94a3b8','--hint':'#475569','--accent':'#38bdf8','--accent-dark':'#0ea5e9','--accent-light':'#0c1a2e','--dow-bg':'#334155','--dow-color':'rgba(255,255,255,.9)','--today-bg':'#0c1a2e','--today-dot':'#38bdf8','--input-bg':'#252d40','--surface-glass':'rgba(37,45,64,.84)'}}
+  oceano:{name:'Oceano',desc:'Claro e profissional',icon:'🌊',sw:['#eef1f8','#3b5bdb','#dde3f5'],v:{'--bg':'#eef1f8','--surface':'#fff','--surface2':'#f4f6fc','--border':'#dde3f5','--text':'#1a1f36','--muted':'#6b7280','--hint':'#b0b8d0','--accent':'#3b5bdb','--accent-dark':'#2748c2','--accent-light':'#eef2ff','--dow-bg':'#3b5bdb','--dow-color':'rgba(255,255,255,.92)','--today-bg':'#eef2ff','--today-dot':'#3b5bdb','--input-bg':'#fff','--surface-glass':'rgba(255,255,255,.82)','--surface-crystal':'rgba(255,255,255,.12)'}},
+  sereno:{name:'Sereno',desc:'Natural e tranquilo',icon:'🌿',sw:['#f0f5ef','#2e7d32','#d4e8d4'],v:{'--bg':'#f0f5ef','--surface':'#fff','--surface2':'#f5faf4','--border':'#cde4cd','--text':'#1a2e1a','--muted':'#52785a','--hint':'#9dc09d','--accent':'#2e7d32','--accent-dark':'#1b5e20','--accent-light':'#e8f5e9','--dow-bg':'#2e7d32','--dow-color':'rgba(255,255,255,.92)','--today-bg':'#e8f5e9','--today-dot':'#2e7d32','--input-bg':'#fff','--surface-glass':'rgba(255,255,255,.82)','--surface-crystal':'rgba(255,255,255,.12)'}},
+  aurora:{name:'Aurora',desc:'Escuro e sofisticado',icon:'✨',sw:['#0f1117','#7c4dff','#2d3154'],v:{'--bg':'#0f1117','--surface':'#1a1d2e','--surface2':'#13161f','--border':'#2d3154','--text':'#e8eaf6','--muted':'#9fa8da','--hint':'#3d4275','--accent':'#7c4dff','--accent-dark':'#651fff','--accent-light':'#1a1040','--dow-bg':'#2d3154','--dow-color':'rgba(200,210,255,.95)','--today-bg':'#1a1040','--today-dot':'#7c4dff','--input-bg':'#1a1d2e','--surface-glass':'rgba(26,29,46,.84)','--surface-crystal':'rgba(26,29,46,.18)'}},
+  marfim:{name:'Marfim',desc:'Elegante e refinado',icon:'🏛️',sw:['#faf8f3','#b8860b','#e8dfc8'],v:{'--bg':'#faf8f3','--surface':'#fff','--surface2':'#f6f2e8','--border':'#e2d9c4','--text':'#2c2416','--muted':'#8b7355','--hint':'#c4aa80','--accent':'#b8860b','--accent-dark':'#8b6914','--accent-light':'#fdf8e8','--dow-bg':'#b8860b','--dow-color':'rgba(255,255,255,.95)','--today-bg':'#fdf8e8','--today-dot':'#b8860b','--input-bg':'#fff','--surface-glass':'rgba(255,255,255,.82)','--surface-crystal':'rgba(255,255,255,.12)'}},
+  ardosia:{name:'Ardósia',desc:'Moderno e minimalista',icon:'🪨',sw:['#1e2433','#38bdf8','#3a4460'],v:{'--bg':'#1e2433','--surface':'#252d40','--surface2':'#1a2130','--border':'#3a4460','--text':'#e2e8f0','--muted':'#94a3b8','--hint':'#475569','--accent':'#38bdf8','--accent-dark':'#0ea5e9','--accent-light':'#0c1a2e','--dow-bg':'#334155','--dow-color':'rgba(255,255,255,.9)','--today-bg':'#0c1a2e','--today-dot':'#38bdf8','--input-bg':'#252d40','--surface-glass':'rgba(37,45,64,.84)','--surface-crystal':'rgba(37,45,64,.18)'}}
 };
 let currentTheme=localStorage.getItem('cal_theme')||'oceano';
 let weekStart=parseInt(localStorage.getItem('cal_week_start')||'0'); // 0=Dom, 1=Seg
@@ -4710,15 +4759,18 @@ document.getElementById('btnLarge').addEventListener('click',()=>_applyDensity('
 
 /* ── Design toggle ── */
 function _applyDesign(d){
-  document.body.classList.toggle('design-extra',d==='extra');
+  document.body.classList.toggle('design-extra',d==='extra'||d==='crystal');
+  document.body.classList.toggle('design-crystal',d==='crystal');
   localStorage.setItem('cal_design',d);
   document.getElementById('themePopup').classList.remove('open');
   document.getElementById('btnDesignDefault').classList.toggle('density-active',d==='default');
   document.getElementById('btnDesignExtra').classList.toggle('density-active',d==='extra');
+  document.getElementById('btnDesignCrystal').classList.toggle('density-active',d==='crystal');
   render();
 }
 document.getElementById('btnDesignDefault').addEventListener('click',()=>_applyDesign('default'));
 document.getElementById('btnDesignExtra').addEventListener('click',()=>_applyDesign('extra'));
+document.getElementById('btnDesignCrystal').addEventListener('click',()=>_applyDesign('crystal'));
 
 function applyWeekStart(v){
   weekStart=v;
@@ -8178,9 +8230,11 @@ renderCalendarList();
 populateCalendarSelect();
 const density=localStorage.getItem('cal_density');if(density){document.body.classList.add(density);const _db=document.getElementById(_densityMap[density]);if(_db)_db.classList.add('density-active');}
 const _savedDesign=localStorage.getItem('cal_design')||'default';
-if(_savedDesign==='extra')document.body.classList.add('design-extra');
+if(_savedDesign==='extra'||_savedDesign==='crystal')document.body.classList.add('design-extra');
+if(_savedDesign==='crystal')document.body.classList.add('design-crystal');
 document.getElementById('btnDesignDefault').classList.toggle('density-active',_savedDesign==='default');
 document.getElementById('btnDesignExtra').classList.toggle('density-active',_savedDesign==='extra');
+document.getElementById('btnDesignCrystal').classList.toggle('density-active',_savedDesign==='crystal');
 // Pre-fill Supabase config modal with stored values
 document.getElementById('sbUrl').value=localStorage.getItem(SB_URL_KEY)||'';
 document.getElementById('sbKey').value=localStorage.getItem(SB_KEY_KEY)||'';
