@@ -101,7 +101,7 @@ Quando quiser sincronizar entre computadores ou acessar pelo celular, basta conf
 
 ### Interface
 - 5 temas visuais: Oceano, Sereno, Aurora, Marfim, Ardósia + cor personalizada
-- **Design Extra** — modo glass morphism com aurora gradient, floating cards, sidebar em cards separados e colunas flutuantes na Semana
+- **3 modos de design** — Classic (padrão), ✨ Lumina (glass morphism + floating cards + aurora gradient) e 💎 Crystal (transparência máxima, vidro cristal em todos os elementos)
 - 3 densidades: Compacto, Normal, Grande
 - Feriados nacionais brasileiros automáticos (fixos + móveis via algoritmo da Páscoa)
 
