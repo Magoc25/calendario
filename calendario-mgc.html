@@ -3004,13 +3004,13 @@ function openCalModal(calId){
   document.getElementById('calDeleteBtn').style.display=c&&c.id!=='default'?'':'none';
   selectedCalColor=c?c.color:'#3b5bdb';
   document.querySelectorAll('#calColorRow .color-swatch-big').forEach(s=>s.classList.toggle('selected',s.dataset.c===selectedCalColor));
-  document.getElementById('calOverlay').classList.add('open');
+  DOM.calOverlay.classList.add('open');
   setTimeout(()=>document.getElementById('calName').focus(),60);
 }
 document.getElementById('btnAddCal').addEventListener('click',()=>openCalModal(null));
-document.getElementById('calCancelBtn').addEventListener('click',()=>document.getElementById('calOverlay').classList.remove('open'));
-document.getElementById('calModalClose').addEventListener('click',()=>document.getElementById('calOverlay').classList.remove('open'));
-document.getElementById('calOverlay').addEventListener('click',e=>{if(e.target===document.getElementById('calOverlay'))document.getElementById('calOverlay').classList.remove('open');});
+document.getElementById('calCancelBtn').addEventListener('click',()=>DOM.calOverlay.classList.remove('open'));
+document.getElementById('calModalClose').addEventListener('click',()=>DOM.calOverlay.classList.remove('open'));
+DOM.calOverlay.addEventListener('click',e=>{if(e.target===DOM.calOverlay)DOM.calOverlay.classList.remove('open');});
 document.querySelectorAll('#calColorRow .color-swatch-big').forEach(s=>{
   s.addEventListener('click',()=>{
     selectedCalColor=s.dataset.c;
@@ -3027,7 +3027,7 @@ document.getElementById('calSaveBtn').addEventListener('click',()=>{
     calendars.push({id:uid(),name,color:selectedCalColor,visible:true});
   }
   saveCalendars();renderCalendarList();populateCalendarSelect();
-  document.getElementById('calOverlay').classList.remove('open');
+  DOM.calOverlay.classList.remove('open');
   render();toast(editingCalId?'Calendário atualizado!':'Calendário criado!');
 });
 document.getElementById('calDeleteBtn').addEventListener('click',()=>{
@@ -3036,7 +3036,7 @@ document.getElementById('calDeleteBtn').addEventListener('click',()=>{
   AppState.events.forEach(ev=>{if(ev.calendarId===editingCalId)ev.calendarId='default';});
   calendars=calendars.filter(c=>c.id!==editingCalId);
   save();saveCalendars();renderCalendarList();populateCalendarSelect();
-  document.getElementById('calOverlay').classList.remove('open');
+  DOM.calOverlay.classList.remove('open');
   render();toast('Calendário excluído.');
 });
 
@@ -3055,6 +3055,7 @@ const safeHtml=h=>(typeof DOMPurify!=='undefined')?DOMPurify.sanitize(h||''):esc
 
 // Cache de referências DOM estáticas — evita getElementById repetido em cada render()
 const DOM={
+  // Cards de view (cada cal-card)
   todayCard:    document.getElementById('todayCard'),
   monthCard:    document.getElementById('monthCard'),
   weekCard:     document.getElementById('weekCard'),
@@ -3067,6 +3068,18 @@ const DOM={
   tagChips:     document.getElementById('tagChips'),
   progressWrap: document.getElementById('progressWrap'),
   calFooter:    document.querySelector('.cal-footer'),
+  // Overlays e popups (acessados frequentemente em handlers)
+  overlay:           document.getElementById('overlay'),
+  calOverlay:        document.getElementById('calOverlay'),
+  supabaseOverlay:   document.getElementById('supabaseOverlay'),
+  pixOverlay:        document.getElementById('pixOverlay'),
+  gcalOverlay:       document.getElementById('gcalOverlay'),
+  reviewsOverlay:    document.getElementById('reviewsOverlay'),
+  mdsOverlay:        document.getElementById('mdsOverlay'),
+  themePopup:        document.getElementById('themePopup'),
+  backupPopup:       document.getElementById('backupPopup'),
+  ctxMenu:           document.getElementById('ctxMenu'),
+  ctxBackdrop:       document.getElementById('ctxBackdrop'),
 };
 
 // Cache de buildEvMap — invalidado a cada save() para evitar recomputação desnecessária
@@ -3080,6 +3093,9 @@ const saveCatColors=()=>{localStorage.setItem('cal_catcolors',JSON.stringify(cat
 function saveCategories(){localStorage.setItem('cal_categories',JSON.stringify(AppState.categories));localStorage.setItem('cal_local_ts',new Date().toISOString());rebuildCatIcons();renderCatTags();};
 const todayDs=()=>{const t=new Date();return ds(t.getFullYear(),t.getMonth(),t.getDate())};
 const toast=msg=>{const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2400)};
+// Debug log — só imprime em dev (localhost) ou se URL tiver ?debug=1
+const _debug=location.hostname==='localhost'||location.hostname==='127.0.0.1'||/[?&]debug=1\b/.test(location.search);
+const dlog=(...a)=>{if(_debug)console.log(...a);};
 let _toastUndoTimer=null;
 const toastUndo=(msg,undoFn,delay=5000)=>{
   const el=document.getElementById('toastUndo'),msgEl=document.getElementById('toastUndoMsg'),btn=document.getElementById('toastUndoBtn');
@@ -4563,7 +4579,7 @@ function openNew(date){
   document.getElementById('evCalendar').value=calendars[0]?.id||'default';
   // Auto-suggest slot
   if(date){const slot=suggestFreeSlot(date);const h=document.getElementById('freeSlotHint');if(slot){h.textContent=`💡 Próximo horário livre: ${slot.start} – ${slot.end} (clique para usar)`;h.style.display='block';h.onclick=()=>{document.getElementById('evStart').value=slot.start;document.getElementById('evEnd').value=slot.end;h.style.display='none';};}else h.style.display='none';}
-  document.getElementById('overlay').classList.add('open');
+  DOM.overlay.classList.add('open');
   if(window._vvAttach)window._vvAttach();
   setTimeout(()=>{document.getElementById('evTitle').focus();if(window.ctsSync){ctsSync('evStart');ctsSync('evEnd');}},60);
 }
@@ -4588,19 +4604,19 @@ function openEdit(id,dateCtx){
   document.getElementById('evCalendar').value=ev.calendarId||'default';
   setDoneUI(ev.rrule?isDoneOn(ev,editingDate):!!ev.done);
   currentTags=[...(ev.tags||[])];renderTagPills();
-  document.getElementById('overlay').classList.add('open');
+  DOM.overlay.classList.add('open');
   if(window._vvAttach)window._vvAttach();
   setTimeout(()=>{document.getElementById('evTitle').focus();if(window.ctsSync){ctsSync('evStart');ctsSync('evEnd');}},60);
 }
 
 const closeModal=()=>{
   if(window._vvDetach)window._vvDetach();
-  document.getElementById('overlay').classList.remove('open');
+  DOM.overlay.classList.remove('open');
   editingId=null;editingDate=null;
 };
 document.getElementById('cancelBtn').addEventListener('click',closeModal);
 document.getElementById('closeBtn').addEventListener('click',closeModal);
-document.getElementById('overlay').addEventListener('click',e=>{if(e.target===document.getElementById('overlay'))closeModal();});
+DOM.overlay.addEventListener('click',e=>{if(e.target===DOM.overlay)closeModal();});
 
 document.getElementById('saveBtn').addEventListener('click',()=>{
   try{
@@ -4775,7 +4791,7 @@ const _densityMap={compact:'btnCompact',comfortable:'btnComfort',large:'btnLarge
 const _applyDensity=d=>{
   document.body.className=document.body.className.replace(/compact|comfortable|large/g,'').trim()+(d?' '+d:'');
   localStorage.setItem('cal_density',d);
-  document.getElementById('themePopup').classList.remove('open');
+  DOM.themePopup.classList.remove('open');
   Object.entries(_densityMap).forEach(([k,id])=>document.getElementById(id).classList.toggle('density-active',k===d));
   if(AppState.viewMode==='week')renderWeek();
 };
@@ -4788,7 +4804,7 @@ function _applyDesign(d){
   document.body.classList.toggle('design-extra',d==='extra'||d==='crystal');
   document.body.classList.toggle('design-crystal',d==='crystal');
   localStorage.setItem('cal_design',d);
-  document.getElementById('themePopup').classList.remove('open');
+  DOM.themePopup.classList.remove('open');
   document.getElementById('btnDesignDefault').classList.toggle('density-active',d==='default');
   document.getElementById('btnDesignExtra').classList.toggle('density-active',d==='extra');
   document.getElementById('btnDesignCrystal').classList.toggle('density-active',d==='crystal');
@@ -4803,7 +4819,7 @@ function applyWeekStart(v){
   localStorage.setItem('cal_week_start',v);
   document.getElementById('btnWeekSun').classList.toggle('density-active',v===0);
   document.getElementById('btnWeekMon').classList.toggle('density-active',v===1);
-  document.getElementById('themePopup').classList.remove('open');
+  DOM.themePopup.classList.remove('open');
   render();renderSidebar();
 }
 document.getElementById('btnWeekSun').addEventListener('click',()=>applyWeekStart(0));
@@ -4819,7 +4835,7 @@ document.getElementById('reloadBtn').addEventListener('click',()=>location.reloa
   document.getElementById(name+'Btn').addEventListener('click',e=>{e.stopPropagation();['backup','theme'].forEach(n=>{if(n!==name)document.getElementById(n+'Popup').classList.remove('open');});document.getElementById(name+'Popup').classList.toggle('open');});
   document.getElementById(name+'Popup').addEventListener('click',e=>e.stopPropagation());
 });
-document.addEventListener('click',()=>{document.getElementById('backupPopup').classList.remove('open');document.getElementById('themePopup').classList.remove('open');});
+document.addEventListener('click',()=>{DOM.backupPopup.classList.remove('open');DOM.themePopup.classList.remove('open');});
 
 /* ═══════ ICS BUILDER ═══════ */
 function buildIcs(){
@@ -4839,7 +4855,7 @@ function buildIcs(){
 }
 
 /* ═══════ ICS IMPORT ═══════ */
-document.getElementById('importIcsBtn').addEventListener('click',()=>{document.getElementById('importIcsFile').click();document.getElementById('backupPopup').classList.remove('open');});
+document.getElementById('importIcsBtn').addEventListener('click',()=>{document.getElementById('importIcsFile').click();DOM.backupPopup.classList.remove('open');});
 document.getElementById('importIcsFile').addEventListener('change',function(){
   const file=this.files[0];if(!file)return;
   const reader=new FileReader();
@@ -4898,9 +4914,9 @@ document.getElementById('exportJsonBtn').addEventListener('click',()=>{
     exportedAt:new Date().toISOString(),events:AppState.events};
   const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
   const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`backup-calendario-${new Date().toISOString().slice(0,10)}.json`;a.click();URL.revokeObjectURL(url);
-  document.getElementById('backupPopup').classList.remove('open');toast('Backup exportado!');
+  DOM.backupPopup.classList.remove('open');toast('Backup exportado!');
 });
-document.getElementById('importJsonBtn').addEventListener('click',()=>{document.getElementById('importFile').click();document.getElementById('backupPopup').classList.remove('open');});
+document.getElementById('importJsonBtn').addEventListener('click',()=>{document.getElementById('importFile').click();DOM.backupPopup.classList.remove('open');});
 document.getElementById('importFile').addEventListener('change',function(){
   const file=this.files[0];if(!file)return;
   const reader=new FileReader();
@@ -4917,9 +4933,9 @@ document.getElementById('importFile').addEventListener('change',function(){
   reader.readAsText(file);this.value='';
 });
 document.getElementById('exportIcsBtn').addEventListener('click',()=>{
-  if(!AppState.events.length){toast('Nenhum evento para exportar.');document.getElementById('backupPopup').classList.remove('open');return;}
+  if(!AppState.events.length){toast('Nenhum evento para exportar.');DOM.backupPopup.classList.remove('open');return;}
   const blob=new Blob([buildIcs()],{type:'text/calendar;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='calendario-marlon.ics';a.click();URL.revokeObjectURL(url);
-  document.getElementById('backupPopup').classList.remove('open');toast(`${AppState.events.length} evento(s) exportados!`);
+  DOM.backupPopup.classList.remove('open');toast(`${AppState.events.length} evento(s) exportados!`);
 });
 
 /* ═══════ BACKUP MOBILE MODAL ═══════ */
@@ -5179,20 +5195,20 @@ function hasNotes(evId,evDate){const k=noteKey(evId,evDate);return !!notesStore[
 /* ═══════ CONTEXT MENU ═══════ */
 let ctxEvId=null,ctxEvDate=null;
 function closeCtxMenu(){
-  document.getElementById('ctxMenu').classList.remove('open');
-  document.getElementById('ctxBackdrop').classList.remove('open');
+  DOM.ctxMenu.classList.remove('open');
+  DOM.ctxBackdrop.classList.remove('open');
 }
 function openCtxMenu(e,evId,evDate){
   ctxEvId=evId;ctxEvDate=evDate;
   const ev=AppState.events.find(x=>x.id===evId);
-  const menu=document.getElementById('ctxMenu');
+  const menu=DOM.ctxMenu;
   document.getElementById('ctxSkip').style.display=ev&&ev.rrule?'flex':'none';
   const hasN=hasNotes(evId,ctxEvDate);
   document.getElementById('ctxNotes').textContent=hasN?'📝 Notas (com conteúdo)':'📝 Notas do evento';
   menu.style.left=Math.min(e.clientX,window.innerWidth-190)+'px';
   menu.style.top=Math.min(e.clientY,window.innerHeight-180)+'px';
   menu.classList.add('open');
-  document.getElementById('ctxBackdrop').classList.add('open');
+  DOM.ctxBackdrop.classList.add('open');
 }
 /* ── Mover evento ── */
 let _moveEvId=null,_moveEvDate=null;
@@ -5235,7 +5251,7 @@ function moveEventToDate(evId,fromDate,toDate){
 document.getElementById('moveCancelBtn').addEventListener('click',exitMoveMode);
 
 document.getElementById('ctxCancel').addEventListener('click',closeCtxMenu);
-document.getElementById('ctxBackdrop').addEventListener('click',e=>{e.stopPropagation();closeCtxMenu();});
+DOM.ctxBackdrop.addEventListener('click',e=>{e.stopPropagation();closeCtxMenu();});
 
 document.getElementById('ctxMove').addEventListener('click',()=>{
   closeCtxMenu();
@@ -5944,7 +5960,7 @@ function openMobileDaySheet(dateStr){
   }
   document.getElementById('mdsAddBtn').onclick=()=>{closeMobileDaySheet();openNew(dateStr);};
   document.getElementById('mdsOpenBtn').onclick=()=>_mdsGoToDay();
-  document.getElementById('mdsOverlay').classList.add('open');
+  DOM.mdsOverlay.classList.add('open');
   requestAnimationFrame(()=>document.getElementById('mdsSheet').classList.add('open'));
 }
 
@@ -5959,12 +5975,12 @@ function _mdsGoToDay(){
 
 function closeMobileDaySheet(){
   document.getElementById('mdsSheet').classList.remove('open');
-  document.getElementById('mdsOverlay').classList.remove('open');
+  DOM.mdsOverlay.classList.remove('open');
   _mdsDate=null;
   if(window._srpClose){window._srpClose();} // fecha SRP se aberto (via ações do ctx menu)
 }
 
-document.getElementById('mdsOverlay').addEventListener('click',closeMobileDaySheet);
+DOM.mdsOverlay.addEventListener('click',closeMobileDaySheet);
 
 /* ═══════ VIRTUAL KEYBOARD — ajuste de altura do modal ═══════
    Quando o teclado virtual sobe no mobile, o visualViewport encolhe.
@@ -5979,7 +5995,7 @@ document.getElementById('mdsOverlay').addEventListener('click',closeMobileDayShe
 
   function onVVResize(){
     if(!isMobile())return;
-    const m=modal(),ol=document.getElementById('overlay');
+    const m=modal(),ol=DOM.overlay;
     if(!m||!ol)return;
     const vv=window.visualViewport;
     const keyboardOpen=vv.height<window.innerHeight*0.8;
@@ -6010,7 +6026,7 @@ document.getElementById('mdsOverlay').addEventListener('click',closeMobileDayShe
 
   function detachVV(){
     window.visualViewport.removeEventListener('resize', onVVResize);
-    const m=modal(),ol=document.getElementById('overlay');
+    const m=modal(),ol=DOM.overlay;
     if(m){m.style.removeProperty('height');m.style.removeProperty('max-height');}
     if(ol){ol.style.removeProperty('align-items');ol.style.removeProperty('padding-top');ol.style.removeProperty('padding-bottom');}
   }
@@ -7453,36 +7469,32 @@ function _scheduleSbSync(){
 // (We can't re-declare const, so we shadow it via a wrapper called after save)
 
 
-// Sync button
+// Helper: pré-preenche formulário Supabase com valores salvos
+const _prefillSbForm=()=>{
+  document.getElementById('sbUrl').value=localStorage.getItem(SB_URL_KEY)||'';
+  document.getElementById('sbKey').value=localStorage.getItem(SB_KEY_KEY)||'';
+};
+
+// Sync button — abre config se não configurado, senão sincroniza
 document.getElementById('syncBtn').addEventListener('click',async()=>{
   if(syncStatus==='unconfigured'){
-    document.getElementById('supabaseOverlay').classList.add('open');
+    _prefillSbForm();
+    DOM.supabaseOverlay.classList.add('open');
     return;
   }
   if(syncStatus==='syncing')return;
   await syncFromCloud(false);
 });
 
-// Config link in banner
+// Config link no banner — abre modal pré-preenchido
 document.getElementById('syncConfigLink').addEventListener('click',()=>{
-  document.getElementById('supabaseOverlay').classList.add('open');
+  _prefillSbForm();
+  DOM.supabaseOverlay.classList.add('open');
 });
 
-// Config modal
-document.getElementById('supabaseClose').addEventListener('click',()=>document.getElementById('supabaseOverlay').classList.remove('open'));
-document.getElementById('supabaseOverlay').addEventListener('click',e=>{if(e.target===document.getElementById('supabaseOverlay'))document.getElementById('supabaseOverlay').classList.remove('open');});
-
-// Pre-fill with saved values
-document.getElementById('syncConfigLink').addEventListener('click',()=>{
-  document.getElementById('sbUrl').value=localStorage.getItem(SB_URL_KEY)||'';
-  document.getElementById('sbKey').value=localStorage.getItem(SB_KEY_KEY)||'';
-});
-document.getElementById('syncBtn').addEventListener('click',()=>{
-  if(syncStatus==='unconfigured'){
-    document.getElementById('sbUrl').value=localStorage.getItem(SB_URL_KEY)||'';
-    document.getElementById('sbKey').value=localStorage.getItem(SB_KEY_KEY)||'';
-  }
-},true); // capture phase — runs before the other listener
+// Fechar modal
+document.getElementById('supabaseClose').addEventListener('click',()=>DOM.supabaseOverlay.classList.remove('open'));
+DOM.supabaseOverlay.addEventListener('click',e=>{if(e.target===DOM.supabaseOverlay)DOM.supabaseOverlay.classList.remove('open');});
 
 async function testSupabaseConnection(url,key){
   const res=document.getElementById('sbTestResult');
@@ -7523,7 +7535,7 @@ document.getElementById('sbSaveBtn').addEventListener('click',async()=>{
   localStorage.setItem(SB_URL_KEY,url);
   localStorage.setItem(SB_KEY_KEY,key);
   sbClient=window.supabase.createClient(url,key);
-  document.getElementById('supabaseOverlay').classList.remove('open');
+  DOM.supabaseOverlay.classList.remove('open');
   document.getElementById('syncConfigBanner').style.display='none';
   toast('✓ Supabase configurado! Sincronizando…');
   await syncFromCloud(false);
@@ -7534,7 +7546,7 @@ document.getElementById('sbClearBtn').addEventListener('click',()=>{
   localStorage.removeItem(SB_URL_KEY);localStorage.removeItem(SB_KEY_KEY);
   sbClient=null;setSyncStatus('unconfigured');
   document.getElementById('syncConfigBanner').style.display='flex';
-  document.getElementById('supabaseOverlay').classList.remove('open');
+  DOM.supabaseOverlay.classList.remove('open');
   toast('Configuração removida. Usando modo local.');
 });
 
@@ -7587,7 +7599,7 @@ function gcalShowPanel(){
     document.getElementById('gcalPanelSync').style.display='none';
     document.getElementById('gcalClearBtn').style.display=clientId?'':'none';
   }
-  document.getElementById('gcalOverlay').classList.add('open');
+  DOM.gcalOverlay.classList.add('open');
 }
 
 async function gcalLoadCalendars(){
@@ -7910,9 +7922,9 @@ async function gcalSync(pullOnly=false){
 
 // Wire Google button
 document.getElementById('gcalBtn').addEventListener('click',()=>gcalShowPanel());
-document.getElementById('gcalClose').addEventListener('click',()=>document.getElementById('gcalOverlay').classList.remove('open'));
-document.getElementById('gcalOverlay').addEventListener('click',e=>{if(e.target===document.getElementById('gcalOverlay'))document.getElementById('gcalOverlay').classList.remove('open');});
-document.getElementById('gcalCancelBtn').addEventListener('click',()=>document.getElementById('gcalOverlay').classList.remove('open'));
+document.getElementById('gcalClose').addEventListener('click',()=>DOM.gcalOverlay.classList.remove('open'));
+DOM.gcalOverlay.addEventListener('click',e=>{if(e.target===DOM.gcalOverlay)DOM.gcalOverlay.classList.remove('open');});
+document.getElementById('gcalCancelBtn').addEventListener('click',()=>DOM.gcalOverlay.classList.remove('open'));
 
 document.getElementById('gcalLoginBtn').addEventListener('click',()=>{
   const clientId=document.getElementById('gcalClientId').value.trim();
@@ -7949,7 +7961,7 @@ document.getElementById('gcalClearBtn').addEventListener('click',()=>{
   localStorage.removeItem('cal_gcal_email');
   gcalToken=null;gcalTokenExpiry=0;gcalTokenClient=null;
   updateGcalBtn();
-  document.getElementById('gcalOverlay').classList.remove('open');
+  DOM.gcalOverlay.classList.remove('open');
   toast('Configuração Google removida.');
 });
 
@@ -7958,7 +7970,7 @@ document.getElementById('gcalDisconnectBtn').addEventListener('click',()=>{
   gcalToken=null;gcalTokenExpiry=0;
   sessionStorage.removeItem(GCAL_TOKEN_KEY);
   updateGcalBtn();
-  document.getElementById('gcalOverlay').classList.remove('open');
+  DOM.gcalOverlay.classList.remove('open');
   toast('Desconectado do Google Agenda.');
 });
 
@@ -8177,12 +8189,12 @@ function openPixModal(){
   document.querySelectorAll('.pix-star').forEach(s=>s.classList.remove('active'));
   document.getElementById('pixRevName').value='';
   document.getElementById('pixRevComment').value='';
-  document.getElementById('pixOverlay').classList.add('open');
+  DOM.pixOverlay.classList.add('open');
 }
 
 document.getElementById('pixBtn').addEventListener('click',openPixModal);
-document.getElementById('pixClose').addEventListener('click',()=>document.getElementById('pixOverlay').classList.remove('open'));
-document.getElementById('pixOverlay').addEventListener('click',e=>{if(e.target===document.getElementById('pixOverlay'))document.getElementById('pixOverlay').classList.remove('open');});
+document.getElementById('pixClose').addEventListener('click',()=>DOM.pixOverlay.classList.remove('open'));
+DOM.pixOverlay.addEventListener('click',e=>{if(e.target===DOM.pixOverlay)DOM.pixOverlay.classList.remove('open');});
 
 document.querySelectorAll('.pix-amount-btn').forEach(btn=>{
   btn.addEventListener('click',()=>{
@@ -8217,7 +8229,7 @@ function submitReview(donated=true){
   const name=document.getElementById('pixRevName').value.trim()||'Anônimo';
   const comment=document.getElementById('pixRevComment').value.trim();
   const stars=pixSelectedRating;
-  if(stars===0&&!comment){document.getElementById('pixOverlay').classList.remove('open');return;}
+  if(stars===0&&!comment){DOM.pixOverlay.classList.remove('open');return;}
   const review={id:uid(),name,comment,stars,donated,date:todayDs(),ts:new Date().toISOString()};
   appReviews.unshift(review);
   saveAppReviews();
@@ -8227,8 +8239,8 @@ function submitReview(donated=true){
 }
 
 document.getElementById('pixSubmitReview').addEventListener('click',()=>submitReview(true));
-document.getElementById('pixSkipReview').addEventListener('click',()=>document.getElementById('pixOverlay').classList.remove('open'));
-document.getElementById('pixFinalClose').addEventListener('click',()=>document.getElementById('pixOverlay').classList.remove('open'));
+document.getElementById('pixSkipReview').addEventListener('click',()=>DOM.pixOverlay.classList.remove('open'));
+document.getElementById('pixFinalClose').addEventListener('click',()=>DOM.pixOverlay.classList.remove('open'));
 
 // Calcula quantos meses distintos um usuário doou e retorna seu badge
 function getUserBadge(name,memberReviews){
@@ -8284,13 +8296,13 @@ function renderReviewsModal(){
         ${r.comment?`<div class="rev-comment">"${esc(r.comment)}"</div>`:''}</div>`;
     }).join('');
 
-  document.getElementById('reviewsOverlay').classList.add('open');
+  DOM.reviewsOverlay.classList.add('open');
 }
 document.getElementById('reviewsBtn').addEventListener('click',()=>{
   loadSharedReviews().then(()=>renderReviewsModal());
 });
-document.getElementById('reviewsClose').addEventListener('click',()=>document.getElementById('reviewsOverlay').classList.remove('open'));
-document.getElementById('reviewsOverlay').addEventListener('click',e=>{if(e.target===document.getElementById('reviewsOverlay'))document.getElementById('reviewsOverlay').classList.remove('open');});
+document.getElementById('reviewsClose').addEventListener('click',()=>DOM.reviewsOverlay.classList.remove('open'));
+DOM.reviewsOverlay.addEventListener('click',e=>{if(e.target===DOM.reviewsOverlay)DOM.reviewsOverlay.classList.remove('open');});
 
 // Mobile: respeita o bloqueio de rotação nativo do dispositivo
 // screen.orientation.lock só funciona em PWA instalado; em aba de browser falha silenciosamente
@@ -8338,7 +8350,7 @@ async function registerSW(){
   if(!('serviceWorker' in navigator))return;
   try{
     _swReg=await navigator.serviceWorker.register('./sw.js',{scope:'./'});
-    console.log('[PWA] Service Worker registrado, state:',_swReg.active?.state||'installing');
+    dlog('[PWA] Service Worker registrado, state:',_swReg.active?.state||'installing');
 
     // If SW is installing, wait for it to activate
     if(!_swReg.active){
@@ -8357,7 +8369,7 @@ async function registerSW(){
         firedAlerts.add(e.data.key);saveFired();
       }
       if(e.data?.type==='PONG'){
-        console.log('[PWA] SW respondeu ao ping');
+        dlog('[PWA] SW respondeu ao ping');
       }
     });
 
@@ -8370,11 +8382,11 @@ async function registerSW(){
         const status=await navigator.permissions.query({name:'periodic-background-sync'});
         if(status.state==='granted'){
           await _swReg.periodicSync.register('cal-mgc-alerts',{minInterval:15*60*1000});
-          console.log('[PWA] Periodic Background Sync registrado (15 min)');
+          dlog('[PWA] Periodic Background Sync registrado (15 min)');
         }else{
-          console.log('[PWA] Periodic sync sem permissão, state:',status.state);
+          dlog('[PWA] Periodic sync sem permissão, state:',status.state);
         }
-      }catch(e){console.log('[PWA] Periodic sync não disponível:',e.message);}
+      }catch(e){dlog('[PWA] Periodic sync não disponível:',e.message);}
     }
 
     // Sync alerts right after registration
@@ -8409,7 +8421,7 @@ function syncAlertsToSW(){
   });
   if(swAlerts.length){
     sw.postMessage({type:'STORE_ALERTS',data:{alerts:swAlerts,catIcons:CAT_ICONS}});
-    console.log('[PWA] '+swAlerts.length+' alerta(s) enviado(s) para o SW');
+    dlog('[PWA] '+swAlerts.length+' alerta(s) enviado(s) para o SW');
   }
 }
 
