@@ -25,6 +25,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.8/purify.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
@@ -2988,7 +2989,9 @@ function renderCalendarList(){
 
 function populateCalendarSelect(){
   const sel=document.getElementById('evCalendar');
-  sel.innerHTML=calendars.map(c=>`<option value="${c.id}" style="color:${c.color}">${c.name}</option>`).join('');
+  // Valida color como hex/named CSS color (evita CSS injection); escapa name (evita HTML injection)
+  const safeColor=c=>/^(#[0-9a-fA-F]{3,8}|[a-zA-Z]+)$/.test(c||'')?c:'inherit';
+  sel.innerHTML=calendars.map(c=>`<option value="${esc(c.id)}" style="color:${safeColor(c.color)}">${esc(c.name)}</option>`).join('');
 }
 
 function openCalModal(calId){
@@ -3044,6 +3047,9 @@ const pad=n=>String(n).padStart(2,'0');
 const ds=(y,m,d)=>`${y}-${pad(m+1)}-${pad(d)}`;
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2);
 const esc=s=>String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+// safeHtml: sanitiza HTML rico (para notas) preservando formatação legítima
+// Se DOMPurify falhar (CDN offline), degrada para escape simples — sem formatação mas seguro
+const safeHtml=h=>(typeof DOMPurify!=='undefined')?DOMPurify.sanitize(h||''):esc(h||'');
 
 // Cache de referências DOM estáticas — evita getElementById repetido em cada render()
 const DOM={
@@ -4967,7 +4973,7 @@ function openNotes(evId,evDate){
   document.getElementById('notesEvDate').textContent=dateStr;
   // Load saved content
   const editor=document.getElementById('notesEditor');
-  editor.innerHTML=notesStore[nk]||'';
+  editor.innerHTML=safeHtml(notesStore[nk]);
   document.getElementById('notesSavedLabel').textContent=notesStore[nk]?'💾 Notas salvas':'📝 Sem notas ainda';
   document.getElementById('notesOverlay').classList.add('open');
   setTimeout(()=>editor.focus(),80);
@@ -6972,7 +6978,7 @@ function openNoteEdit(noteId){
     if(!note)return;
     _editingNoteId=noteId;
     document.getElementById('neTitleInput').value=note.title||'';
-    document.getElementById('neEditor').innerHTML=note.content||'';
+    document.getElementById('neEditor').innerHTML=safeHtml(note.content);
     document.getElementById('neColorPick').value=note.color||'#3b5bdb';
     const pinBtn=document.getElementById('nePinBtn');
     pinBtn.classList.toggle('active',!!note.pinned);
@@ -7027,22 +7033,25 @@ function _renderNotesGrid(search){
   grid.innerHTML=ordered.length===0
     ?`<div class="nv-empty"><div class="nv-empty-icon">📝</div>${s?'Nenhuma nota encontrada.':'Nenhuma nota ainda.<br><small>Clique em "+ Nova nota" para começar.</small>'}</div>`
     :`<div class="nv-grid">
-      ${ordered.map(n=>{const c=n.color||'#3b5bdb';return`
-        <div class="note-card" data-note-id="${n.id}" draggable="true"
+      ${ordered.map(n=>{
+        // Valida cor hex (#fff, #ffffff, #ffffff88) — bloqueia CSS injection
+        const c=/^#[0-9a-fA-F]{3,8}$/.test(n.color||'')?n.color:'#3b5bdb';
+        return`
+        <div class="note-card" data-note-id="${esc(n.id)}" draggable="true"
           style="background:linear-gradient(135deg,${c}22 0%,${c}0a 60%,transparent 100%);border-color:${c}40;box-shadow:0 4px 20px ${c}22">
           <div style="position:absolute;inset:0;border-radius:14px;background:linear-gradient(135deg,${c}18 0%,${c}06 100%);pointer-events:none"></div>
           <div class="note-card-top">
             <span class="note-card-drag-handle" title="Arrastar para reordenar">⠿</span>
             <div class="note-card-dot" style="background:${c};box-shadow:0 0 6px ${c}88"></div>
-            <div class="note-card-title">${n.title||'Sem título'}</div>
+            <div class="note-card-title">${esc(n.title||'Sem título')}</div>
             ${n.pinned?`<span class="note-card-pin-badge">📌 fixado</span>`:''}
           </div>
-          <div class="note-card-preview">${preview(n.content||'')}</div>
+          <div class="note-card-preview">${esc(preview(n.content||''))}</div>
           <div class="note-card-footer">
             <span class="note-card-date">${fmtDate(n.updatedAt||n.createdAt)}</span>
             <div class="note-card-actions">
-              <button class="note-card-btn" data-note-pin="${n.id}" title="${n.pinned?'Desafixar':'Fixar'}">${n.pinned?'📌':'📍'}</button>
-              <button class="note-card-btn" data-note-del="${n.id}" title="Excluir" style="color:#c0392b">🗑</button>
+              <button class="note-card-btn" data-note-pin="${esc(n.id)}" title="${n.pinned?'Desafixar':'Fixar'}">${n.pinned?'📌':'📍'}</button>
+              <button class="note-card-btn" data-note-del="${esc(n.id)}" title="Excluir" style="color:#c0392b">🗑</button>
             </div>
           </div>
         </div>`}).join('')}
