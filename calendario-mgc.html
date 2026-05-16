@@ -10,6 +10,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Calendário MGC</title>
+<!-- Suprime prompt de instalação do Chrome o mais cedo possível -->
+<script>window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();});</script>
 <!-- PWA -->
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#3b5bdb">
@@ -8287,9 +8289,7 @@ function syncAlertsToSW(){
 // Register SW on load
 registerSW();
 
-// Suprime o prompt automático do Chrome "toque para copiar URL / adicionar à tela inicial"
-// O app já é uma PWA instalável — o usuário instala manualmente se quiser
-window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();});
+// beforeinstallprompt suprimido no <head> para garantir registro antes do evento disparar
 
 // Re-sync when app becomes visible (user returns to app after minimizing)
 document.addEventListener('visibilitychange',()=>{
