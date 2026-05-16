@@ -22,11 +22,13 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Serif+Display&display=swap" rel="stylesheet">
+<!-- Dependências externas (CDN) — versões pinadas para reprodutibilidade.
+     Atualização manual: alterar versão + bump CACHE_NAME em sw.js + commit dedicado. -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.8/purify.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-app-region:no-drag}
@@ -4875,7 +4877,7 @@ document.getElementById('importIcsFile').addEventListener('change',function(){
     // Converte COUNT em until aproximado (N ocorrências a partir da data de início)
     imported.forEach(ev=>{
       if(ev._icsCount&&ev.rrule&&!ev.until){
-        const d=new Date(ev.date+'T12:00:00');
+        let d=new Date(ev.date+'T12:00:00');
         for(let i=1;i<ev._icsCount;i++)d=advance(d,ev.rrule);
         ev.until=ds(d.getFullYear(),d.getMonth(),d.getDate());
       }
@@ -4914,12 +4916,6 @@ document.getElementById('importFile').addEventListener('change',function(){
   };
   reader.readAsText(file);this.value='';
 });
-document.getElementById('exportIcsBtn').addEventListener('click',()=>{
-  if(!AppState.events.length){toast('Nenhum evento para exportar.');document.getElementById('backupPopup').classList.remove('open');return;}
-  const blob=new Blob([buildIcs()],{type:'text/calendar;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='calendario-marlon.ics';a.click();URL.revokeObjectURL(url);
-  document.getElementById('backupPopup').classList.remove('open');toast(`${AppState.events.length} evento(s) exportados!`);
-});
-
 document.getElementById('exportIcsBtn').addEventListener('click',()=>{
   if(!AppState.events.length){toast('Nenhum evento para exportar.');document.getElementById('backupPopup').classList.remove('open');return;}
   const blob=new Blob([buildIcs()],{type:'text/calendar;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='calendario-marlon.ics';a.click();URL.revokeObjectURL(url);
@@ -7477,7 +7473,6 @@ document.getElementById('supabaseClose').addEventListener('click',()=>document.g
 document.getElementById('supabaseOverlay').addEventListener('click',e=>{if(e.target===document.getElementById('supabaseOverlay'))document.getElementById('supabaseOverlay').classList.remove('open');});
 
 // Pre-fill with saved values
-document.getElementById('supabaseOverlay').addEventListener('transitionend',()=>{});
 document.getElementById('syncConfigLink').addEventListener('click',()=>{
   document.getElementById('sbUrl').value=localStorage.getItem(SB_URL_KEY)||'';
   document.getElementById('sbKey').value=localStorage.getItem(SB_KEY_KEY)||'';
