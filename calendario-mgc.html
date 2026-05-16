@@ -5339,11 +5339,13 @@ document.addEventListener('keydown',e=>{
       agosto:7,ago:7,setembro:8,set:8,outubro:9,out:9,novembro:10,nov:10,dezembro:11,dez:11};
     const PREPS='(?:no|na|nos|nas|num|numa|em|do|da|para|pro|pra|ao|à)';
 
-    // Helper: remove token e preposição anterior se houver (ex: "no IFMA" → remove tudo)
+    // Helper: com preposição → mantém no título (calendário é contexto local, ex: "no IFMA")
+    //          sem preposição → remove do título (tag puro, ex: "IFMA amanhã")
     function stripWithPrep(nameRx){
       const rxPrep=new RegExp(LNLT+PREPS+'\\s+'+nameRx+RNLT,'i');
       const rxPlain=new RegExp(LNLT+nameRx+RNLT,'i');
-      str=(rxPrep.test(str)?str.replace(rxPrep,''):str.replace(rxPlain,'')).replace(/\s+/g,' ').trim();
+      if(!rxPrep.test(str)){str=str.replace(rxPlain,'').replace(/\s+/g,' ').trim();}
+      // Com preposição: calendário atribuído mas "no IFMA" permanece no título
     }
 
     // ── 1. Data numérica dd/mm[/yyyy], dd.mm[.yyyy] ─────────────
