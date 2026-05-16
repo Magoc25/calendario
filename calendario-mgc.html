@@ -5333,16 +5333,76 @@ document.addEventListener('keydown',e=>{
     let str=text.trim();
     let date=null,startTime=null,endTime=null,category='',calendarId='';
 
-    // Data relativa: hoje / amanhã — usa lookahead/lookbehind em vez de \b
-    // para lidar com chars acentuados no final de "amanhã"
-    const relM=str.match(new RegExp(LNLT+'(hoje|amanhã|amanha)'+RNLT,'i'));
-    if(relM){
-      const d=new Date();d.setDate(d.getDate()+(relM[1].toLowerCase()==='hoje'?0:1));
-      date=ds(d.getFullYear(),d.getMonth(),d.getDate());
-      str=str.replace(relM[0],'').trim();
+    // ── Meses pt-BR ────────────────────────────────────────────
+    const MESES={janeiro:0,jan:0,fevereiro:1,fev:1,'março':2,marco:2,mar:2,
+      abril:3,abr:3,maio:4,mai:4,junho:5,jun:5,julho:6,jul:6,
+      agosto:7,ago:7,setembro:8,set:8,outubro:9,out:9,novembro:10,nov:10,dezembro:11,dez:11};
+    const PREPS='(?:no|na|nos|nas|num|numa|em|do|da|para|pro|pra|ao|à)';
+
+    // Helper: remove token e preposição anterior se houver (ex: "no IFMA" → remove tudo)
+    function stripWithPrep(nameRx){
+      const rxPrep=new RegExp(LNLT+PREPS+'\\s+'+nameRx+RNLT,'i');
+      const rxPlain=new RegExp(LNLT+nameRx+RNLT,'i');
+      str=(rxPrep.test(str)?str.replace(rxPrep,''):str.replace(rxPlain,'')).replace(/\s+/g,' ').trim();
     }
 
-    // Dia da semana: segunda, terça-feira, …
+    // ── 1. Data numérica dd/mm[/yyyy], dd.mm[.yyyy] ─────────────
+    if(!date){
+      const m=str.match(/\b(\d{1,2})[\/\.](\d{1,2})(?:[\/\.](\d{2,4}))?\b/);
+      if(m){
+        const day=parseInt(m[1]),mon=parseInt(m[2])-1;
+        let yr=m[3]?parseInt(m[3]):new Date().getFullYear();
+        if(yr<100)yr+=2000;
+        if(mon>=0&&mon<=11&&day>=1&&day<=31){
+          const d=new Date(yr,mon,day);
+          date=ds(d.getFullYear(),d.getMonth(),d.getDate());
+          str=str.replace(m[0],'').replace(/\s+/g,' ').trim();
+        }
+      }
+    }
+
+    // ── 2. Data por extenso: [dia] dd de mês [de yyyy] ──────────
+    if(!date){
+      const mesRx=Object.keys(MESES).join('|');
+      const m=str.match(new RegExp('(?:no\\s+dia\\s+|dia\\s+)?(\\d{1,2})\\s+de\\s+('+mesRx+')(?:\\s+de\\s+(\\d{2,4}))?','i'));
+      if(m){
+        const day=parseInt(m[1]),mon=MESES[m[2].toLowerCase()];
+        let yr=m[3]?parseInt(m[3]):new Date().getFullYear();
+        if(yr<100)yr+=2000;
+        if(mon!==undefined&&day>=1&&day<=31){
+          const d=new Date(yr,mon,day);
+          date=ds(d.getFullYear(),d.getMonth(),d.getDate());
+          str=str.replace(m[0],'').replace(/\s+/g,' ').trim();
+        }
+      }
+    }
+
+    // ── 3. "dia N" — próxima ocorrência desse número no calendário
+    if(!date){
+      const m=str.match(/\b(?:no\s+)?dia\s+(\d{1,2})\b/i);
+      if(m){
+        const day=parseInt(m[1]);
+        if(day>=1&&day<=31){
+          const today=new Date();
+          let d=new Date(today.getFullYear(),today.getMonth(),day);
+          if(d<=today)d=new Date(today.getFullYear(),today.getMonth()+1,day);
+          date=ds(d.getFullYear(),d.getMonth(),d.getDate());
+          str=str.replace(m[0],'').replace(/\s+/g,' ').trim();
+        }
+      }
+    }
+
+    // ── 4. Data relativa: hoje / amanhã ─────────────────────────
+    if(!date){
+      const relM=str.match(new RegExp(LNLT+'(hoje|amanhã|amanha)'+RNLT,'i'));
+      if(relM){
+        const d=new Date();d.setDate(d.getDate()+(relM[1].toLowerCase()==='hoje'?0:1));
+        date=ds(d.getFullYear(),d.getMonth(),d.getDate());
+        str=str.replace(relM[0],'').replace(/\s+/g,' ').trim();
+      }
+    }
+
+    // ── 5. Dia da semana ─────────────────────────────────────────
     if(!date){
       const dowM=str.match(/\b(domingo|segunda|terça|terca|quarta|quinta|sexta|sábado|sabado)(-feira)?\b/i);
       if(dowM){
@@ -5351,52 +5411,43 @@ document.addEventListener('keydown',e=>{
         let diff=target-cur;if(diff<=0)diff+=7;
         const d=new Date(today);d.setDate(d.getDate()+diff);
         date=ds(d.getFullYear(),d.getMonth(),d.getDate());
-        str=str.replace(dowM[0],'').trim();
+        str=str.replace(dowM[0],'').replace(/\s+/g,' ').trim();
       }
     }
 
-    // Hora: 14h, 14h30, 14h30m, 14hs, 14:30
-    // "s?" aceita "10hs" (abreviatura de "horas" em pt-BR)
+    // ── 6. Hora: 14h, 14h30, 14hs, 14:30 ────────────────────────
     const timeM=str.match(/\b(\d{1,2})hs?(\d{2})?m?\b|\b(\d{1,2}):(\d{2})\b/i);
     if(timeM){
       let h,m;
       if(timeM[1]!==undefined){h=parseInt(timeM[1]);m=parseInt(timeM[2]||'0');}
       else{h=parseInt(timeM[3]);m=parseInt(timeM[4]);}
       if(h>=0&&h<=23&&m>=0&&m<=59)startTime=pad(h)+':'+pad(m);
-      str=str.replace(timeM[0],'').trim();
+      str=str.replace(timeM[0],'').replace(/\s+/g,' ').trim();
     }
 
-    // Categoria — encontra TODOS os matches e prefere o mais à direita no texto
-    // (contexto/categoria costuma vir depois do título em linguagem natural)
+    // ── 7. Categoria — rightmost; mantida no título (mais natural) ─
     let catPos=-1;
     for(const cat of AppState.categories){
       const rx=new RegExp(LNLT+escRx(cat.name)+RNLT,'ig');
       let m;
-      while((m=rx.exec(str))!==null){
-        if(m.index>catPos){catPos=m.index;category=cat.name;}
-      }
+      while((m=rx.exec(str))!==null){if(m.index>catPos){catPos=m.index;category=cat.name;}}
     }
-    if(category){
-      const rx=new RegExp(LNLT+escRx(category)+RNLT,'i');
-      str=str.replace(rx,'').trim();
-    }
+    // Categoria identificada mas NÃO removida do título — evento "Reunião Fulano" mantém o nome completo
 
-    // Calendário — mesmo critério: match mais à direita, ignora calendário padrão
+    // ── 8. Calendário — rightmost + remove preposição anterior ────
     let calPos=-1;
     for(const cal of calendars){
       if(cal.id==='default')continue;
       const rx=new RegExp(LNLT+escRx(cal.name)+RNLT,'ig');
       let m;
-      while((m=rx.exec(str))!==null){
-        if(m.index>calPos){calPos=m.index;calendarId=cal.id;}
-      }
+      while((m=rx.exec(str))!==null){if(m.index>calPos){calPos=m.index;calendarId=cal.id;}}
     }
     if(calendarId){
       const calName=calendars.find(c=>c.id===calendarId)?.name||'';
-      if(calName){const rx=new RegExp(LNLT+escRx(calName)+RNLT,'i');str=str.replace(rx,'').trim();}
+      if(calName)stripWithPrep(escRx(calName));
     }
 
-    // Duração via template da categoria; fallback 60min
+    // ── 9. Duração via template da categoria; fallback 60min ──────
     if(startTime){
       const tpl=category?getCatTemplates()[category]:null;
       const dur=(tpl?.duration>0)?tpl.duration:60;
