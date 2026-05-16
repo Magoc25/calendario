@@ -1,8 +1,14 @@
 # Calendário MGC — Termos de Uso e Isenção de Responsabilidade
 
-**Versão:** 1.0  
-**Data:** Abril de 2026  
+**Versão:** 2.0  
+**Data:** Maio de 2026  
 **Desenvolvedor:** Marlon Gomes da Costa (MGC Dev)
+
+> 📋 **Documentos complementares (leitura recomendada):**
+> - [`PRIVACY.md`](./PRIVACY.md) — Aviso de Privacidade (LGPD)
+> - [`SECURITY.md`](./SECURITY.md) — Política de Segurança e Resposta a Incidentes
+> - [`ACCESSIBILITY.md`](./ACCESSIBILITY.md) — Declaração de Acessibilidade
+> - [`DATA_INVENTORY.md`](./DATA_INVENTORY.md) — Inventário de tratamento de dados
 
 > ⚠️ **Este é um projeto pessoal e independente.** O Calendário MGC não é produto, serviço ou iniciativa do IFMA (Instituto Federal do Maranhão) ou de qualquer outra instituição. O desenvolvedor é professor do IFMA, mas atua aqui exclusivamente em capacidade pessoal.
 
@@ -95,7 +101,37 @@ As avaliações enviadas através da funcionalidade de apoio são de responsabil
 
 ---
 
-## 6. Backups e Responsabilidade pelos Dados
+## 6. Obrigações do usuário sobre atualizações de segurança
+
+### 6.1 Mecanismo de notificação de atualizações
+
+Quando uma nova versão do Calendário MGC é publicada, o usuário é notificado através de:
+
+1. **Banner de atualização** no app (para usuários com Supabase configurado, via `app_config`)
+2. **Histórico no [CHANGELOG.md](./CHANGELOG.md)** com identificação clara de **correções de segurança** marcadas com `🔒 Security`
+3. **Releases no repositório GitHub**
+
+### 6.2 Diligência exigida do usuário
+
+Ao receber notificação de atualização, é **obrigação do usuário**:
+
+- ✅ Consultar o [`CHANGELOG.md`](./CHANGELOG.md) para identificar o conteúdo da atualização
+- ✅ Aplicar correções marcadas com `🔒 Security` em **prazo razoável**
+- ✅ Manter o navegador e sistema operacional atualizados (dependências da Camada 2)
+
+### 6.3 Culpa concorrente e exoneração de responsabilidade
+
+Conforme o **Art. 945 do Código Civil** e o **Art. 12, §3º do CDC**, o desenvolvedor **não responde** por danos decorrentes de vulnerabilidades que:
+
+- ✅ Foram **corrigidas e publicadas** com correção disponível;
+- ✅ Foram **notificadas pelos canais oficiais** (CHANGELOG.md + banner);
+- ✅ E o usuário **não aplicou a atualização** em prazo razoável.
+
+Este mecanismo está alinhado com o **Art. 8º da Lei 9.609/1998** (dever do autor de comunicar correções) e a **Resolução CD/ANPD nº 15/2024** (canal estabelecido de comunicação).
+
+---
+
+## 7. Backups e Responsabilidade pelos Dados
 
 O usuário é **inteiramente responsável** por realizar backups regulares dos seus dados. Recomenda-se:
 
@@ -107,13 +143,50 @@ O usuário é **inteiramente responsável** por realizar backups regulares dos s
 
 ---
 
-## 7. Modificações nos Termos
+## 8. Acessibilidade
 
-O desenvolvedor reserva-se o direito de modificar estes termos a qualquer momento, publicando a versão atualizada neste repositório. O uso continuado do software após publicação de novos termos implica aceitação dos mesmos.
+O Calendário MGC adota as **Diretrizes WCAG 2.2 nível AA** (em conformidade parcial) e a **norma ABNT NBR 17225:2025**, em atendimento ao **Art. 63 da Lei 13.146/2015 (LBI)**.
+
+Detalhes completos, limitações conhecidas e canal para reportar problemas estão em [`ACCESSIBILITY.md`](./ACCESSIBILITY.md).
 
 ---
 
-## 8. Disposições Finais
+## 9. Uso por menores de idade
+
+O Calendário MGC **não é destinado a menores de 18 anos** sem supervisão de pais ou responsáveis. Conforme **Lei 15.211/2025 (ECA Digital)**:
+
+- Não há coleta de dados pessoais identificáveis de menores na infraestrutura do desenvolvedor (Camada 1);
+- Pais/responsáveis devem supervisionar o uso por menores;
+- Em caso de identificação de uso indevido por menor, dados serão removidos.
+
+---
+
+## 10. Conformidade Legal
+
+Este projeto é desenvolvido em conformidade com a legislação brasileira aplicável:
+
+| Lei / Regulamento | Conformidade |
+|---|---|
+| Lei 13.709/2018 (LGPD) | [`PRIVACY.md`](./PRIVACY.md) + [`DATA_INVENTORY.md`](./DATA_INVENTORY.md) |
+| Lei 12.965/2014 (Marco Civil) | Direitos do usuário garantidos |
+| Lei 15.211/2025 (ECA Digital) | Seção 9 deste documento + privacy by default |
+| Lei 13.146/2015 (LBI) | [`ACCESSIBILITY.md`](./ACCESSIBILITY.md) |
+| Lei 12.737/2012 (Cibersegurança) | [`SECURITY.md`](./SECURITY.md) |
+| Lei 9.609/1998 (Software) | [`LICENSE.md`](./LICENSE.md) |
+| Resolução CD/ANPD nº 2/2022 (ATPP) | Enquadramento aplicado |
+| Resolução CD/ANPD nº 15/2024 (incidentes) | [`SECURITY.md`](./SECURITY.md) Seção 4 |
+
+Fontes oficiais consultadas: [Planalto](https://www.planalto.gov.br/), [Autoridade Nacional de Proteção de Dados (ANPD)](https://www.gov.br/anpd/), [Ministério da Justiça e Segurança Pública](https://www.gov.br/mj/).
+
+---
+
+## 11. Modificações nos Termos
+
+O desenvolvedor reserva-se o direito de modificar estes termos a qualquer momento, publicando a versão atualizada neste repositório. **Mudanças materiais** (que alterem direitos ou obrigações substancialmente) terão aviso prévio de **30 dias** antes da vigência. O uso continuado do software após publicação de novos termos implica aceitação dos mesmos.
+
+---
+
+## 12. Disposições Finais
 
 - Este documento rege-se pelas leis brasileiras;
 - Eventuais disputas serão resolvidas no foro da comarca de São Raimundo das Mangabeiras — MA, Brasil;
@@ -125,6 +198,15 @@ O desenvolvedor reserva-se o direito de modificar estes termos a qualquer moment
 
 **© 2026 MGC Dev — Marlon Gomes da Costa**  
 *Desenvolvedor independente — projeto pessoal, sem vínculo institucional*
+
+---
+
+## Histórico de versões
+
+| Versão | Data | Mudanças |
+|---|---|---|
+| 2.0 | 2026-05-16 | Adequação à legislação brasileira: novas seções 6 (atualizações + culpa concorrente), 8 (acessibilidade), 9 (menores/ECA Digital), 10 (conformidade legal). Referências aos documentos PRIVACY.md, SECURITY.md, ACCESSIBILITY.md, DATA_INVENTORY.md |
+| 1.0 | 2026-04 | Versão inicial |
 
 ---
 
