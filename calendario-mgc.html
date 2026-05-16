@@ -303,7 +303,7 @@ body.design-extra .day{border-radius:16px;border:1px solid var(--border);transit
 /* Dias do mês atual — card sólido com fundo */
 body.design-extra .day:not(.other-month){background:var(--surface)}
 body.design-extra .day:not(.other-month):hover{transform:translateY(-2px);box-shadow:0 8px 22px rgba(0,0,0,.11);border-color:var(--accent)}
-body.design-extra .day.today{border-color:var(--accent)}
+body.design-extra .day.today{border:2px solid var(--accent);box-shadow:0 0 0 1px var(--accent),0 4px 16px rgba(0,0,0,.14)}
 /* Dias de meses adjacentes — transparentes e recuados */
 body.design-extra .day.other-month{background:transparent}
 /* Pílulas de eventos dos dias adjacentes — efeito fantasma */
@@ -583,6 +583,8 @@ body.design-extra.design-crystal .sidebar-foot{background:var(--surface-crystal)
 body.design-extra.design-crystal .cal-footer{background:var(--surface-crystal)!important;backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px)}
 /* Aba Mês — dias do mês atual: vidro fosco vs adjacentes totalmente transparentes */
 body.design-extra.design-crystal .day:not(.other-month){background:var(--surface-crystal);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1.5px solid var(--muted);box-shadow:0 2px 10px rgba(0,0,0,.10)}
+/* Dia atual no Crystal — borda accent intensa sobrepõe a muted dos outros dias */
+body.design-extra.design-crystal .day.today{border:2.5px solid var(--accent);box-shadow:0 0 0 1px var(--accent),0 4px 18px rgba(0,0,0,.16)}
 /* Aba Semana — tag do dia (perde cor sólida, vira cristal) */
 body.design-extra.design-crystal .week-day-head{background:var(--surface-crystal);backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px);border:1px solid var(--border);box-shadow:0 3px 10px rgba(0,0,0,.08)}
 body.design-extra.design-crystal .week-day-head .wdow{color:var(--muted)}
