@@ -77,7 +77,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);hei
 .header-right{display:flex;gap:5px;align-items:center;position:relative;flex-wrap:wrap}
 .hbtn{background:var(--surface2);border:1px solid var(--border);color:var(--muted);border-radius:var(--radius-sm);padding:5px 10px;font-size:11px;font-family:'DM Sans',sans-serif;cursor:pointer;font-weight:600;transition:all .15s;white-space:nowrap}
 .hbtn:hover{background:var(--surface);color:var(--text)}
-.hbtn-accent{border:1.5px solid var(--accent)!important;color:var(--accent)!important;background:var(--surface)!important}
+.hbtn-accent{border:1.5px solid var(--accent)!important;color:var(--accent)!important;background:var(--surface2)!important}
 .hbtn-accent:hover{background:var(--accent-light)!important}
 .hbtn-primary{background:var(--accent);border:none;color:#fff;box-shadow:0 2px 8px rgba(0,0,0,.12)}
 .hbtn-primary:hover{background:var(--accent-dark);transform:translateY(-1px);color:#fff}
@@ -305,12 +305,15 @@ body.design-extra .day:not(.other-month):hover{transform:translateY(-2px);box-sh
 body.design-extra .day.today{border-color:var(--accent)}
 /* Dias de meses adjacentes — transparentes e recuados */
 body.design-extra .day.other-month{background:transparent}
+/* Pílulas de eventos dos dias adjacentes — efeito fantasma */
+body.design-extra .day.other-month .ev-pill,
+body.design-extra .day.other-month .ev-more{opacity:.28;pointer-events:none}
 /* Número do dia — badge */
 body.design-extra .dnum-s{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:8px;background:var(--surface2);border:1px solid var(--border);font-weight:800;font-size:11px}
 body.design-extra .day.today .dnum-s{width:22px;height:22px;border-radius:50%;background:var(--today-dot);color:#fff;border-color:transparent;font-size:11px}
 body.design-extra .day.other-month .dnum-s{background:transparent;border-color:transparent;font-weight:600}
 /* Blocos da semana */
-body.design-extra .week-ev{border-radius:10px!important;box-shadow:0 3px 10px rgba(0,0,0,.10);transition:opacity .14s ease,box-shadow .14s ease}
+body.design-extra .week-ev{border-radius:10px!important;box-shadow:0 3px 10px rgba(0,0,0,.10);transition:opacity .14s ease,box-shadow .14s ease;text-shadow:0 0 6px rgba(0,0,0,.18),0 1px 2px rgba(0,0,0,.12)}
 body.design-extra .week-ev:hover{box-shadow:0 6px 18px rgba(0,0,0,.18);opacity:.88}
 
 /* ── MÊS: cal-card transparente — aurora visível entre os dias ── */
@@ -564,6 +567,10 @@ body.design-extra ::-webkit-scrollbar-thumb:hover{background:var(--muted)}
    com opacidade mínima + blur mais intenso.
 ══════════════════════════════════════════════════════ */
 
+/* CSS variables herdadas — --input-bg fica crystal em todos os campos de texto */
+body.design-extra.design-crystal{--input-bg:var(--surface-crystal)}
+/* text-shadow mais forte nos eventos da semana (leitura em temas escuros) */
+body.design-extra.design-crystal .week-ev{text-shadow:0 0 8px rgba(0,0,0,.35),0 1px 3px rgba(0,0,0,.25)}
 /* Header */
 body.design-extra.design-crystal .main-header{background:var(--surface-crystal);backdrop-filter:blur(28px);-webkit-backdrop-filter:blur(28px);box-shadow:0 8px 32px rgba(0,0,0,.08)}
 /* Sidebar — 4 cards */
@@ -589,7 +596,11 @@ body.design-extra.design-crystal .routine-card,
 body.design-extra.design-crystal .rv-metric-card,
 body.design-extra.design-crystal .rew-metric-card,
 body.design-extra.design-crystal .rew-mood-chart,
-body.design-extra.design-crystal .stat-card{background:transparent;border:1px solid var(--border)}
+body.design-extra.design-crystal .stat-card{background:transparent!important;border:1px solid var(--border)}
+/* Aba Próximos — blocos de eventos */
+body.design-extra.design-crystal .upcoming-ev{background:var(--surface-crystal)!important}
+/* Aba Semana — label da hora atual */
+body.design-extra.design-crystal .now-line-time{background:var(--surface-crystal)}
 /* Day panel */
 body.design-extra.design-crystal .day-panel{background:var(--surface-crystal);backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px)}
 /* Modais/popups — mantém --surface-glass para leitura */
