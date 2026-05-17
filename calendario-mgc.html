@@ -5346,7 +5346,7 @@ document.addEventListener('keydown',e=>{
 
 /* ═══════ QUICK ADD ═══════ */
 (function initQuickAdd(){
-  const DOW_MAP={domingo:0,segunda:1,'terça':1,terca:1,quarta:3,quinta:4,sexta:5,'sábado':6,sabado:6};
+  const DOW_MAP={domingo:0,segunda:1,'terça':2,terca:2,quarta:3,quinta:4,sexta:5,'sábado':6,sabado:6};
   const escRx=s=>s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
   // Lookahead/lookbehind que inclui chars acentuados (À-ÿ) — evita falsos \b em "ã","ç",etc.
   const LNLT='(?<![a-zA-Z\\u00C0-\\u00FF])';
