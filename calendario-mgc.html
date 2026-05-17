@@ -2996,6 +2996,36 @@ function populateCalendarSelect(){
   sel.innerHTML=calendars.map(c=>`<option value="${esc(c.id)}" style="color:${safeColor(c.color)}">${esc(c.name)}</option>`).join('');
 }
 
+// Cache de referências DOM estáticas — declarado AQUI (antes de qualquer handler que use DOM.xxx).
+// const em JS tem temporal dead zone: usar antes da declaração causa ReferenceError.
+const DOM={
+  // Cards de view (cada cal-card)
+  todayCard:    document.getElementById('todayCard'),
+  monthCard:    document.getElementById('monthCard'),
+  weekCard:     document.getElementById('weekCard'),
+  upcomingCard: document.getElementById('upcomingCard'),
+  routinesCard: document.getElementById('routinesCard'),
+  reviewCard:   document.getElementById('reviewCard'),
+  notesCard:    document.getElementById('notesCard'),
+  notesViewContent: document.getElementById('notesViewContent'),
+  tagBar:       document.getElementById('tagBar'),
+  tagChips:     document.getElementById('tagChips'),
+  progressWrap: document.getElementById('progressWrap'),
+  calFooter:    document.querySelector('.cal-footer'),
+  // Overlays e popups (acessados frequentemente em handlers)
+  overlay:           document.getElementById('overlay'),
+  calOverlay:        document.getElementById('calOverlay'),
+  supabaseOverlay:   document.getElementById('supabaseOverlay'),
+  pixOverlay:        document.getElementById('pixOverlay'),
+  gcalOverlay:       document.getElementById('gcalOverlay'),
+  reviewsOverlay:    document.getElementById('reviewsOverlay'),
+  mdsOverlay:        document.getElementById('mdsOverlay'),
+  themePopup:        document.getElementById('themePopup'),
+  backupPopup:       document.getElementById('backupPopup'),
+  ctxMenu:           document.getElementById('ctxMenu'),
+  ctxBackdrop:       document.getElementById('ctxBackdrop'),
+};
+
 function openCalModal(calId){
   editingCalId=calId||null;
   const c=calId?getCal(calId):null;
@@ -3053,34 +3083,7 @@ const esc=s=>String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>
 // Se DOMPurify falhar (CDN offline), degrada para escape simples — sem formatação mas seguro
 const safeHtml=h=>(typeof DOMPurify!=='undefined')?DOMPurify.sanitize(h||''):esc(h||'');
 
-// Cache de referências DOM estáticas — evita getElementById repetido em cada render()
-const DOM={
-  // Cards de view (cada cal-card)
-  todayCard:    document.getElementById('todayCard'),
-  monthCard:    document.getElementById('monthCard'),
-  weekCard:     document.getElementById('weekCard'),
-  upcomingCard: document.getElementById('upcomingCard'),
-  routinesCard: document.getElementById('routinesCard'),
-  reviewCard:   document.getElementById('reviewCard'),
-  notesCard:    document.getElementById('notesCard'),
-  notesViewContent: document.getElementById('notesViewContent'),
-  tagBar:       document.getElementById('tagBar'),
-  tagChips:     document.getElementById('tagChips'),
-  progressWrap: document.getElementById('progressWrap'),
-  calFooter:    document.querySelector('.cal-footer'),
-  // Overlays e popups (acessados frequentemente em handlers)
-  overlay:           document.getElementById('overlay'),
-  calOverlay:        document.getElementById('calOverlay'),
-  supabaseOverlay:   document.getElementById('supabaseOverlay'),
-  pixOverlay:        document.getElementById('pixOverlay'),
-  gcalOverlay:       document.getElementById('gcalOverlay'),
-  reviewsOverlay:    document.getElementById('reviewsOverlay'),
-  mdsOverlay:        document.getElementById('mdsOverlay'),
-  themePopup:        document.getElementById('themePopup'),
-  backupPopup:       document.getElementById('backupPopup'),
-  ctxMenu:           document.getElementById('ctxMenu'),
-  ctxBackdrop:       document.getElementById('ctxBackdrop'),
-};
+// [DOM cache movido para antes de openCalModal — ver linha ~2999]
 
 // Cache de buildEvMap — invalidado a cada save() para evitar recomputação desnecessária
 let _evMapCache={};
