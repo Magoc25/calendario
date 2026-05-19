@@ -7853,6 +7853,7 @@ async function gcalSync(pullOnly=false){
           // Same event, just missing gcalId — link them instead of duplicating
           titleDateMatch.gcalId=gcEv.id;
           titleDateMatch.gcalUpdated=gcEv.updated||new Date().toISOString();
+          titleDateMatch.meetLink=gcEv.hangoutLink||gcEv.conferenceData?.entryPoints?.find(e=>e.entryPointType==='video')?.uri||undefined;
           localByGcalId[gcEv.id]=titleDateMatch;
         } else {
         // New event from Google → add locally
@@ -7875,6 +7876,10 @@ async function gcalSync(pullOnly=false){
             AppState.events[idx]={...existingEv,...updated_ev,localUpdatedAt:existingEv.localUpdatedAt};
           }
           updated++;
+        } else {
+          // Not newer, but always sync meetLink — read-only field added after initial sync
+          const freshMeet=gcEv.hangoutLink||gcEv.conferenceData?.entryPoints?.find(e=>e.entryPointType==='video')?.uri||'';
+          if(freshMeet!==local.meetLink){local.meetLink=freshMeet||undefined;}
         }
       }
     }
