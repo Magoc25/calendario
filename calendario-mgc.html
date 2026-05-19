@@ -4226,6 +4226,7 @@ document.addEventListener('click',e=>{if(!e.target.closest('.search-wrap'))docum
     .srp-row strong{color:var(--text)}
     .srp-note-hint{color:var(--accent);font-weight:600}
     .srp-notes-active{background:#fff3bf!important;color:#7c5500!important;border-color:#f0c000!important;font-weight:700!important}
+    .srp-meet-link{color:#1a73e8;font-weight:600;text-decoration:none}.srp-meet-link:hover{text-decoration:underline}
     @media(min-width:769px){#srpSheet{width:400px}}`;
   document.head.appendChild(css);
 
@@ -4291,6 +4292,7 @@ document.addEventListener('click',e=>{if(!e.target.closest('.search-wrap'))docum
         <div class="srp-title${done?' done':''}">${esc(ev.title)}${done?' ✓':''}</div>
         <div class="srp-row">📅 <strong>${dayStr}${time?' · '+time:''}</strong></div>
         ${ev.location?`<div class="srp-row">📍 <span>${esc(ev.location)}</span></div>`:''}
+        ${ev.meetLink?`<div class="srp-row">🎥 <a href="${ev.meetLink}" target="_blank" rel="noopener" class="srp-meet-link" onclick="event.stopPropagation()">Entrar no Google Meet</a></div>`:''}
         ${cal&&cal.id!=='default'?`<div class="srp-row">🗂 <span>${esc(cal.name)}</span></div>`:''}
         ${(ev.tags||[]).length?`<div class="srp-row">🏷 <span>${ev.tags.map(t=>esc(t)).join(' ')}</span></div>`:''}
         ${ev.desc?`<div class="srp-row" style="align-items:flex-start">📄 <span style="white-space:pre-wrap;overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical">${esc(ev.desc)}</span></div>`:''}
@@ -7917,7 +7919,7 @@ async function gcalSync(pullOnly=false){
       }
     }
 
-    save();render();updateGcalBtn();
+    save();render();if(AppState.selectedDay)renderDayPanel(AppState.selectedDay);updateGcalBtn();
     const msg=pullOnly
       ?`✓ Importado do Google: ${added} novo${added!==1?'s':''}, ${updated} atualizado${updated!==1?'s':''}${removed?` · ${removed} removido${removed!==1?'s':''}`:''}`
       :`✓ Sync concluído: ${added} importado${added!==1?'s':''} · ${updated} atualizado${updated!==1?'s':''} · ${pushed} enviado${pushed!==1?'s':''}${removed?` · ${removed} removido${removed!==1?'s':''}`: ''}${errors?` · ${errors} erro(s)`:''}`;
