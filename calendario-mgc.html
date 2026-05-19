@@ -4066,63 +4066,22 @@ function playAlertSound(){
   }catch(e){}
 }
 
-/* ── Show in-page card + OS notification ── */
+/* ── Dispara som + OS notification do sistema operacional ── */
 function showNotifCard(ev,dateStr,alertMin){
-  if(!isNotifEnabled())return; // usuário desativou os alertas no app
-  // 1. Play sound
+  if(!isNotifEnabled())return;
   playAlertSound();
-
-  // 2. OS notification via SW (new Notification() é deprecated quando SW está ativo)
   if(getNotifPerm()==='granted'&&'serviceWorker' in navigator){
     const _k=ev.id+'|'+dateStr+'|'+alertMin;
     const _t=`${CAT_ICONS[ev.category]||'🔔'} ${ev.title}`;
     const _b=[ev.start?`às ${ev.start}`:'',ev.category||'',ev.location?`📍 ${ev.location}`:'',ev.meetLink?'🎥 Meet disponível':''].filter(Boolean).join('  ');
+    const _actions=ev.meetLink
+      ?[{action:'open_meet',title:'🎥 Abrir Meet'},{action:'snooze30',title:'+30 min'}]
+      :[{action:'snooze30',title:'+30 min'},{action:'snooze60',title:'+1 hora'}];
     navigator.serviceWorker.ready.then(reg=>{
-      reg.showNotification(_t,{body:_b||'Lembrete de evento',tag:_k,requireInteraction:true,silent:false,vibrate:[200,100,200],data:{key:_k,evId:ev.id,date:dateStr,alertMin},actions:[{action:'snooze30',title:'+30 min'},{action:'snooze60',title:'+1 hora'}]});
+      reg.showNotification(_t,{body:_b||'Lembrete de evento',tag:_k,requireInteraction:true,silent:false,vibrate:[200,100,200],data:{key:_k,evId:ev.id,date:dateStr,alertMin,meetLink:ev.meetLink||''},actions:_actions});
     }).catch(()=>{});
-    // Avisa o SW para marcar como disparado — evita notificação duplicada
     getActiveSW()?.postMessage({type:'MARK_FIRED',data:{key:_k}});
   }
-
-  // 3. In-page card
-  const c=document.getElementById('notifContainer');
-  const card=document.createElement('div');
-  card.className='notif-card';card.style.borderLeftColor=ev.color||'var(--accent)';
-  const tl=ev.start?`às ${ev.start}`:'',cat=ev.category?` · ${esc(ev.category)}`:'';
-  card.innerHTML=`
-    <div class="notif-header">
-      <span class="notif-icon">${CAT_ICONS[ev.category]||'🔔'}</span>
-      <div class="notif-info">
-        <div class="notif-title">${esc(ev.title)}</div>
-        <div class="notif-meta">${tl}${cat}</div>
-      </div>
-      <button class="notif-dismiss">✕</button>
-    </div>
-    ${ev.location?`<div class="notif-loc">📍 ${esc(ev.location)}</div>`:''}
-    ${ev.meetLink?`<div class="notif-meet"><a class="notif-meet-link" href="${ev.meetLink}" target="_blank" rel="noopener">🎥 Entrar no Google Meet</a><button class="meet-copy-btn notif-meet-copy" onclick="_copyMeet(this,'${ev.meetLink}')">📋</button></div>`:''}
-    <div class="notif-snooze">
-      <button class="snooze-btn" data-s="30">+30 min</button>
-      <button class="snooze-btn" data-s="60">+1 h</button>
-      <button class="snooze-btn" data-s="180">+3 h</button>
-      <button class="snooze-btn tomorrow" data-s="tomorrow">Amanhã</button>
-    </div>`;
-  card.querySelector('.notif-dismiss').addEventListener('click',()=>card.remove());
-  card.querySelectorAll('[data-s]').forEach(btn=>{
-    btn.addEventListener('click',()=>{
-      const val=btn.dataset.s,key=ev.id+'|'+dateStr+'|'+alertMin;
-      if(val==='tomorrow'){
-        if(!ev.rrule){const d=new Date(ev.date+'T12:00:00');d.setDate(d.getDate()+1);ev.date=ds(d.getFullYear(),d.getMonth(),d.getDate());save();render();toast('Evento movido para amanhã.');}
-        else{const t=new Date();t.setDate(t.getDate()+1);const[hh,mm]=(ev.start||'08:00').split(':').map(Number);t.setHours(hh,mm,0,0);snoozedAlerts.push({key,ev,dateStr,alertMin,showAt:t.getTime()});rescheduleAlerts();toast('Adiado para amanhã.');}
-      } else {
-        const mins=parseInt(val);
-        snoozedAlerts.push({key,ev,dateStr,alertMin,showAt:Date.now()+mins*60000});
-        rescheduleAlerts();
-        toast(`Adiado por ${mins<60?mins+' min':mins/60+' h'}.`);
-      }
-      card.remove();
-    });
-  });
-  c.appendChild(card);
 }
 
 /* ── Schedule exact setTimeout for each upcoming alert ── */
@@ -8408,13 +8367,8 @@ async function registerSW(){
         const key=e.data.key;
         if(!firedAlerts.has(key)){
           firedAlerts.add(key);saveFired();
-          // SW exibiu OS notification; se app está visível, exibe card in-app também
-          // key = evId|dateStr|alertMin — SW só envia key, extrair os campos aqui
-          if(document.visibilityState==='visible'&&isNotifEnabled()){
-            const[evId,date,alertMinStr]=key.split('|');
-            const swEv=AppState.events.find(ev=>ev.id===evId);
-            if(swEv)showNotifCard(swEv,date,parseInt(alertMinStr)||0);
-          }
+          // SW exibiu OS notification; se app está em foco, toca o som
+          if(document.visibilityState==='visible'&&isNotifEnabled())playAlertSound();
         }
       }
       if(e.data?.type==='PONG'){
@@ -8465,7 +8419,7 @@ function syncAlertsToSW(){
       if(firedAlerts.has(key))return;
       if(fireAt<now-60000)return; // skip if more than 1 min past
       swAlerts.push({key,title:ev.title,category:ev.category||'',time:ev.start,
-        location:ev.location||'',fireAt,evId:ev.id,date:dStr,alertMin});
+        location:ev.location||'',meetLink:ev.meetLink||'',fireAt,evId:ev.id,date:dStr,alertMin});
     });
   });
   if(swAlerts.length){

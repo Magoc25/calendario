@@ -6,7 +6,7 @@
    3. Periodic Background Sync (Android Chrome)
 ═══════════════════════════════════════════════════════ */
 
-const CACHE_NAME = 'cal-mgc-v172';
+const CACHE_NAME = 'cal-mgc-v173';
 const DB_NAME = 'cal-mgc-sw';
 const DB_VERSION = 1;
 const STORE_ALERTS = 'pending_alerts';
@@ -125,6 +125,11 @@ self.addEventListener('message', async event => {
 self.addEventListener('notificationclick', event => {
   event.notification.close();
   const data = event.notification.data || {};
+
+  if (event.action === 'open_meet') {
+    if (data.meetLink) event.waitUntil(clients.openWindow(data.meetLink));
+    return;
+  }
 
   if (event.action === 'snooze30' || event.action === 'snooze60' || event.action === 'snooze180') {
     const mins = event.action === 'snooze30' ? 30 : event.action === 'snooze60' ? 60 : 180;
@@ -247,10 +252,16 @@ async function checkAndFireAlerts(source) {
 
       // Show notification (catIcons populado pelo app via STORE_ALERTS)
       const icon = catIcons[alert.category] || '🔔';
+      const meetLink = alert.meetLink || '';
       const bodyParts = [];
       if (alert.time) bodyParts.push('às ' + alert.time);
       if (alert.category) bodyParts.push(alert.category);
       if (alert.location) bodyParts.push('📍 ' + alert.location);
+      if (meetLink) bodyParts.push('🎥 Meet disponível');
+
+      const actions = meetLink
+        ? [{ action: 'open_meet', title: '🎥 Abrir Meet' }, { action: 'snooze30', title: '+30 min' }]
+        : [{ action: 'snooze30', title: '+30 min' }, { action: 'snooze60', title: '+1 hora' }];
 
       await self.registration.showNotification(
         `${icon} ${alert.title}`,
@@ -261,11 +272,8 @@ async function checkAndFireAlerts(source) {
           tag: alert.key,
           requireInteraction: true,
           vibrate: [200, 100, 200],
-          data: alert,
-          actions: [
-            { action: 'snooze30',  title: '+30 min' },
-            { action: 'snooze60',  title: '+1 hora'  },
-          ]
+          data: { ...alert, meetLink },
+          actions
         }
       );
 
