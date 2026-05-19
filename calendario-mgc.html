@@ -4062,7 +4062,19 @@ function showNotifCard(ev,dateStr,alertMin){
   // 1. Play sound
   playAlertSound();
 
-  // 2. In-page card
+  // 2. OS notification via SW (new Notification() é deprecated quando SW está ativo)
+  if(getNotifPerm()==='granted'&&'serviceWorker' in navigator){
+    const _k=ev.id+'|'+dateStr+'|'+alertMin;
+    const _t=`${CAT_ICONS[ev.category]||'🔔'} ${ev.title}`;
+    const _b=[ev.start?`às ${ev.start}`:'',ev.category||'',ev.location?`📍 ${ev.location}`:''].filter(Boolean).join('  ');
+    navigator.serviceWorker.ready.then(reg=>{
+      reg.showNotification(_t,{body:_b||'Lembrete de evento',tag:_k,requireInteraction:true,silent:false,vibrate:[200,100,200],data:{key:_k,evId:ev.id,date:dateStr,alertMin},actions:[{action:'snooze30',title:'+30 min'},{action:'snooze60',title:'+1 hora'}]});
+    }).catch(()=>{});
+    // Avisa o SW para marcar como disparado — evita notificação duplicada
+    getActiveSW()?.postMessage({type:'MARK_FIRED',data:{key:_k}});
+  }
+
+  // 3. In-page card
   const c=document.getElementById('notifContainer');
   const card=document.createElement('div');
   card.className='notif-card';card.style.borderLeftColor=ev.color||'var(--accent)';
@@ -8382,9 +8394,11 @@ async function registerSW(){
         if(!firedAlerts.has(key)){
           firedAlerts.add(key);saveFired();
           // SW exibiu OS notification; se app está visível, exibe card in-app também
+          // key = evId|dateStr|alertMin — SW só envia key, extrair os campos aqui
           if(document.visibilityState==='visible'&&isNotifEnabled()){
-            const swEv=AppState.events.find(ev=>ev.id===e.data.evId);
-            if(swEv)showNotifCard(swEv,e.data.date,e.data.alertMin);
+            const[evId,date,alertMinStr]=key.split('|');
+            const swEv=AppState.events.find(ev=>ev.id===evId);
+            if(swEv)showNotifCard(swEv,date,parseInt(alertMinStr)||0);
           }
         }
       }
