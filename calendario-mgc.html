@@ -678,6 +678,10 @@ body.design-extra.design-crystal #srpSheet{background:var(--surface-glass)}
 .dp-ev-title{font-size:12px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .dp-ev-cat{font-size:9.5px;color:var(--muted);margin-top:2px}
 .dp-ev-loc{font-size:9.5px;color:var(--muted);margin-top:1px}
+.dp-meet-link{color:#1a73e8;font-weight:600;text-decoration:none;font-size:9.5px}
+.dp-meet-link:hover{text-decoration:underline}
+.meet-modal-link{display:inline-block;background:#1a73e8;color:#fff;font-size:11px;font-weight:600;padding:6px 12px;border-radius:6px;text-decoration:none;margin-top:2px}
+.meet-modal-link:hover{background:#1558b0}
 .dp-ev-tags{display:flex;gap:3px;flex-wrap:wrap;margin-top:3px}
 .dp-tag{font-size:8.5px;background:var(--surface);border:1px solid var(--border);color:var(--muted);border-radius:10px;padding:1px 5px}
 .dp-ev-check{width:14px;height:14px;border-radius:3px;border:1.5px solid var(--hint);display:flex;align-items:center;justify-content:center;font-size:9px;cursor:pointer;flex-shrink:0;transition:all .15s}
@@ -2388,6 +2392,7 @@ body.large .sidebar-year{font-size:22px}
       <div class="field" style="margin-bottom:0;margin-top:8px"><label>Repetir até</label><input type="date" id="evUntil"></div>
     </div>
     <div class="field"><label>Local</label><input type="text" id="evLocation" placeholder="Ex: Sala 01 — IFMA"></div>
+    <div class="field" id="meetLinkField" style="display:none"><label>Google Meet</label><a id="meetLinkAnchor" href="#" target="_blank" rel="noopener" class="meet-modal-link">🎥 Entrar na videochamada</a></div>
     <div class="field"><label>Descrição</label><textarea id="evDesc" placeholder="Notas, links, observações…"></textarea></div>
     <div class="modal-actions">
       <button class="btn-del" id="deleteBtn" style="display:none">🗑 Excluir</button>
@@ -3461,6 +3466,7 @@ function renderDayPanel(dateStr){
         </div>
         ${ev.category?`<div class="dp-ev-cat">${esc(ev.category)}${ev.rrule?' · recorrente':''}</div>`:''}
         ${ev.location?`<div class="dp-ev-loc">📍 ${esc(ev.location)}</div>`:''}
+        ${ev.meetLink?`<div class="dp-ev-loc"><a class="dp-meet-link" href="${ev.meetLink}" target="_blank" rel="noopener" onclick="event.stopPropagation()">🎥 Entrar no Google Meet</a></div>`:''}
         ${tagsHtml}
       </div>`;
     });
@@ -4581,6 +4587,7 @@ function openNew(date){
   currentTags=[];renderTagPills();
   const ccw=document.getElementById('colorCustom').closest('.color-custom-wrap');ccw.querySelector('.color-custom-btn').style.cssText='';ccw.querySelector('.color-custom-btn').textContent='+';
   setColor('#3b5bdb');setDoneUI(false);
+  document.getElementById('meetLinkField').style.display='none';
   document.getElementById('evCalendar').value=calendars[0]?.id||'default';
   // Auto-suggest slot
   if(date){const slot=suggestFreeSlot(date);const h=document.getElementById('freeSlotHint');if(slot){h.textContent=`💡 Próximo horário livre: ${slot.start} – ${slot.end} (clique para usar)`;h.style.display='block';h.onclick=()=>{document.getElementById('evStart').value=slot.start;document.getElementById('evEnd').value=slot.end;h.style.display='none';};}else h.style.display='none';}
@@ -4607,6 +4614,8 @@ function openEdit(id,dateCtx){
   document.getElementById('conflictWarning').style.display='none';document.getElementById('freeSlotHint').style.display='none';
   setColor(ev.color||'#3b5bdb');applyCatColor(ev.category||'');
   document.getElementById('evCalendar').value=ev.calendarId||'default';
+  const _mlf=document.getElementById('meetLinkField');const _mla=document.getElementById('meetLinkAnchor');
+  if(ev.meetLink){_mla.href=ev.meetLink;_mlf.style.display='';}else _mlf.style.display='none';
   setDoneUI(ev.rrule?isDoneOn(ev,editingDate):!!ev.done);
   currentTags=[...(ev.tags||[])];renderTagPills();
   DOM.overlay.classList.add('open');
@@ -4648,7 +4657,7 @@ document.getElementById('saveBtn').addEventListener('click',()=>{
   ev.localUpdatedAt=new Date().toISOString();
   if(editingId){
     const old=AppState.events.find(e=>e.id===editingId);
-    if(old){ev.gcalId=old.gcalId;ev.gcalUpdated=old.gcalUpdated;} // preserve gcal link
+    if(old){ev.gcalId=old.gcalId;ev.gcalUpdated=old.gcalUpdated;ev.meetLink=old.meetLink;} // preserve gcal link
     const i=AppState.events.findIndex(e=>e.id===editingId);if(i>-1)AppState.events[i]=ev;
   }else AppState.events.push(ev);
   save();closeModal();render();if(AppState.selectedDay)renderDayPanel(AppState.selectedDay);
@@ -7729,6 +7738,7 @@ function gcalToMgc(gcEv){
   const endDate=endRaw.split('T')[0];
   const startTime=isAllDay?'':startRaw.split('T')[1]?.slice(0,5)||'';
   const endTime=isAllDay?'':endRaw.split('T')[1]?.slice(0,5)||'';
+  const meetLink=gcEv.hangoutLink||gcEv.conferenceData?.entryPoints?.find(e=>e.entryPointType==='video')?.uri||'';
   const ev={
     id:uid(),
     gcalId:gcEv.id,
@@ -7736,6 +7746,7 @@ function gcalToMgc(gcEv){
     title:gcEv.summary||'(sem título)',
     desc:gcEv.description||'',
     location:gcEv.location||'',
+    meetLink,
     date:startDate,
     dateEnd:endDate!==startDate?endDate:startDate,
     start:startTime,
@@ -7774,7 +7785,7 @@ async function gcalSync(pullOnly=false){
       maxResults:'500',
       orderBy:'startTime',
       showDeleted:'true',
-      fields:'items(id,summary,description,location,start,end,updated,status,recurringEventId,extendedProperties)'
+      fields:'items(id,summary,description,location,start,end,updated,status,recurringEventId,extendedProperties,hangoutLink,conferenceData(entryPoints(uri,entryPointType)))'
     });
     const resp=await fetch(`${GCAL_API}/calendars/${encodeURIComponent(calId)}/events?${params}`,{
       headers:{Authorization:`Bearer ${gcalToken}`}
