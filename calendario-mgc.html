@@ -4062,18 +4062,7 @@ function showNotifCard(ev,dateStr,alertMin){
   // 1. Play sound
   playAlertSound();
 
-  // 2. OS-level notification — appears in Windows Action Center / macOS Notification Center
-  //    Works even when browser window is minimized (browser process must be running)
-  if(getNotifPerm()==='granted'){
-    try{
-      const title=`${CAT_ICONS[ev.category]||'🔔'} ${ev.title}`;
-      const body=[ev.start?`às ${ev.start}`:'',ev.category||'',ev.location?`📍 ${ev.location}`:''].filter(Boolean).join('  ');
-      const n=new Notification(title,{body,tag:ev.id+'|'+dateStr,requireInteraction:true,silent:false});
-      n.onclick=()=>{window.focus();n.close();};
-    }catch(e){}
-  }
-
-  // 3. In-page card
+  // 2. In-page card
   const c=document.getElementById('notifContainer');
   const card=document.createElement('div');
   card.className='notif-card';card.style.borderLeftColor=ev.color||'var(--accent)';
@@ -8387,7 +8376,15 @@ async function registerSW(){
     // Listen for messages from SW
     navigator.serviceWorker.addEventListener('message',e=>{
       if(e.data?.type==='ALERT_FIRED'){
-        firedAlerts.add(e.data.key);saveFired();
+        const key=e.data.key;
+        if(!firedAlerts.has(key)){
+          firedAlerts.add(key);saveFired();
+          // SW exibiu OS notification; se app está visível, exibe card in-app também
+          if(document.visibilityState==='visible'&&isNotifEnabled()){
+            const swEv=AppState.events.find(ev=>ev.id===e.data.evId);
+            if(swEv)showNotifCard(swEv,e.data.date,e.data.alertMin);
+          }
+        }
       }
       if(e.data?.type==='PONG'){
         dlog('[PWA] SW respondeu ao ping');
