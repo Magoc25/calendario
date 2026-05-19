@@ -8450,6 +8450,10 @@ const _patchedSyncAlerts=()=>{setTimeout(syncAlertsToSW,500);};
 document.getElementById('saveBtn').addEventListener('click',_patchedSyncAlerts);
 document.getElementById('deleteBtn').addEventListener('click',_patchedSyncAlerts);
 
+// Heartbeat: mantém o SW vivo enquanto o app estiver aberto.
+// Sem isso, o Chrome termina o SW após ~30s de inatividade e os timers internos são perdidos.
+setInterval(()=>getActiveSW()?.postMessage({type:'PING'}),25000);
+
 // Handle query params (from PWA shortcuts)
 (()=>{
   const params=new URLSearchParams(location.search);

@@ -6,7 +6,7 @@
    3. Periodic Background Sync (Android Chrome)
 ═══════════════════════════════════════════════════════ */
 
-const CACHE_NAME = 'cal-mgc-v173';
+const CACHE_NAME = 'cal-mgc-v174';
 const DB_NAME = 'cal-mgc-sw';
 const DB_VERSION = 1;
 const STORE_ALERTS = 'pending_alerts';
@@ -78,6 +78,7 @@ self.addEventListener('message', async event => {
     // Main thread sends upcoming alerts for SW to monitor
     if (data.catIcons) catIcons = { ...catIcons, ...data.catIcons };
     await storeAlerts(data.alerts);
+    _swScheduleTimers(data.alerts); // agenda timers internos para manter SW ativo
     await checkAndFireAlerts('message');
   }
 
@@ -234,6 +235,19 @@ async function clearFiredForDate(date) {
   };
 }
 
+// Agenda timers internos no SW para alertas futuros.
+// Chrome mantém o SW vivo enquanto houver timers pendentes,
+// permitindo notificações mesmo com o app fechado (desde que o Chrome esteja rodando).
+function _swScheduleTimers(alerts) {
+  const now = Date.now();
+  for (const a of alerts) {
+    const delay = a.fireAt - now;
+    if (delay > 0 && delay <= 4 * 60 * 60 * 1000) { // até 4h à frente
+      setTimeout(() => checkAndFireAlerts('sw-timer').catch(() => {}), delay + 500);
+    }
+  }
+}
+
 // ══════════════════════════════════════════════════════
 // Core: check and fire pending alerts
 // ══════════════════════════════════════════════════════
@@ -286,6 +300,10 @@ async function checkAndFireAlerts(source) {
         c.postMessage({ type: 'ALERT_FIRED', key: alert.key });
       }
     }
+
+    // Agenda timers internos para alertas futuros ainda pendentes
+    const future = alerts.filter(a => a.fireAt && a.fireAt > now + 30000);
+    if (future.length) _swScheduleTimers(future);
 
     // Clean up very old alerts (>24h overdue)
     const stale = alerts.filter(a => a.fireAt && a.fireAt < now - 86400000);
