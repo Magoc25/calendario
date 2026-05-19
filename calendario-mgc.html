@@ -7369,6 +7369,10 @@ function applyRemotePayload(row){
     const remoteNotes=JSON.parse(row.notes||'{}');
     const remoteCatColors=JSON.parse(row.category_colors||'{}');
     const remoteCalendars=JSON.parse(row.calendars||'null');
+    // Detecta eventos com gcalId que foram removidos remotamente (deletados em outro dispositivo).
+    // Marca cada um como deletado localmente para o guard do GCal sync não os reimportar.
+    const remoteIds=new Set(remoteEvents.map(e=>e.id));
+    AppState.events.forEach(ev=>{if(ev.gcalId&&!remoteIds.has(ev.id))gcalMarkDeleted(ev.gcalId);});
     AppState.events=remoteEvents;
     notesStore=remoteNotes;
     categoryColors=remoteCatColors;
