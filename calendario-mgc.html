@@ -806,7 +806,11 @@ body.design-extra.design-crystal #srpSheet{background:var(--surface-glass)}
 .notif-meta{font-size:10px;color:var(--muted);margin-top:1px}
 .notif-dismiss{background:none;border:none;color:var(--hint);cursor:pointer;font-size:14px;line-height:1;padding:0;flex-shrink:0;transition:color .15s}
 .notif-dismiss:hover{color:var(--text)}
-.notif-loc{font-size:10px;color:var(--muted);margin-bottom:7px}
+.notif-loc{font-size:10px;color:var(--muted);margin-bottom:5px}
+.notif-meet{display:flex;align-items:center;gap:6px;margin-bottom:7px}
+.notif-meet-link{color:#1a73e8;font-weight:600;font-size:10px;text-decoration:none;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.notif-meet-link:hover{text-decoration:underline}
+.notif-meet-copy{font-size:9px;padding:1px 4px}
 .notif-snooze{display:flex;gap:4px;flex-wrap:wrap}
 .snooze-btn{background:var(--surface2);border:1px solid var(--border);color:var(--muted);border-radius:20px;padding:2px 8px;font-size:9.5px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s}
 .snooze-btn:hover{background:var(--accent);color:#fff;border-color:var(--accent)}
@@ -4072,7 +4076,7 @@ function showNotifCard(ev,dateStr,alertMin){
   if(getNotifPerm()==='granted'&&'serviceWorker' in navigator){
     const _k=ev.id+'|'+dateStr+'|'+alertMin;
     const _t=`${CAT_ICONS[ev.category]||'🔔'} ${ev.title}`;
-    const _b=[ev.start?`às ${ev.start}`:'',ev.category||'',ev.location?`📍 ${ev.location}`:''].filter(Boolean).join('  ');
+    const _b=[ev.start?`às ${ev.start}`:'',ev.category||'',ev.location?`📍 ${ev.location}`:'',ev.meetLink?'🎥 Meet disponível':''].filter(Boolean).join('  ');
     navigator.serviceWorker.ready.then(reg=>{
       reg.showNotification(_t,{body:_b||'Lembrete de evento',tag:_k,requireInteraction:true,silent:false,vibrate:[200,100,200],data:{key:_k,evId:ev.id,date:dateStr,alertMin},actions:[{action:'snooze30',title:'+30 min'},{action:'snooze60',title:'+1 hora'}]});
     }).catch(()=>{});
@@ -4095,6 +4099,7 @@ function showNotifCard(ev,dateStr,alertMin){
       <button class="notif-dismiss">✕</button>
     </div>
     ${ev.location?`<div class="notif-loc">📍 ${esc(ev.location)}</div>`:''}
+    ${ev.meetLink?`<div class="notif-meet"><a class="notif-meet-link" href="${ev.meetLink}" target="_blank" rel="noopener">🎥 Entrar no Google Meet</a><button class="meet-copy-btn notif-meet-copy" onclick="_copyMeet(this,'${ev.meetLink}')">📋</button></div>`:''}
     <div class="notif-snooze">
       <button class="snooze-btn" data-s="30">+30 min</button>
       <button class="snooze-btn" data-s="60">+1 h</button>
