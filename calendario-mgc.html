@@ -682,6 +682,8 @@ body.design-extra.design-crystal #srpSheet{background:var(--surface-glass)}
 .dp-meet-link:hover{text-decoration:underline}
 .meet-modal-link{display:inline-block;background:#1a73e8;color:#fff;font-size:11px;font-weight:600;padding:6px 12px;border-radius:6px;text-decoration:none;margin-top:2px}
 .meet-modal-link:hover{background:#1558b0}
+.meet-copy-btn{background:none;border:1px solid var(--border);border-radius:4px;padding:1px 5px;cursor:pointer;font-size:10px;color:var(--muted);flex-shrink:0;line-height:1.5}
+.meet-copy-btn:hover{background:var(--surface2)}
 .dp-ev-tags{display:flex;gap:3px;flex-wrap:wrap;margin-top:3px}
 .dp-tag{font-size:8.5px;background:var(--surface);border:1px solid var(--border);color:var(--muted);border-radius:10px;padding:1px 5px}
 .dp-ev-check{width:14px;height:14px;border-radius:3px;border:1.5px solid var(--hint);display:flex;align-items:center;justify-content:center;font-size:9px;cursor:pointer;flex-shrink:0;transition:all .15s}
@@ -2392,7 +2394,7 @@ body.large .sidebar-year{font-size:22px}
       <div class="field" style="margin-bottom:0;margin-top:8px"><label>Repetir até</label><input type="date" id="evUntil"></div>
     </div>
     <div class="field"><label>Local</label><input type="text" id="evLocation" placeholder="Ex: Sala 01 — IFMA"></div>
-    <div class="field" id="meetLinkField" style="display:none"><label>Google Meet</label><a id="meetLinkAnchor" href="#" target="_blank" rel="noopener" class="meet-modal-link">🎥 Entrar na videochamada</a></div>
+    <div class="field" id="meetLinkField" style="display:none"><label>Google Meet</label><div style="display:flex;align-items:center;gap:8px"><a id="meetLinkAnchor" href="#" target="_blank" rel="noopener" class="meet-modal-link">🎥 Entrar na videochamada</a><button id="meetLinkCopy" class="meet-copy-btn" title="Copiar link">📋</button></div></div>
     <div class="field"><label>Descrição</label><textarea id="evDesc" placeholder="Notas, links, observações…"></textarea></div>
     <div class="modal-actions">
       <button class="btn-del" id="deleteBtn" style="display:none">🗑 Excluir</button>
@@ -3427,6 +3429,10 @@ function renderMonth(){
   });
 } // end renderMonth
 
+function _copyMeet(btn,url){
+  navigator.clipboard.writeText(url).then(()=>{btn.textContent='✓';setTimeout(()=>{btn.textContent='📋';},1500);}).catch(()=>{});
+}
+
 /* ═══════ DAY PANEL ═══════ */
 function renderDayPanel(dateStr){
   const panel=document.getElementById('dayPanel');
@@ -3466,7 +3472,7 @@ function renderDayPanel(dateStr){
         </div>
         ${ev.category?`<div class="dp-ev-cat">${esc(ev.category)}${ev.rrule?' · recorrente':''}</div>`:''}
         ${ev.location?`<div class="dp-ev-loc">📍 ${esc(ev.location)}</div>`:''}
-        ${ev.meetLink?`<div class="dp-ev-loc"><a class="dp-meet-link" href="${ev.meetLink}" target="_blank" rel="noopener" onclick="event.stopPropagation()">🎥 Entrar no Google Meet</a></div>`:''}
+        ${ev.meetLink?`<div class="dp-ev-loc" style="display:flex;align-items:center;gap:5px"><a class="dp-meet-link" href="${ev.meetLink}" target="_blank" rel="noopener" onclick="event.stopPropagation()">🎥 Entrar no Google Meet</a><button class="meet-copy-btn" onclick="event.stopPropagation();_copyMeet(this,'${ev.meetLink}')" title="Copiar link">📋</button></div>`:''}
         ${tagsHtml}
       </div>`;
     });
@@ -4304,7 +4310,7 @@ document.addEventListener('click',e=>{if(!e.target.closest('.search-wrap'))docum
         <div class="srp-title${done?' done':''}">${esc(ev.title)}${done?' ✓':''}</div>
         <div class="srp-row">📅 <strong>${dayStr}${time?' · '+time:''}</strong></div>
         ${ev.location?`<div class="srp-row">📍 <span>${esc(ev.location)}</span></div>`:''}
-        ${ev.meetLink?`<div class="srp-row">🎥 <a href="${ev.meetLink}" target="_blank" rel="noopener" class="srp-meet-link" onclick="event.stopPropagation()">Entrar no Google Meet</a></div>`:''}
+        ${ev.meetLink?`<div class="srp-row" style="align-items:center;gap:6px">🎥 <a href="${ev.meetLink}" target="_blank" rel="noopener" class="srp-meet-link" onclick="event.stopPropagation()">Entrar no Google Meet</a><button class="meet-copy-btn" onclick="event.stopPropagation();_copyMeet(this,'${ev.meetLink}')" title="Copiar link">📋</button></div>`:''}
         ${cal&&cal.id!=='default'?`<div class="srp-row">🗂 <span>${esc(cal.name)}</span></div>`:''}
         ${(ev.tags||[]).length?`<div class="srp-row">🏷 <span>${ev.tags.map(t=>esc(t)).join(' ')}</span></div>`:''}
         ${ev.desc?`<div class="srp-row" style="align-items:flex-start">📄 <span style="white-space:pre-wrap;overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical">${esc(ev.desc)}</span></div>`:''}
@@ -4617,8 +4623,8 @@ function openEdit(id,dateCtx){
   document.getElementById('conflictWarning').style.display='none';document.getElementById('freeSlotHint').style.display='none';
   setColor(ev.color||'#3b5bdb');applyCatColor(ev.category||'');
   document.getElementById('evCalendar').value=ev.calendarId||'default';
-  const _mlf=document.getElementById('meetLinkField');const _mla=document.getElementById('meetLinkAnchor');
-  if(ev.meetLink){_mla.href=ev.meetLink;_mlf.style.display='';}else _mlf.style.display='none';
+  const _mlf=document.getElementById('meetLinkField');const _mla=document.getElementById('meetLinkAnchor');const _mlc=document.getElementById('meetLinkCopy');
+  if(ev.meetLink){_mla.href=ev.meetLink;_mlf.style.display='';if(_mlc)_mlc.onclick=e=>{e.preventDefault();_copyMeet(_mlc,ev.meetLink);};}else _mlf.style.display='none';
   setDoneUI(ev.rrule?isDoneOn(ev,editingDate):!!ev.done);
   currentTags=[...(ev.tags||[])];renderTagPills();
   DOM.overlay.classList.add('open');
