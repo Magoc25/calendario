@@ -4668,6 +4668,10 @@ document.getElementById('saveBtn').addEventListener('click',()=>{
     const old=AppState.events.find(e=>e.id===editingId);
     if(old){ev.gcalId=old.gcalId;ev.gcalUpdated=old.gcalUpdated;ev.meetLink=old.meetLink;} // preserve gcal link
     const i=AppState.events.findIndex(e=>e.id===editingId);if(i>-1)AppState.events[i]=ev;
+    // Limpa estado "fired" do evento editado para o alerta poder disparar novamente
+    [...firedAlerts].filter(k=>k.startsWith(editingId+'|')).forEach(k=>firedAlerts.delete(k));
+    saveFired();
+    getActiveSW()?.postMessage({type:'CLEAR_FIRED_EVENT',data:{evId:editingId}});
   }else AppState.events.push(ev);
   save();closeModal();render();if(AppState.selectedDay)renderDayPanel(AppState.selectedDay);
   rescheduleAlerts();

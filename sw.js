@@ -6,7 +6,7 @@
    3. Periodic Background Sync (Android Chrome)
 ═══════════════════════════════════════════════════════ */
 
-const CACHE_NAME = 'cal-mgc-v170';
+const CACHE_NAME = 'cal-mgc-v171';
 const DB_NAME = 'cal-mgc-sw';
 const DB_VERSION = 1;
 const STORE_ALERTS = 'pending_alerts';
@@ -87,6 +87,25 @@ self.addEventListener('message', async event => {
 
   if (type === 'MARK_FIRED') {
     if (data?.key) { await markFired(data.key); await removeAlert(data.key); }
+  }
+
+  if (type === 'CLEAR_FIRED_EVENT') {
+    // Limpa entradas de STORE_FIRED e STORE_ALERTS cujo evId bate com o evento editado
+    if (data?.evId) {
+      const db = await openDB();
+      for (const store of [STORE_FIRED, STORE_ALERTS]) {
+        await new Promise((res, rej) => {
+          const tx = db.transaction(store, 'readwrite');
+          const st = tx.objectStore(store);
+          const req = st.getAll();
+          req.onsuccess = () => {
+            (req.result || []).filter(r => r.key && r.key.startsWith(data.evId + '|')).forEach(r => st.delete(r.key));
+            tx.oncomplete = res; tx.onerror = rej;
+          };
+          req.onerror = rej;
+        });
+      }
+    }
   }
 
   if (type === 'CLEAR_ALL_ALERTS') {
