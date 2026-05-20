@@ -561,7 +561,7 @@ Na primeira sincronização, eventos recorrentes podem gerar cópias. Para remov
 | `sw.js` | Service Worker — cache offline, alertas e notificações em segundo plano | Todos |
 | `manifest.json` | Define o app como PWA: nome, ícones e modo de exibição ao instalar no celular, Windows e macOS | Cenários 2, 3 e 4 |
 | `icon-192.png` / `icon-512.png` | Ícones do app usados na tela inicial do celular e em notificações | Cenários 2, 3 e 4 |
-| `.github/workflows/keep-alive.yml` | Ping diário no Supabase para manter o banco ativo (configure com suas próprias chaves) | Cenários 2, 3 e 4 |
+| `.github/workflows/keep-alive.yml` | Mantém o banco de avaliações compartilhadas ativo — configurado pelo desenvolvedor, não requer ação do usuário. Para manter seu próprio Supabase ativo, use o **Bloco extra pg_cron** acima | Cenários 2, 3 e 4 |
 
 ---
 
