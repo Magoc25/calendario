@@ -5,6 +5,316 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 
 ---
 
+## [2.2.0] — Junho 2026
+
+### 📱 Mobile — Experiência aprimorada
+
+#### 🆕 Adicionado
+- **Janela flutuante de dia** — ao tocar num dia na aba Mês, abre um card flutuante com visual polido (margens, cantos arredondados, sombra), listando todos os eventos do dia com horário e opção de ir para o dia completo
+- **Ícone 📝 na janela flutuante** — eventos com notas exibem o ícone ao lado do título; toque abre o editor de notas diretamente, sem passar pelo menu de contexto
+- **Drag & drop de notas no mobile** — reordene cards de notas com long press (400ms) + arrastamento; ghost visual com rotação durante o drag
+- **Abas Mês/Semana visíveis no Stats** — o modal de estatísticas agora exibe as duas abas de período também no mobile (estavam ocultas)
+
+#### 🆕 Adicionado
+- **Histórico de tarefas** — botão 📋 no painel "Tarefas de hoje" abre modal com todas as tarefas de dias anteriores, agrupadas por data (mais recentes primeiro) com status ✅/⬜ e contagem de concluídas; purge automático de tarefas com mais de 90 dias
+
+#### 🔧 Melhorado
+- **FAB translúcido** — botão flutuante + no mobile agora tem fundo semitransparente (76% opacidade + backdrop-filter blur), permitindo ver o conteúdo por baixo; toque restaura opacidade total como feedback
+- Formulário de evento no mobile alinha ao topo visível e rola automaticamente até o campo focado, evitando que o teclado cubra o conteúdo
+
+---
+
+### 🖥️ Desktop — Experiência aprimorada
+
+#### 🆕 Adicionado
+- **Janela flutuante de dia na aba Mês** — clicar num dia abre painel flutuante com lista de eventos, menu de contexto por clique direito e botão para abrir o dia completo
+- **Menu de contexto no painel do dia** — clique direito nos eventos do day panel agora abre o menu de contexto (Editar, Notas, Pular, Excluir)
+- **Ícone 📝 ao lado do título no painel do dia** — eventos com notas exibem o ícone 📝 (15px) ao lado do título; clique abre o editor de notas diretamente
+
+---
+
+### 🔄 Rotinas
+
+#### 🆕 Adicionado
+- **Dias de descanso em rotinas diárias** — rotinas com frequência "Todos os dias" podem ter dias de folga definidos; a sequência (streak) não é quebrada nos dias de descanso configurados
+- **Dashboard de progresso na aba Rotinas** — heatmap anual de check-ins, métricas de streaks e barras de progresso por rotina
+- **Ordenação por horário na aba Hoje** — rotinas do dia aparecem na ordem do horário definido (sem horário vão para o final)
+
+#### 🔧 Melhorado
+- **Ordenação por horário na aba Rotinas** — lista de rotinas agora também é ordenada por horário (igual à aba Hoje), em vez de ordem de criação
+- Frequência simplificada: removida a opção "Personalizado" que era idêntica a "Dias da semana"; agora só duas opções claras: **Todos os dias** e **Dias da semana**
+- A lista de rotinas exibe os dias selecionados explicitamente (ex: "Seg, Ter, Qui") em vez do genérico "Dias úteis"
+
+---
+
+### 🗂️ Categorias de Eventos
+
+#### 🆕 Adicionado
+- **Gerenciamento de categorias** — botão ⚙️ Gerenciar no formulário de evento permite criar categorias personalizadas (nome + emoji) e excluir as existentes; grid visual com 44 emojis para seleção rápida
+- Ícones das categorias personalizadas aparecem automaticamente nas pílulas do calendário, aba Próximos, busca e notificações
+
+---
+
+### ✍️ Aba Revisão
+
+#### 🔧 Melhorado
+- **Cards de estatísticas padronizados** — Eventos, Rotinas e Tarefas agora têm layout idêntico: fração `X/Y` à esquerda, `%` à direita e barra de progresso na base, na cor do tema ativo
+- Eventos agora exibem `concluídos/total` em vez de apenas o total
+
+---
+
+### 🎨 Densidade / Tema
+
+#### 🆕 Adicionado
+- **Nível de densidade "Grande"** — novo nível de espaçamento acima do Normal, para telas maiores ou preferência por mais espaço
+- **Botão ativo destacado** — o botão da densidade em uso fica com borda e fundo na cor do tema (igual ao comportamento dos temas)
+
+#### 🔧 Melhorado
+- Densidade agora cobre todas as abas: Rotinas, Revisão, Notas, Busca e Sidebar — antes só funcionava em Mês, Hoje, Semana e Próximos
+
+---
+
+### 📝 Notas
+
+#### 🆕 Adicionado
+- **Drag & drop para reordenar notas** — arraste os cards na aba Notas para reorganizar a ordem manualmente (desktop e mobile)
+- **Toast com Desfazer** — exclusão de eventos, notas, rotinas e tarefas exibe toast com botão "Desfazer" por alguns segundos
+
+---
+
+### 📊 Analytics
+
+#### 🆕 Adicionado
+- **Horas por categoria no modal Stats** — nova seção "⏱ Horas por categoria" exibe barras horizontais com o tempo total por categoria (horas + minutos) no período selecionado (Mês ou Semana); label inclui contagem de eventos entre parênteses; exibe mensagem quando não há eventos com horário definido no período
+
+---
+
+### 🎨 Cores de eventos por categoria
+
+#### 🔧 Melhorado
+- **Pílulas (Mês) e blocos (Semana) agora usam a cor da categoria** em vez da cor por tipo de recorrência; fundo da pílula: cor da categoria a ~13% de opacidade; texto: cor da categoria saturada; fundo do bloco semana: cor da categoria a ~9% de opacidade (nível mantido); borda esquerda permanece associada ao calendário em ambas as views; fallback: cor própria do evento → cor do calendário; `--pill-ev-color` atualizado para refletir categoria (mobile dots)
+
+---
+
+### 🔍 Busca — painel de detalhes do evento
+
+#### 🆕 Adicionado
+- **Search Result Panel** — clicar num resultado da busca abre painel flutuante com detalhes do evento em vez de abrir o formulário de edição diretamente; mostra: título (com riscado se concluído), data + hora, localização, calendário (se não Geral), tags, trecho da descrição (3 linhas) e indicador "📝 Tem anotações" se houver nota; para eventos recorrentes, exibe a próxima ocorrência a partir de hoje; rodapé com botões [📝 Notas] [✏️ Editar] [⋯ menu de contexto]; right-click no corpo (desktop) e long press (mobile) abrem o ctx menu; ações do ctx menu fecham o painel automaticamente; reutiliza CSS `.mds-sheet` / `.mds-overlay` sem HTML novo
+
+---
+
+### 🎓 Onboarding
+
+#### 🆕 Adicionado
+- **Guia rápido para novos usuários** — modal com 3 slides exibido automaticamente na primeira visita; apresenta os diferenciais do app (gratuito/offline/sem conta), as 7 visualizações e o campo de criação rápida; dots de progresso animados; botão "Pular" ou "Começar 🚀" no último slide; re-acessível via botão "📖 Guia rápido" no rodapé do sidebar; estado salvo em `cal_onboarding_done` no localStorage
+
+---
+
+### ⚡ Quick add
+
+#### 🆕 Adicionado
+- **Campo de criação rápida** — disponível no header (desktop) e como segundo row do header (mobile, com botão ⚡); cria o evento diretamente ao pressionar Enter ou ⚡, sem abrir formulário; parser extrai: hora (`14h`, `14h30`, `14:30`), data relativa (`hoje`, `amanhã`), dia da semana (`segunda`, `terça-feira`…), **categoria** (match pelo nome contra as categorias salvas) e **calendário** (match pelo nome); o restante vira o título; se a categoria tiver template, aplica duração configurada; fallback 60 min; local do template aplicado ao evento; toast com Desfazer por 5s; Esc limpa e desfoca
+
+---
+
+### 📋 Templates de categoria
+
+#### 🆕 Adicionado
+- **Duração e local padrão por categoria** — ao clicar em uma categoria no formulário de evento, a hora de fim é calculada automaticamente (início + duração configurada) e o local padrão é preenchido se estiver vazio; configuração via botão ⏱ no painel ⚙️ Gerenciar de cada categoria; templates salvos em `cal_cat_templates` no localStorage; não aplica ao editar evento existente
+
+---
+
+### ⌨️ Atalhos de teclado
+
+#### 🆕 Adicionado
+- **Atalhos globais de navegação** — `N` novo evento, `T` ir para hoje, `←` período anterior, `→` próximo período, `Esc` fechar modal aberto, `?` lista de atalhos; desativados enquanto o foco está em campo de texto ou modal aberto; lista de atalhos exibida em modal dedicado criado dinamicamente
+
+---
+
+### ⚡ Performance e Qualidade de Código
+
+#### 🔧 Melhorado
+- Memoização de `buildEvMap` — mapa de eventos não é reconstruído desnecessariamente a cada render
+- Cache de referências DOM frequentes — reduz buscas no DOM em operações repetitivas
+- Throttle no SW fetch — verificação de alertas limitada a 1× por 30s para não sobrecarregar em fetch intensivo
+- Parser ICS mais robusto — suporte a line folding, DTEND multi-dia, UNTIL e COUNT; compatibilidade ampliada com exportações do Google Calendar e Apple Calendar
+
+#### 🔒 Segurança
+- Corrigidas vulnerabilidades de XSS em campos de entrada do formulário
+- Tratamento correto do token OAuth do Google Calendar (não exposto em logs)
+- Erros silenciosos (`catch` vazios) substituídos por tratamento explícito com feedback ao usuário
+
+---
+
+### 🐛 Correções
+
+- **Régua de horas da aba Semana alinhada** — labels e slots desalinhados no mobile porque `todayCard` comprimia os slots (sem `flex-shrink:0`) enquanto os labels tinham `flex-shrink:0`; corrigido com `align-items:flex-start` e `flex-shrink:0` nos slots; altura das labels também ajustada por densidade
+- **Rotina com dia de descanso aparecia na aba Hoje** — `getRoutinesForToday()` não verificava `restDays`; corrigido
+- **Drag Top 3 não funcionava no desktop** — HTML5 drag API falha em containers `overflow:auto` (Chrome); substituído por custom mouse drag com `document.elementsFromPoint()` no desktop; mobile continua com HTML5 drag (funciona porque `todayCard` tem `overflow:visible`)
+- **PWA instalável no desktop** — `manifest.json` atualizado: `orientation:any` (antes travava em retrato) e `display_override:window-controls-overlay`
+
+---
+
+---
+
+### 🎨 Modos de Design — Classic / Lumina / Crystal
+
+#### 🆕 Adicionado
+- **3 modos de design** — Classic (padrão), ✨ Lumina (glass morphism) e 💎 Crystal (transparência máxima); selecionados via botão "Tema & Design" no header; estado salvo em `cal_design` no localStorage
+- **Design Lumina** (antigo "Extra") — alternativa visual com glass morphism, aurora gradient e floating cards
+- **Aurora gradient no fundo** — dois gradientes radiais sutis (azul e roxo) sobrepostos ao `var(--bg)` do tema ativo
+- **Variável `--surface-glass`** por tema — light `rgba(255,255,255,.82)`; Aurora `rgba(26,29,46,.84)`; Ardósia `rgba(37,45,64,.84)` — usada em todos os floating cards
+- **Header como floating card** — `backdrop-filter:blur(20px)` + `--surface-glass` + `border-radius:18px` + `margin:8px 12px 6px`; aurora visível nas margens
+- **Sidebar com 4 cards flutuantes separados** — fundo transparente; cada seção (ano/nav, calendários, mini-calendários, rodapé) é um card glass independente com `backdrop-filter:blur(16px)` + borda + sombra
+- **Aba Mês — card transparente** — `#monthCard` sem fundo, borda ou sombra; aurora visível entre os days; dias do mês com `background:var(--surface)` (card sólido); dias adjacentes sem fundo + borda ghost (efeito fantasma)
+- **Aba Semana — colunas flutuantes** — `#weekCard` transparente; cada dia tem 2 cards separados: tag do dia (cor `--dow-bg` do tema, `border-radius:12px`, sombra) e coluna de eventos (glass `--surface-glass`, `backdrop-filter:blur(12px)`, `border-radius:12px`, separados por `margin-bottom:5px`); `column-gap:6px` entre colunas; coluna de horas transparente
+- **Cal-footer glass card** — `backdrop-filter:blur(12px)` + `border-radius:12px!important` + `overflow:hidden`; standalone em todas as abas com footer visível
+- **Labels `.dow`** (Dom/Seg/Ter no cabeçalho do mês) com `border-radius:8px` + padding
+- **Tooltip nos slots da Semana** — hover em qualquer mini-bloco exibe caixa com intervalo de hora, dia da semana, data e CTA "Clique para agendar"
+
+#### 🔧 Melhorado
+- Todos os `color-mix()` substituídos por `rgba()`/`var()` — compatibilidade Chrome/Windows onde `color-mix()` falhava silenciosamente
+- `backdrop-filter` removido de cards sem transparência real (sem ganho visual e sem custo de stacking context)
+- `.week-time-spacer` transparente (eliminado bloquinho branco no canto da coluna de horas na aba Semana)
+
+---
+
+### 📋 Rodapé — simplificado (ambos os designs)
+
+#### 🆕 Adicionado
+- **Botão GitHub no rodapé** — ícone do GitHub (SVG inline) ao lado de Apoiar/Avaliações, abrindo o repositório do projeto em nova aba; ordem do rodapé padronizada para **GitHub → Apoiar → Avaliações → ©**
+
+#### 🔧 Melhorado
+- Removidas 7 tags de legenda por recorrência (Único/Diário/Semanal/Quinzenal/Mensal/Anual/Person.) — sistema migrou para cores por categoria; labels eram misleading
+- Progresso `X/Y` exibido apenas na aba Mês; oculto em Semana e Próximos
+- Label 🔄 Rotina exibida apenas na aba Mês; oculta nas demais
+- Contagem bruta do banco (`62 eventos`) removida — sem contexto útil para o usuário
+
+---
+
+### 🐛 Correções
+
+- **Pílula de feriado desproporcional** — `font-size` 8px → 9.5px; `padding` 1px 4px → 2px 5px; emoji 7px → 9px; agora proporcional às demais pílulas (ambos os designs)
+- **Dias adjacentes na aba Mês (Design Extra)** — fundo era branco (herdado da base); corrigido para transparente; borda em força total via `border:1px solid var(--border)` sem `opacity`
+
+---
+
+### 💎 Design Crystal — Transparência máxima
+
+#### 🆕 Adicionado
+- **Design Crystal** (`body.design-extra.design-crystal`) — herda toda a estrutura do Lumina e sobrepõe backgrounds com opacidade mínima (`--surface-crystal` por tema: light `rgba(255,255,255,.12)`, Aurora `rgba(26,29,46,.18)`, Ardósia `rgba(37,45,64,.18)`) + blur mais intenso (22–28px)
+- `--surface-crystal` definida em todos os 5 temas e no `:root` como fallback
+- Header, 4 cards sidebar, cal-footer: `--surface-crystal` + `backdrop-filter:blur(28px/22px)`
+- Aba Mês — dias do mês atual: `--surface-crystal` + `backdrop-filter:blur(8px)` (vidro fosco vs adjacentes transparentes) + `border:1.5px solid var(--muted)` para destaque; `border:2.5px solid var(--accent)` no dia atual com anel glow
+- Aba Semana — tag do dia: perde cor sólida do tema → glass crystal; coluna de eventos: crystal
+- Cal-cards (Hoje/Próximos/Rotinas/Revisão/Notas): `--surface-crystal` + `backdrop-filter`
+- Cards internos (metric, stat, mood): `transparent` + só borda
+- `--input-bg:var(--surface-crystal)` sobreposta — todos os campos de texto (tarefas, busca, textarea) ficam crystal automaticamente
+- `.upcoming-ev`: crystal; `.now-line-time`: `--surface-glass` (legível); `.rv-filter-chip`: crystal
+- Modais/popups/sheets: mantém `--surface-glass` para preservar leitura
+
+---
+
+### 🎨 Ajustes visuais gerais (todos os designs)
+
+#### 🔧 Melhorado
+- **Botões 🔔 e ☁️ (`hbtn-accent`)** — `background` igualado a `var(--surface2)` (mesmo fundo dos outros botões do header)
+- **Efeito fantasma em pílulas de dias adjacentes** — `.day.other-month .ev-pill/.ev-more: opacity:.28 + pointer-events:none` aplicado no **Classic** (base CSS) e no **Lumina/Crystal** (já existia)
+- **Dia atual aba Mês (Lumina)** — `border:2px solid var(--accent)` + `box-shadow:0 0 0 1px var(--accent)` — anel duplo na cor do tema
+- **Eventos da semana** — `text-shadow` sutil adicionado no Lumina; mais intenso no Crystal — melhora leitura em temas escuros (Aurora/Ardósia)
+- **`.mobile-qa-bar` (mobile)** — glass morphism completo com `border-radius:18px` + `margin:0 12px 6px` (alinhado ao header)
+- **Rotação de tela (mobile)** — `"orientation"` removido do `manifest.json` (`"any"` ignorava o bloqueio do sistema); `screen.orientation.lock('portrait')` como fallback em PWA
+
+#### 🐛 Corrigido
+- Popup bloqueado no Chrome Android — `beforeinstallprompt handler` removido (causava o indicador "Sempre mostrar")
+
+---
+
+### ⚖️ Conformidade Legal Brasileira
+
+#### 🆕 Adicionado
+- **`PRIVACY.md`** — Aviso de Privacidade conforme **LGPD** (Lei 13.709/2018) com modelo de 3 camadas de responsabilidade, bases legais (Art. 7º), direitos do titular (Art. 18), tratamento ATPP conforme Resolução CD/ANPD nº 2/2022
+- **`SECURITY.md`** — Política de Segurança e Plano de Resposta a Incidentes conforme Resolução CD/ANPD nº 15/2024; canal de update via banner + CHANGELOG como mecanismo de **culpa concorrente** (CC Art. 945 + CDC Art. 12 §3º + Lei 9.609 Art. 8º)
+- **`ACCESSIBILITY.md`** — Declaração de Acessibilidade conforme **Lei 13.146/2015 (LBI Art. 63)** + WCAG 2.2 nível AA parcial + ABNT NBR 17225:2025
+- **`DATA_INVENTORY.md`** — Inventário simplificado de tratamento conforme LGPD Art. 37 e Resolução ANPD 2/2022 Art. 7º (regime ATPP)
+- **`TERMS.md` v2.0** — novas seções 6 (obrigações do usuário sobre atualizações + culpa concorrente), 8 (acessibilidade), 9 (uso por menores conforme ECA Digital — Lei 15.211/2025), 10 (matriz de conformidade legal)
+
+#### Enquadramento legal aplicado
+- **Agente:** Pessoa Natural (desenvolvedor independente)
+- **Porte:** ATPP (Agente de Tratamento de Pequeno Porte) — Resolução CD/ANPD nº 2/2022 Art. 4º
+- **Encarregado (DPO):** dispensado, mas canal de comunicação publicado
+- **Sem tratamento de alto risco** — sem dados sensíveis em larga escala, sem profiling, sem decisões automatizadas
+
+---
+
+### 🔒 Hardening de Segurança — XSS, CSP e backend
+
+#### 🐛 Corrigido (críticos)
+- **XSS persistente em avaliações** (vetor um-para-muitos) — campos `r.name`, `r.comment` e `r.date` agora passam por `esc()` antes do `innerHTML`. Atacante podia injetar `<img src=x onerror=...>` em comment via Supabase compartilhado e roubar tokens OAuth de TODOS os usuários que abrissem o modal de avaliações. Severidade: 🟠 Alta
+- **Ausência de Content-Security-Policy** — adicionada meta tag CSP no `<head>` com `script-src`, `connect-src`, `img-src`, `form-action`, `object-src` restritivos. Mesmo XSS futuro fica impossibilitado de exfiltrar dados para domínio externo (defesa em profundidade)
+
+#### 🔧 Melhorado (XSS médios)
+- **Select de calendários** — `esc()` em `c.id`, `c.name` e validação regex em `c.color` (previne CSS injection)
+- **DOMPurify integrado** — biblioteca de sanitização de HTML rico carregada via CDN (`cdnjs/dompurify@3.0.8`); helper `safeHtml()` com fallback para `esc()` se CDN falhar
+  - Aplicado no editor de notas por evento e notas standalone
+  - Bloqueia XSS persistente via import de JSON malicioso com notas
+- **Cards da aba Notas** — `esc()` em `n.title`, `n.id` e `preview(n.content)`; validação regex de `n.color`
+
+#### 🛡️ Backend (Supabase compartilhado)
+- **Constraints SQL na tabela `app_reviews`** — limites de tamanho (name ≤ 60, comment ≤ 1000), bloqueio de `<script>/<iframe>/javascript:/on*=` via CHECK constraints
+- **Rate limit por trigger** — 5 minutos entre reviews do mesmo nome + project_id; previne flood/spam
+- **Defesa em 4 camadas:** `esc()` (texto) + DOMPurify (HTML rico) + CSP (rede) + constraints SQL (banco)
+
+---
+
+### 🧹 Qualidade de Código — análise profunda
+
+#### 🐛 Corrigido
+- **Listener duplicado em `exportIcsBtn`** — clicar em "Exportar .ics" baixava o arquivo duas vezes e mostrava o toast em duplicidade (bloco idêntico repetido nas linhas 4917 e 4923)
+- **TypeError no parser de .ics com `COUNT=N`** — `const d` reatribuído no loop quebrava import de eventos recorrentes do Google Calendar (formato `RRULE:FREQ=WEEKLY;COUNT=5`); corrigido para `let d`
+- **Handler `transitionend` vazio** no `supabaseOverlay` — resíduo de debug que não fazia nada; removido
+
+#### 🔒 Hardening de dependências externas
+- **Versão Supabase pinada** — de `@supabase/supabase-js@2` (que resolvia para qualquer 2.x.x) para `@supabase/supabase-js@2.45.4` (versão fixa); previne atualizações inesperadas do CDN
+- Comentário no bloco de `<script>` documentando processo de atualização manual
+
+---
+
+---
+
+### 📅 Google Calendar — Link do Google Meet
+
+#### 🆕 Adicionado
+- **Link do Meet nos eventos sincronizados** — `hangoutLink` e `conferenceData` agora incluídos nos fields da API do Google Calendar; `meetLink` salvo em cada evento
+- **Botão "🎥 Entrar no Google Meet"** — exibido no card do dia, popup do evento (pílula no modo mês), modal de edição e card de alerta
+- **Botão 📋 copiar link** — ao lado do botão de entrar, em todos os pontos; muda para ✓ por 1,5s como feedback; permite abrir em qualquer navegador
+- **Link no alerta** — quando o alerta OS notification dispara, mostra ação `[🎥 Abrir Meet]` que abre o Meet diretamente; útil quando o usuário está em outro app
+
+---
+
+### 🔔 Alertas — OS Notification
+
+#### 🔧 Melhorado
+- **Card in-app removido** — alerta agora é exclusivamente via OS notification do sistema (Windows/macOS/Android); card interno era redundante quando o usuário já está olhando o app
+- **Ações dinâmicas por tipo de evento:**
+  - Com Meet: `[🎥 Abrir Meet]` + `[+30 min]`
+  - Sem Meet: `[+30 min]` + `[+1 hora]`
+  - Clicar no corpo → abre o calendário
+- **Notificações com app fechado** — timers internos no SW + heartbeat PING 25s mantêm SW ativo para disparar alertas mesmo com a janela fechada (desde que Chrome esteja rodando)
+
+#### 🐛 Corrigido
+- Alerta não re-disparava após testes — `firedAlerts` era marcado como fired mesmo sem o usuário ver; agora limpa ao salvar o evento editado
+- OS notification duplicada — handler `MARK_FIRED` no SW evita que SW e main thread mostrem notificação ao mesmo tempo
+
+---
+
+### 🐛 Correções
+
+- **Evento deletado voltava após sync Google Calendar** — ao receber payload do Supabase com evento removido, `gcalMarkDeleted()` agora é chamado automaticamente; impede que o Google Calendar reimporte o evento na próxima sync
+- **Meet link não aparecia em eventos já sincronizados** — branch `else` do pull GCal atualiza `meetLink` independente do timestamp; painel do dia atualizado imediatamente após sync
+
+---
+
 ## [2.1.0] — Abril 2026
 
 ### 📱 Mobile — Experiência aprimorada
