@@ -653,6 +653,8 @@ body.design-extra.design-crystal #srpSheet{background:var(--surface-glass)}
 .list-item-del:hover{opacity:1;color:#dc2626}
 .lists-empty{text-align:center;color:var(--muted);font-size:12px;padding:30px 10px;line-height:1.7}
 /* drag & drop (reordenar listas e itens) */
+/* impede seleção de texto/callout (lupa) no long-press mobile — senão "trava" o arrasto */
+.list-item,.list-card{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 .list-item[draggable=true],.list-card[draggable=true]{cursor:grab}
 .list-item.list-dragging,.list-card.list-dragging{opacity:.4}
 .list-item.list-drag-over,.list-card.list-drag-over{box-shadow:inset 0 0 0 2px var(--accent);border-color:var(--accent)}
@@ -6446,7 +6448,7 @@ function makeListReorderable(container,itemSelector,idAttr,reorder){
   if(!window._listDndInit){
     window._listDndInit=true;
     const cleanup=()=>{
-      if(_listDrag&&_listDrag.ghost)_listDrag.ghost.remove();
+      document.querySelectorAll('.list-ghost').forEach(g=>g.remove()); // remove qualquer fantasma órfão
       document.querySelectorAll('.list-dragging,.list-drag-over').forEach(c=>c.classList.remove('list-dragging','list-drag-over'));
       document.body.style.overscrollBehavior='';
     };
@@ -6476,6 +6478,9 @@ function makeListReorderable(container,itemSelector,idAttr,reorder){
       if(to&&from!==to)fn(from,to);
     },{passive:false});
     document.addEventListener('touchcancel',()=>{cleanup();_listDrag=null;},{passive:true});
+    // Rede de segurança: se um drag "vazar" (touchend/cancel perdido pelo SO), um novo toque
+    // reseta o estado e libera o scroll — evita o app ficar travado permanentemente.
+    document.addEventListener('touchstart',()=>{if(_listDrag){cleanup();_listDrag=null;}},{passive:true});
   }
 }
 
