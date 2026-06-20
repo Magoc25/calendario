@@ -394,25 +394,7 @@ create policy "Allow all operations" on cal_sync
   for all using (true) with check (true);
 ```
 
-> ⚠️ **Se já criou a tabela antes** e quer adicionar as colunas que faltam, rode no SQL Editor:
-> ```sql
-> alter table cal_sync add column if not exists standalone_notes text;
-> alter table cal_sync add column if not exists routine_checks text;
-> ```
-
-> ⚠️ **Se criou a tabela sem ativar o RLS** (via interface do Supabase ou SQL anterior), rode:
-> ```sql
-> alter table cal_sync enable row level security;
->
-> create policy "Allow all operations" on cal_sync
->   for all using (true) with check (true);
-> ```
-> Se aparecer o erro `policy already exists`, rode apenas a linha `alter table`:
-> ```sql
-> alter table cal_sync enable row level security;
-> ```
-
-> ✅ **Como confirmar que o RLS está ativo:** no Table Editor, clique na tabela `cal_sync` — deve aparecer um botão **"1 RLS policy"** acima das colunas. Você também pode confirmar via SQL: `SELECT tablename, rowsecurity FROM pg_tables WHERE tablename = 'cal_sync';` — o resultado `rowsecurity = true` confirma.
+> ✅ Pronto — tabela, acessos (GRANTs) e segurança (RLS) ficam configurados de uma vez. Pode seguir para o passo 3.
 
 **Bloco extra — Evitar suspensão por inatividade (recomendado):**
 
