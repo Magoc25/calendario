@@ -652,6 +652,11 @@ body.design-extra.design-crystal #srpSheet{background:var(--surface-glass)}
 .list-item-del{flex-shrink:0;background:none;border:none;color:var(--muted);cursor:pointer;font-size:13px;opacity:.5;transition:opacity .15s}
 .list-item-del:hover{opacity:1;color:#dc2626}
 .lists-empty{text-align:center;color:var(--muted);font-size:12px;padding:30px 10px;line-height:1.7}
+/* drag & drop (reordenar listas e itens) */
+.list-item[draggable=true],.list-card[draggable=true]{cursor:grab}
+.list-item.list-dragging,.list-card.list-dragging{opacity:.4}
+.list-item.list-drag-over,.list-card.list-drag-over{box-shadow:inset 0 0 0 2px var(--accent);border-color:var(--accent)}
+.list-ghost{border:1px solid var(--accent);background:var(--surface)}
 
 /* ── DAY PANEL ── */
 .day-panel{width:0;min-width:0;background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;transition:width .28s ease,min-width .28s ease;flex-shrink:0}
@@ -2950,6 +2955,7 @@ let editingId=null,editingDate=null,selectedColor='#3b5bdb',isDone=false;
 let selectedCustomDays=new Set(),currentTags=[],activeTagFilter='';
 let categoryColors={};
 let _openListId=null; // aba Listas: id da lista aberta (null = visão geral de listas)
+let _listDrag=null,_listLpTimer=null,_listLpX=0,_listLpY=0,_listDragJustEnded=false; // drag&drop das Listas
 
 /* ═══════ MULTI-CALENDAR ═══════ */
 const DEFAULT_CALS=[
@@ -6369,6 +6375,110 @@ function deleteListItem(listId,itemId){
   toastUndo('Item excluído.',()=>{const ll=AppState.lists.find(x=>x.id===listId);if(ll){ll.items.splice(Math.min(idx,ll.items.length),0,removed);saveLists();renderListsView();}});
 }
 
+/* ── Drag & drop (reordenar) — genérico p/ listas e itens ──
+   Desktop: HTML5 drag. Mobile: long-press 500ms na linha → ghost que segue o dedo.
+   Reusa o padrão das Notas/§25. Não toca em check/excluir (tap instantâneo) e
+   cancela o long-press ao rolar (>8px antes dos 500ms) p/ preservar o scroll. */
+function reorderListItems(fromId,toId){
+  const l=AppState.lists.find(x=>x.id===_openListId);if(!l)return;
+  const from=l.items.findIndex(i=>i.id===fromId),to=l.items.findIndex(i=>i.id===toId);
+  if(from<0||to<0||from===to)return;
+  const[m]=l.items.splice(from,1);l.items.splice(to,0,m);
+  saveLists();renderListsView();
+}
+function reorderLists(fromId,toId){
+  const from=AppState.lists.findIndex(l=>l.id===fromId),to=AppState.lists.findIndex(l=>l.id===toId);
+  if(from<0||to<0||from===to)return;
+  const[m]=AppState.lists.splice(from,1);AppState.lists.splice(to,0,m);
+  saveLists();renderListsView();
+}
+function makeListReorderable(container,itemSelector,idAttr,reorder){
+  if(!container)return;
+  container.querySelectorAll(itemSelector).forEach(row=>{
+    const id=row.getAttribute(idAttr);
+    // ── Desktop (HTML5 drag) ──
+    row.setAttribute('draggable','true');
+    row.addEventListener('dragstart',e=>{
+      _listDrag={id,itemSelector,idAttr,reorder,targetId:null};_listDragJustEnded=false;
+      e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain',id);
+      setTimeout(()=>{if(row.isConnected)row.classList.add('list-dragging');},0);
+    });
+    row.addEventListener('dragend',()=>{
+      row.classList.remove('list-dragging');
+      document.querySelectorAll('.list-drag-over').forEach(c=>c.classList.remove('list-drag-over'));
+      _listDrag=null;_listDragJustEnded=true;setTimeout(()=>{_listDragJustEnded=false;},50);
+    });
+    row.addEventListener('dragover',e=>{e.preventDefault();e.dataTransfer.dropEffect='move';});
+    row.addEventListener('dragenter',e=>{
+      e.preventDefault();
+      if(!_listDrag||_listDrag.id===id)return;
+      document.querySelectorAll('.list-drag-over').forEach(c=>c.classList.remove('list-drag-over'));
+      row.classList.add('list-drag-over');
+    });
+    row.addEventListener('dragleave',e=>{if(!row.contains(e.relatedTarget))row.classList.remove('list-drag-over');});
+    row.addEventListener('drop',e=>{
+      e.preventDefault();e.stopPropagation();row.classList.remove('list-drag-over');
+      const from=(_listDrag&&_listDrag.id)||e.dataTransfer.getData('text/plain');_listDrag=null;
+      if(from&&from!==id)reorder(from,id);
+    });
+    // ── Mobile (long-press → ghost drag) ──
+    row.addEventListener('touchstart',e=>{
+      if(e.target.closest('[data-itcheck],[data-itdel],[data-dellist],button'))return; // botões = tap
+      const t=e.touches[0];_listLpX=t.clientX;_listLpY=t.clientY;
+      clearTimeout(_listLpTimer);
+      _listLpTimer=setTimeout(()=>{
+        _listLpTimer=null;
+        _listDrag={id,itemSelector,idAttr,reorder,targetId:null};
+        const r=row.getBoundingClientRect(),g=row.cloneNode(true);
+        g.classList.add('list-ghost');g.classList.remove('list-drag-over');
+        g.style.cssText=`position:fixed;z-index:9999;width:${row.offsetWidth}px;left:${r.left}px;top:${r.top}px;opacity:.92;pointer-events:none;transform:scale(1.03) rotate(.6deg);box-shadow:0 10px 28px rgba(0,0,0,.28)`;
+        document.body.appendChild(g);_listDrag.ghost=g;
+        row.classList.add('list-dragging');document.body.style.overscrollBehavior='none';
+        if(navigator.vibrate)navigator.vibrate(30);
+      },500);
+    },{passive:true});
+    row.addEventListener('touchmove',e=>{
+      if(_listLpTimer){const t=e.touches[0];if(Math.abs(t.clientX-_listLpX)>8||Math.abs(t.clientY-_listLpY)>8){clearTimeout(_listLpTimer);_listLpTimer=null;}}
+    },{passive:true});
+    row.addEventListener('touchend',()=>{if(_listLpTimer){clearTimeout(_listLpTimer);_listLpTimer=null;}},{passive:true});
+  });
+  // Listeners únicos no document p/ mover/soltar o ghost (touch)
+  if(!window._listDndInit){
+    window._listDndInit=true;
+    const cleanup=()=>{
+      if(_listDrag&&_listDrag.ghost)_listDrag.ghost.remove();
+      document.querySelectorAll('.list-dragging,.list-drag-over').forEach(c=>c.classList.remove('list-dragging','list-drag-over'));
+      document.body.style.overscrollBehavior='';
+    };
+    const findTarget=(x,y)=>{
+      if(!_listDrag)return null;
+      const els=document.elementsFromPoint(x,y)||[];
+      for(const el of els){const m=el.closest&&el.closest(_listDrag.itemSelector);
+        if(m&&m.getAttribute(_listDrag.idAttr)&&m.getAttribute(_listDrag.idAttr)!==_listDrag.id)return m;}
+      return null;
+    };
+    document.addEventListener('touchmove',e=>{
+      if(!_listDrag||!_listDrag.ghost)return;
+      e.preventDefault(); // trava o scroll durante o arrasto engatado
+      const t=e.touches[0];
+      _listDrag.ghost.style.left=(t.clientX-_listDrag.ghost.offsetWidth/2)+'px';
+      _listDrag.ghost.style.top=(t.clientY-20)+'px';
+      const tgt=findTarget(t.clientX,t.clientY);
+      document.querySelectorAll('.list-drag-over').forEach(c=>c.classList.remove('list-drag-over'));
+      if(tgt){tgt.classList.add('list-drag-over');_listDrag.targetId=tgt.getAttribute(_listDrag.idAttr);}
+      else _listDrag.targetId=null;
+    },{passive:false});
+    document.addEventListener('touchend',e=>{
+      if(!_listDrag||!_listDrag.ghost)return;
+      const tc=e.changedTouches[0];if(tc){const tgt=findTarget(tc.clientX,tc.clientY);if(tgt)_listDrag.targetId=tgt.getAttribute(_listDrag.idAttr);}
+      const from=_listDrag.id,to=_listDrag.targetId,fn=_listDrag.reorder;
+      cleanup();_listDrag=null;_listDragJustEnded=true;setTimeout(()=>{_listDragJustEnded=false;},50);
+      if(to&&from!==to)fn(from,to);
+    },{passive:false});
+    document.addEventListener('touchcancel',()=>{cleanup();_listDrag=null;},{passive:true});
+  }
+}
+
 /* ── Render da aba Listas (visão geral ↔ detalhe de uma lista) ── */
 function renderListsView(){
   const body=document.getElementById('listsBody');
@@ -6391,7 +6501,7 @@ function renderListsView(){
       </div>
       <div class="list-items">
         ${l.items.length===0?'<div class="lists-empty">Nenhum item ainda.<br><span style="font-size:10px">Adicione acima e vá dando check conforme resolve.</span></div>':
-          l.items.map(it=>`<div class="list-item${it.done?' done':''}">
+          l.items.map(it=>`<div class="list-item${it.done?' done':''}" data-itid="${it.id}">
             <span class="list-item-check" data-itcheck="${it.id}">${it.done?'✅':'⬜'}</span>
             <span class="list-item-title">${esc(it.title)}</span>
             <button class="list-item-del" data-itdel="${it.id}" title="Excluir item">✕</button>
@@ -6405,6 +6515,7 @@ function renderListsView(){
     input.addEventListener('keydown',e=>{if(e.key==='Enter')doAdd();});
     body.querySelectorAll('[data-itcheck]').forEach(el=>el.onclick=()=>{toggleListItem(_openListId,el.dataset.itcheck);renderListsView();});
     body.querySelectorAll('[data-itdel]').forEach(el=>el.onclick=()=>deleteListItem(_openListId,el.dataset.itdel));
+    makeListReorderable(body.querySelector('.list-items'),'.list-item','data-itid',reorderListItems);
   }else{
     body.innerHTML=`
       <div class="list-add-row">
@@ -6427,10 +6538,12 @@ function renderListsView(){
     document.getElementById('listNewBtn').onclick=doNew;
     ni.addEventListener('keydown',e=>{if(e.key==='Enter')doNew();});
     body.querySelectorAll('[data-openlist]').forEach(el=>el.addEventListener('click',e=>{
+      if(_listDragJustEnded)return; // ignora click acidental após reordenar
       if(e.target.closest('[data-dellist]'))return;
       _openListId=el.dataset.openlist;renderListsView();
     }));
     body.querySelectorAll('.list-card-del').forEach(el=>el.addEventListener('click',e=>{e.stopPropagation();deleteList(el.dataset.dellist);}));
+    makeListReorderable(body.querySelector('.lists-grid'),'.list-card','data-openlist',reorderLists);
   }
 }
 
