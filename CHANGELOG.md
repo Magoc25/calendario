@@ -5,6 +5,27 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 
 ---
 
+## [2.3.0] — Junho 2026
+
+### 🆕 Adicionado
+- **Aba Listas** — listas nomeadas de tarefas **sem horário** (ex.: supermercado, viagem a trabalho, pendências). Crie a lista, adicione itens com a mesma praticidade do ✅ Tarefas de hoje (Enter/＋, dar check, excluir com **Desfazer**); contador `feitos/total` por lista; mesma aba **📋 Listas** no celular e no computador. Sincroniza via Supabase e entra no backup JSON.
+- **Reordenar arrastando (drag & drop)** — reorganize as listas e os itens dentro de uma lista. No computador, arraste; no celular, **segure ~500ms** e arraste. Não atrapalha a captura: tocar para checar/excluir e **rolar** a lista continuam instantâneos.
+
+### 🔧 Alterado
+- Aba **"Próximos" / "Lista"** substituída pela nova **📋 Listas** — os próximos eventos continuam acessíveis pela aba **Mês** + mini-calendário da barra lateral.
+
+### 🐛 Corrigido
+- Drag das Listas no celular: o long-press deixou de disparar a seleção de texto/lupa do sistema, que travava o arrasto.
+
+### ⚠️ Migração — quem sincroniza via Supabase
+Rode **uma vez** no SQL Editor do seu Supabase do calendário:
+```sql
+alter table cal_sync add column if not exists lists text;
+```
+Sem isso, as listas funcionam, mas ficam **só no dispositivo** (o resto do sync não é afetado).
+
+---
+
 ## [2.2.0] — Junho 2026
 
 ### 📱 Mobile — Experiência aprimorada
