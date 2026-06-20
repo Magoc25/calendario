@@ -60,7 +60,6 @@ Para você, o que importa é simples:
 |---|---|
 | **Só usar, agora** (qualquer dispositivo) | Abrir a [URL pública](#-abrir-agora--sem-baixar-nada) — nada para baixar nem configurar |
 | **Usar no computador sem nuvem** | Baixar apenas `calendario-mgc.html` e abrir no navegador |
-| **Ter o seu próprio deploy** _(avançado, opcional)_ | Subir os arquivos no seu GitHub Pages — veja [Configurar GitHub Pages](#configurar-github-pages). Só faz sentido se quiser uma URL própria, separada da pública. |
 
 👉 Vá direto para [**Como usar**](#-como-usar--4-cenários) para o passo a passo do seu cenário.
 
@@ -70,7 +69,7 @@ Para você, o que importa é simples:
 
 O Calendário MGC é um **arquivo HTML único** que roda direto no navegador — Chrome, Edge, Firefox ou Safari. Não precisa instalar nada, não precisa de servidor e funciona offline. Seus dados ficam no próprio computador.
 
-Quando quiser sincronizar entre computadores ou acessar pelo celular, basta configurar o Supabase (gratuito) e opcionalmente o GitHub Pages.
+Quando quiser sincronizar entre computadores ou acessar pelo celular, basta configurar o Supabase (gratuito). É totalmente opcional.
 
 ---
 
@@ -190,7 +189,7 @@ Quando quiser sincronizar entre computadores ou acessar pelo celular, basta conf
 
 ---
 
-### Cenário 3 — Acesso de qualquer lugar pela URL _(Supabase + GitHub Pages)_
+### Cenário 3 — Acesso de qualquer lugar pela URL _(Supabase + URL pública)_
 
 **Ideal para:** quem quer abrir o calendário pelo celular, tablet ou qualquer computador sem precisar do arquivo.
 
@@ -198,8 +197,8 @@ Quando quiser sincronizar entre computadores ou acessar pelo celular, basta conf
              ☁️ Supabase (dados)
                     ▲
                     │
- 🌐 GitHub Pages ───┤
- https://seu.github.io/calendario
+ 🌐 URL pública ─────┤
+ magoc25.github.io/calendario/...
                     │
       ┌─────────────┼─────────────┐
    💻 PC         📱 Celular    💻 PC 2
@@ -207,11 +206,10 @@ Quando quiser sincronizar entre computadores ou acessar pelo celular, basta conf
 
 **Passos:**
 1. Configure o Supabase (Cenário 2)
-2. Crie repositório no GitHub e ative GitHub Pages — veja [Configurar GitHub Pages](#configurar-github-pages)
-3. Acesse pela URL em qualquer dispositivo
-4. Em cada dispositivo, configure as chaves Supabase (uma vez só)
+2. Abra a [URL pública](#-abrir-agora--sem-baixar-nada) em qualquer dispositivo — nada para hospedar
+3. Em cada dispositivo, configure as chaves Supabase (uma vez só)
 
-> ⚠️ **Nota sobre repositório público:** o arquivo HTML não contém seus dados nem suas chaves. As chaves ficam salvas no `localStorage` do navegador. Um repositório público expõe apenas o código do calendário — seus eventos, notas e credenciais são privados.
+> 💡 A URL pública abre o app **vazio** para qualquer pessoa. Seus eventos, notas e chaves ficam no `localStorage` do seu navegador e no seu Supabase privado — ninguém mais os vê.
 
 ---
 
@@ -260,9 +258,9 @@ Quando quiser sincronizar entre computadores ou acessar pelo celular, basta conf
 
 ---
 
-### Nível 2 — Supabase + GitHub Pages _(app no celular, sync automático)_
+### Nível 2 — Supabase + URL pública _(app no celular, sync automático)_
 
-**O que muda:** seus dados vão para a nuvem (Supabase) e o calendário fica acessível por uma URL pública do GitHub Pages — de qualquer dispositivo, a qualquer hora.
+**O que muda:** seus dados vão para a nuvem (Supabase) e o calendário fica acessível pela URL pública do app — de qualquer dispositivo, a qualquer hora.
 
 > 🔒 **Sua agenda não fica visível para ninguém.** A URL pública abre o calendário vazio para qualquer pessoa que acessar. Seus eventos, notas e rotinas ficam no `localStorage` do seu navegador e nas suas chaves privadas do Supabase — que ninguém conhece a não ser você. Repositório público não significa dados públicos.
 
@@ -271,11 +269,11 @@ Quando quiser sincronizar entre computadores ou acessar pelo celular, basta conf
 | URL permanente acessível de qualquer lugar | Integração com Google Agenda |
 | Sync automático entre todos os dispositivos | — |
 | App instalável no celular (Android e iOS) | — |
-| Atualizações automáticas ao atualizar o arquivo no GitHub | — |
+| Atualizações automáticas (publicadas pelo desenvolvedor) | — |
 
 #### Instalar como app no celular
 
-Depois de configurar o GitHub Pages e acessar a URL pelo celular:
+Depois de abrir a URL pública pelo celular:
 
 **Android (Chrome):**
 1. Abra a URL no Chrome
@@ -324,19 +322,19 @@ O Calendário MGC também pode ser instalado como aplicativo no computador, sem 
 
 #### 🔄 Como usar o Google Agenda no dia a dia
 
-> ⚠️ **Regra fundamental:** se você usa sincronização com Google Agenda, **não use o arquivo local** (`calendario-mgc.html` aberto direto no PC). Use sempre o **link do GitHub Pages** ou o **app no celular**. O Google bloqueia autenticação OAuth em arquivos locais (`file://`).
+> ⚠️ **Regra fundamental:** se você usa sincronização com Google Agenda, **não use o arquivo local** (`calendario-mgc.html` aberto direto no PC). Use sempre o **link público do app** ou o **app no celular**. O Google bloqueia autenticação OAuth em arquivos locais (`file://`).
 
 **Comportamento por plataforma:**
 
 | Plataforma | Quando sincroniza com Google | Observação |
 |---|---|---|
-| Link GitHub (desktop) | Ao carregar/atualizar a página + a cada 30 min | Pode pedir login novamente após longa inatividade |
+| Link público (desktop) | Ao carregar/atualizar a página + a cada 30 min | Pode pedir login novamente após longa inatividade |
 | App mobile (celular) | Sempre ao abrir o app | Feche e reabra para forçar atualização |
 | Arquivo local | ❌ Nunca | Google bloqueia OAuth em `file://` |
 
 **O que fazer após cada ação:**
 
-| Ação | Desktop (link GitHub) | Mobile (app) |
+| Ação | Desktop (link público) | Mobile (app) |
 |---|---|---|
 | Criar / editar / excluir evento | Aguardar até 30 min ou atualizar a página | Fechar e reabrir o app |
 | Ver eventos novos vindos do Google | Atualizar a página | Fechar e reabrir o app |
@@ -363,6 +361,9 @@ O Calendário MGC também pode ser instalado como aplicativo no computador, sem 
 6. Aguarde ~2 minutos
 
 #### 2. Criar a tabela (SQL Editor)
+
+> Cole o bloco completo no **SQL Editor** e clique em **Run** (uma vez). Ele cria a tabela, libera o acesso do app (**GRANTs**) e ativa a segurança (**RLS**) — tudo num bloco só.
+
 No menu lateral → **SQL Editor** → **New query** → cole e execute:
 
 ```sql
@@ -381,6 +382,11 @@ create table cal_sync (
   routine_checks text,
   updated_at timestamptz default now()
 );
+
+-- Obrigatório: GRANTs explícitos (anon / authenticated / service_role)
+grant select, insert, update, delete on cal_sync to anon;
+grant select, insert, update, delete on cal_sync to authenticated;
+grant select, insert, update, delete on cal_sync to service_role;
 
 alter table cal_sync enable row level security;
 
@@ -441,41 +447,9 @@ Vá em **Settings → Data API**:
 
 ---
 
-### Configurar GitHub Pages
-
-#### 1. Criar repositório
-1. Acesse [github.com](https://github.com) → **+** → **New repository**
-2. Nome: `calendario`
-3. Visibilidade: **Public** (necessário para GitHub Pages gratuito)
-4. Marque **Add a README file**
-5. Clique em **Create repository**
-
-#### 2. Upload dos arquivos
-No repositório → **Add file → Upload files** → arraste os arquivos:
-- `calendario-mgc.html`
-- `README.md`
-- `TERMS.md`
-- `CHANGELOG.md`
-
-Clique em **Commit changes**.
-
-#### 3. Ativar GitHub Pages
-1. No repositório → **Settings → Pages**
-2. Source: **Deploy from a branch**
-3. Branch: **main** · Pasta: **/ (root)**
-4. Clique em **Save** → aguarde ~2 min
-
-#### 4. Sua URL
-```
-https://seunome.github.io/calendario/calendario-mgc.html
-```
-> ⚠️ **Importante:** a URL base (`/calendario/`) abre erro 404. Sempre use a URL com o nome do arquivo no final.
-
----
-
 ### Configurar Google Calendar
 
-> **Pré-requisito:** tenha o Cenário 3 (GitHub Pages) funcionando antes de configurar o Google Calendar, pois você vai precisar da URL do seu GitHub Pages.
+> **Pré-requisito:** use a [URL pública](#-abrir-agora--sem-baixar-nada) do app (não o arquivo local) — o Google bloqueia OAuth em arquivos `file://`.
 
 #### 1. Criar projeto no Google Cloud Console
 1. Acesse [console.cloud.google.com](https://console.cloud.google.com) com sua conta Google
@@ -511,9 +485,9 @@ https://seunome.github.io/calendario/calendario-mgc.html
 4. Em **Nome**, coloque: `Calendario MGC`
 5. Em **Origens JavaScript autorizadas**, clique em **+ Adicionar URI** e insira:
    ```
-   https://seunome.github.io
+   https://magoc25.github.io
    ```
-   > ⚠️ Substitua `seunome` pelo seu username real do GitHub. Use **apenas a origem** (sem `/calendario/` no final).
+   > ⚠️ Use **apenas a origem** (sem `/calendario/` no final) — `magoc25.github.io` é o domínio onde o app está publicado.
 6. Clique em **Criar**
 7. Uma janela aparecerá com o **Client ID** — copie-o (é uma string longa terminando em `.apps.googleusercontent.com`)
 
@@ -570,7 +544,7 @@ Na primeira sincronização, eventos recorrentes podem gerar cópias. Para remov
 | Erro | Causa | Solução |
 |---|---|---|
 | Acesso bloqueado | Conta não está na lista de usuários de teste | Adicionar o e-mail em Público-alvo → Usuários de teste |
-| Error 401 | Client ID inválido ou origem não autorizada | Verificar se `https://seunome.github.io` está em Origens JavaScript autorizadas |
+| Error 401 | Client ID inválido ou origem não autorizada | Verificar se `https://magoc25.github.io` está em Origens JavaScript autorizadas |
 | Login vai para conta errada | Navegador tem múltiplas contas Google | Preencher o campo **E-mail da conta Google** no painel 📆 |
 | Eventos duplicados | Primeira sync importou ocorrências de séries recorrentes | Usar **🧹 Limpar duplicados** |
 
@@ -599,7 +573,7 @@ Na primeira sincronização, eventos recorrentes podem gerar cópias. Para remov
 ### "A Publishable key do Supabase é segura para usar?"
 **Sim.** Ela foi projetada para ficar exposta no navegador. A segurança real é garantida pelas **Row Level Security policies** do Supabase, que controlam o que pode ser lido e escrito. A Secret key (que nunca usamos) é a que não deve ser exposta.
 
-### "E se alguém acessar a URL do meu GitHub Pages?"
+### "E se alguém acessar a URL pública?"
 A pessoa verá o calendário vazio, sem nenhum dado. Para ver seus dados, precisaria também das suas chaves do Supabase — que não estão em nenhum lugar público.
 
 ### "O Google pode ver meus eventos?"
@@ -614,7 +588,7 @@ Você perde a sincronização em nuvem, mas seus dados continuam locais no `loca
 |---|---|---|
 | Só arquivo local | 🟢 Máximo | Ideal para dados sensíveis |
 | Local + Supabase | 🟢 Alto | Padrão recomendado |
-| GitHub Pages Public | 🟡 Bom | Código exposto, dados não |
+| URL pública (repo público) | 🟡 Bom | Código exposto, dados não |
 | + Google Calendar | 🟡 Bom | Google acessa eventos sincronizados |
 
 ---
