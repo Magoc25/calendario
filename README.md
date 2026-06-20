@@ -108,7 +108,7 @@ Quando quiser sincronizar entre computadores ou acessar pelo celular, basta conf
 - Notificações do sistema operacional (Windows Action Center / macOS Notification Center)
 - Som de chime ao disparar
 - Soneca (+30 min, +1h, +3h, Amanhã)
-- Funciona mesmo com o navegador minimizado
+- Funciona com o navegador minimizado — e fechado no Android e no desktop, enquanto o navegador continuar aberto. No **iPhone/iPad**, mantenha o app aberto para receber os alertas (o Safari restringe notificações em segundo plano)
 - **Toggle ativar/desativar** — clique no 🔔 para ligar (verde) ou desligar (vermelho) os alertas sem revogar a permissão do navegador
 
 ### Integração e Export
@@ -316,7 +316,7 @@ O Calendário MGC também pode ser instalado como aplicativo no computador, sem 
 | Auto-sync ao abrir o app e a cada 30 minutos |
 | Mover evento no MGC atualiza o Google em segundos |
 | Basta conectar em um dispositivo — os demais recebem via Supabase |
-| Alertas dos eventos funcionam sem o app aberto, mesmo com a tela bloqueada |
+| Alertas com o app minimizado ou fechado (Android/desktop, com o navegador aberto; no iPhone, mantenha o app aberto) |
 
 > ⚠️ Este nível exige a configuração mais trabalhosa (Google Cloud Console), mas é feita **uma única vez**, em um único dispositivo. Veja o passo a passo completo em [Configurar Google Calendar](#configurar-google-calendar).
 
