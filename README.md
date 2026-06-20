@@ -379,6 +379,7 @@ create table cal_sync (
   reviews text,
   top3 text,
   standalone_notes text,
+  lists text,
   routine_checks text,
   updated_at timestamptz default now()
 );
