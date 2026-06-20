@@ -13,6 +13,28 @@ Desenvolvido por **Marlon Gomes da Costa (MGC Dev)**
 
 ---
 
+## ▶ Abrir agora — sem baixar nada
+
+O app já está publicado online. Clique e use:
+
+**[▶ Abrir o Calendário MGC](https://Magoc25.github.io/calendario/calendario-mgc.html)**
+
+Funciona em qualquer navegador moderno (Chrome, Edge, Firefox, Safari) — no celular, tablet ou computador. **Não precisa de cadastro, login nem download.** Após o primeiro acesso, o app funciona **offline**, e seus dados ficam **somente no seu dispositivo** (no armazenamento do próprio navegador).
+
+### 📱 Instalar como app no seu dispositivo
+
+Depois de abrir a URL acima, dá para instalar como aplicativo, com ícone na tela inicial / área de trabalho:
+
+| Plataforma | Como instalar |
+|---|---|
+| **Chrome / Edge no PC** | Ícone de instalação (☐ com seta) na barra de endereços → **Instalar** |
+| **Android (Chrome)** | Menu (⋮) → **Instalar app** / **Adicionar à tela inicial** |
+| **iPhone / iPad (Safari)** | Compartilhar (□↑) → **Adicionar à Tela de Início** |
+
+> 💡 Quer **sincronizar entre dispositivos** (PC + celular) ou rodar o seu **próprio** deploy? Isso é opcional — veja os cenários e guias mais abaixo.
+
+---
+
 ## 🤔 Por que usar o Calendário MGC?
 
 Se você está avaliando este app, provavelmente já viu opções na Play Store ou App Store. Antes de decidir, considere:
@@ -36,8 +58,9 @@ Para você, o que importa é simples:
 
 | Cenário | O que você precisa |
 |---|---|
-| **Usar no computador** (sem nuvem) | Baixar apenas `calendario-mgc.html` e abrir no navegador |
-| **Acessar por URL em qualquer dispositivo** | Criar uma conta no GitHub, fazer upload dos arquivos deste repositório uma única vez — depois acessa de qualquer lugar pela URL, sem guardar nada no computador |
+| **Só usar, agora** (qualquer dispositivo) | Abrir a [URL pública](#-abrir-agora--sem-baixar-nada) — nada para baixar nem configurar |
+| **Usar no computador sem nuvem** | Baixar apenas `calendario-mgc.html` e abrir no navegador |
+| **Ter o seu próprio deploy** _(avançado, opcional)_ | Subir os arquivos no seu GitHub Pages — veja [Configurar GitHub Pages](#configurar-github-pages). Só faz sentido se quiser uma URL própria, separada da pública. |
 
 👉 Vá direto para [**Como usar**](#-como-usar--4-cenários) para o passo a passo do seu cenário.
 
