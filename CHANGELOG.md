@@ -5,6 +5,16 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 
 ---
 
+## [2.3.1] — Junho 2026
+
+### 🐛 Corrigido
+- **Listas desaparecendo entre dispositivos** — uma lista criada em um aparelho podia sumir quando o outro aparelho (ainda com a aba Listas vazia) sincronizava: o estado vazio sobrescrevia o da nuvem. Agora o sync **mescla item a item** em vez de substituir tudo — nenhum aparelho apaga o que outro criou. Excluir uma lista ou item continua se propagando para os outros aparelhos, e o **Desfazer** reverte normalmente.
+
+### ⚠️ Para valer nos dois aparelhos
+Abra a **2.3.1** em **todos** os dispositivos (pode ser preciso fechar e reabrir o app uma vez). **Não precisa mexer no Supabase.** Enquanto um aparelho continuar na 2.3.0, ele não exibe as listas no formato novo — mas **não há mais perda de dados**: ao atualizar, tudo reaparece.
+
+---
+
 ## [2.3.0] — Junho 2026
 
 ### 🆕 Adicionado

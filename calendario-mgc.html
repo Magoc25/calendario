@@ -2282,7 +2282,7 @@ body.large .sidebar-year{font-size:22px}
             </a>
             <button class="footer-link-btn pix-btn" id="pixBtn" title="Apoiar o projeto">☕ Apoiar</button>
             <button class="footer-link-btn" id="reviewsBtn" title="Ver avaliações">⭐ Avaliações</button>
-            <span id="appVersion" style="font-size:11px;color:var(--text);user-select:none">© MGC · v2.3.0</span>
+            <span id="appVersion" style="font-size:11px;color:var(--text);user-select:none">© MGC · v2.3.1</span>
           </span>
         </div>
       </div>
@@ -2950,7 +2950,8 @@ const AppState={
   reviews:{},
   standaloneNotes:[],
   categories:[],
-  lists:[],          // Aba Listas: [{id,title,createdAt,items:[{id,title,done}]}] — sem horário/purga
+  lists:[],          // Aba Listas: [{id,title,createdAt,updatedAt,items:[{id,title,done,updatedAt}]}] — sem horário/purga
+  listsDel:{},       // Tombstones de exclusão das Listas: {id:deletedAtMs} (listas e itens) — p/ sync mesclar sem ressuscitar/apagar
 };
 // ─────────────────────────────────────────────────────
 let editingId=null,editingDate=null,selectedColor='#3b5bdb',isDone=false;
@@ -4872,7 +4873,12 @@ document.getElementById('importFile').addEventListener('change',function(){
       if(confirm(`Importar ${imp.length} evento(s)? Os dados atuais serão substituídos.`)){
         AppState.events=imp;if(data.categoryColors)categoryColors=data.categoryColors;
         if(data.notes)notesStore=data.notes;
-        if(Array.isArray(data.lists)){AppState.lists=data.lists;saveLists();}
+        if(Array.isArray(data.lists)){
+          // Restauração explícita: recarimba como recente e zera tombstones p/ o sync não reapagar o importado
+          const _now=Date.now();
+          AppState.lists=data.lists.map(l=>({...l,updatedAt:_now,items:Array.isArray(l.items)?l.items.map(it=>({...it,updatedAt:_now})):[]}));
+          AppState.listsDel={};saveLists();
+        }
         save();saveCatColors();if(data.theme)applyTheme(data.theme);render();toast(`${imp.length} eventos importados!`);
       }
     }catch(err){toast('Erro ao ler JSON.');}
@@ -6340,8 +6346,11 @@ function openRvForm(id,keepOpen=false){
 /* Forma de cada lista: {id, title, createdAt, items:[{id, title, done}]} */
 /* saveLists espelha saveQuickTasks: localStorage + cal_local_ts + push debounced ao Supabase. */
 try{AppState.lists=JSON.parse(localStorage.getItem('cal_lists')||'[]');}catch(e){console.error('[MGC] Falha ao carregar listas:',e);AppState.lists=[];}
+try{AppState.listsDel=JSON.parse(localStorage.getItem('cal_lists_del')||'{}');}catch(e){AppState.listsDel={};}
+if(!AppState.listsDel||typeof AppState.listsDel!=='object'||Array.isArray(AppState.listsDel))AppState.listsDel={};
 function saveLists(){
   localStorage.setItem('cal_lists',JSON.stringify(AppState.lists));
+  localStorage.setItem('cal_lists_del',JSON.stringify(AppState.listsDel||{}));
   localStorage.setItem('cal_local_ts',new Date().toISOString());
   if(sbClient){clearTimeout(_cloudSaveTimer);_cloudSaveTimer=setTimeout(()=>syncToCloud(true),1500);}
 }
@@ -6349,32 +6358,38 @@ function saveLists(){
 /* ── CRUD de listas e itens (estado local; UI chama renderListsView para refletir) ── */
 function createList(title){
   title=(title||'').trim();if(!title)return null;
-  const l={id:uid(),title,createdAt:Date.now(),items:[]};
+  const now=Date.now();
+  const l={id:uid(),title,createdAt:now,updatedAt:now,items:[]};
   AppState.lists.unshift(l); // mais recente no topo (decisão fechada 2026-06-20)
   saveLists();return l;
 }
 function deleteList(id){
   const idx=AppState.lists.findIndex(l=>l.id===id);if(idx<0)return;
-  const[removed]=AppState.lists.splice(idx,1);saveLists();
+  const[removed]=AppState.lists.splice(idx,1);
+  AppState.listsDel[id]=Date.now(); // tombstone → exclusão propaga no sync (não ressuscita de outro device)
+  saveLists();
   if(_openListId===id)_openListId=null;
   renderListsView();
-  toastUndo('Lista excluída.',()=>{AppState.lists.splice(Math.min(idx,AppState.lists.length),0,removed);saveLists();renderListsView();});
+  toastUndo('Lista excluída.',()=>{delete AppState.listsDel[id];removed.updatedAt=Date.now();AppState.lists.splice(Math.min(idx,AppState.lists.length),0,removed);saveLists();renderListsView();});
 }
 function addListItem(listId,title){
   title=(title||'').trim();if(!title)return;
   const l=AppState.lists.find(x=>x.id===listId);if(!l)return;
-  l.items.push({id:uid(),title,done:false});saveLists();
+  const now=Date.now();
+  l.items.push({id:uid(),title,done:false,updatedAt:now});l.updatedAt=now;saveLists();
 }
 function toggleListItem(listId,itemId){
   const l=AppState.lists.find(x=>x.id===listId);if(!l)return;
   const it=l.items.find(i=>i.id===itemId);if(!it)return;
-  it.done=!it.done;saveLists();
+  it.done=!it.done;const now=Date.now();it.updatedAt=now;l.updatedAt=now;saveLists();
 }
 function deleteListItem(listId,itemId){
   const l=AppState.lists.find(x=>x.id===listId);if(!l)return;
   const idx=l.items.findIndex(i=>i.id===itemId);if(idx<0)return;
-  const[removed]=l.items.splice(idx,1);saveLists();renderListsView();
-  toastUndo('Item excluído.',()=>{const ll=AppState.lists.find(x=>x.id===listId);if(ll){ll.items.splice(Math.min(idx,ll.items.length),0,removed);saveLists();renderListsView();}});
+  const[removed]=l.items.splice(idx,1);
+  AppState.listsDel[itemId]=Date.now();l.updatedAt=Date.now(); // tombstone do item
+  saveLists();renderListsView();
+  toastUndo('Item excluído.',()=>{const ll=AppState.lists.find(x=>x.id===listId);if(ll){delete AppState.listsDel[itemId];removed.updatedAt=Date.now();ll.updatedAt=Date.now();ll.items.splice(Math.min(idx,ll.items.length),0,removed);saveLists();renderListsView();}});
 }
 
 /* ── Drag & drop (reordenar) — genérico p/ listas e itens ──
@@ -6386,13 +6401,79 @@ function reorderListItems(fromId,toId){
   const from=l.items.findIndex(i=>i.id===fromId),to=l.items.findIndex(i=>i.id===toId);
   if(from<0||to<0||from===to)return;
   const[m]=l.items.splice(from,1);l.items.splice(to,0,m);
+  l.updatedAt=Date.now();
   saveLists();renderListsView();
 }
 function reorderLists(fromId,toId){
   const from=AppState.lists.findIndex(l=>l.id===fromId),to=AppState.lists.findIndex(l=>l.id===toId);
   if(from<0||to<0||from===to)return;
   const[m]=AppState.lists.splice(from,1);AppState.lists.splice(to,0,m);
+  m.updatedAt=Date.now();
   saveLists();renderListsView();
+}
+
+/* ── Merge de listas (sincronização multi-dispositivo) ───────────────────────
+   A nuvem guarda tudo num único registro JSON com 1 timestamp global. Antes,
+   um device com estado de listas vazio/antigo reenviava "[]" e apagava as listas
+   que outro device criou (bug do sumiço). Aqui mesclamos por id em vez de
+   substituir o array inteiro: união de listas/itens + tombstones de exclusão
+   (AppState.listsDel = {id:deletedAtMs}). Em conflito de mesmo id vence o de
+   updatedAt mais recente; uma exclusão só remove se for >= à última edição.
+   Resultado: nenhum device apaga o que outro criou, e exclusões ainda propagam. */
+function _ut(o){return (o&&(o.updatedAt||o.createdAt))||0;} // "última modificação" com fallback p/ dados antigos
+function _pruneDel(del){            // descarta tombstones com +90 dias (não crescem p/ sempre)
+  const cut=Date.now()-90*864e5,out={};
+  for(const id in del){if(del[id]>=cut)out[id]=del[id];}
+  return out;
+}
+function _mergeListItems(localItems,remoteItems,del){
+  localItems=Array.isArray(localItems)?localItems:[];
+  remoteItems=Array.isArray(remoteItems)?remoteItems:[];
+  const byId=new Map();localItems.forEach(i=>byId.set(i.id,i));
+  const novos=[];
+  remoteItems.forEach(r=>{const cur=byId.get(r.id);
+    if(!cur){byId.set(r.id,r);novos.push(r.id);}
+    else if(_ut(r)>_ut(cur))byId.set(r.id,r);});
+  const ordem=[...localItems.map(i=>i.id),...novos],vis=new Set(),out=[];
+  ordem.forEach(id=>{if(!vis.has(id)){vis.add(id);out.push(byId.get(id));}});
+  return out.filter(it=>!(del[it.id]&&del[it.id]>=_ut(it))); // item com tombstone vigente fica de fora
+}
+function mergeListCollections(localLists,localDel,remoteLists,remoteDel){
+  localLists=Array.isArray(localLists)?localLists:[];
+  remoteLists=Array.isArray(remoteLists)?remoteLists:[];
+  localDel=(localDel&&typeof localDel==='object')?localDel:{};
+  remoteDel=(remoteDel&&typeof remoteDel==='object')?remoteDel:{};
+  const del={...localDel};
+  for(const id in remoteDel){del[id]=Math.max(del[id]||0,remoteDel[id]||0);} // tombstones: união (maior ts)
+  const byId=new Map();localLists.forEach(l=>byId.set(l.id,l));
+  const novas=[];
+  remoteLists.forEach(r=>{const cur=byId.get(r.id);
+    if(!cur){byId.set(r.id,r);novas.push(r.id);}
+    else if(_ut(r)>_ut(cur))byId.set(r.id,r);});
+  const ordem=[...novas,...localLists.map(l=>l.id)],vis=new Set(); // novas (do remoto) no topo, como o unshift
+  let merged=[];
+  ordem.forEach(id=>{if(!vis.has(id)){vis.add(id);merged.push(byId.get(id));}});
+  merged=merged.map(l=>{
+    const ll=localLists.find(x=>x.id===l.id),rr=remoteLists.find(x=>x.id===l.id);
+    return {...l,items:_mergeListItems(ll&&ll.items,rr&&rr.items,del)};
+  });
+  merged=merged.filter(l=>!(del[l.id]&&del[l.id]>=_ut(l))); // lista com tombstone vigente fica de fora
+  return {lists:merged,del:_pruneDel(del)};
+}
+// Mescla as listas vindas de um registro remoto (formato novo {v:2,lists,del} ou array antigo) com o estado local.
+function applyRemoteListsMerge(row){
+  try{
+    let rl=[],rd={};
+    if(row&&row.lists){
+      const p=JSON.parse(row.lists);
+      if(Array.isArray(p))rl=p;                                          // formato antigo: só o array
+      else if(p&&typeof p==='object'){rl=Array.isArray(p.lists)?p.lists:[];rd=(p.del&&typeof p.del==='object')?p.del:{};}
+    }
+    const mg=mergeListCollections(AppState.lists,AppState.listsDel,rl,rd);
+    AppState.lists=mg.lists;AppState.listsDel=mg.del;
+    localStorage.setItem('cal_lists',JSON.stringify(AppState.lists));
+    localStorage.setItem('cal_lists_del',JSON.stringify(AppState.listsDel));
+  }catch(e){console.warn('[MGC] Falha ao mesclar listas remotas:',e);}
 }
 function makeListReorderable(container,itemSelector,idAttr,reorder){
   if(!container)return;
@@ -7528,7 +7609,7 @@ function getLocalPayload(){
     reviews: JSON.stringify(AppState.reviews),
     top3: JSON.stringify(AppState.top3Data),
     standalone_notes: JSON.stringify(AppState.standaloneNotes),
-    lists: JSON.stringify(AppState.lists),
+    lists: JSON.stringify({v:2,lists:AppState.lists,del:AppState.listsDel||{}}), // v2: inclui tombstones p/ merge no sync
     routine_checks: JSON.stringify(rchecks),
     updated_at: new Date().toISOString()
   };
@@ -7556,7 +7637,7 @@ function applyRemotePayload(row){
     if(row.reviews)try{const rv=JSON.parse(row.reviews);if(rv&&typeof rv==='object')AppState.reviews=rv;}catch(e){}
     if(row.top3)try{const t3=JSON.parse(row.top3);if(t3&&typeof t3==='object')AppState.top3Data=t3;}catch(e){}
     if(row.standalone_notes)try{const sn=JSON.parse(row.standalone_notes);if(Array.isArray(sn))AppState.standaloneNotes=sn;}catch(e){}
-    if(row.lists)try{const ls=JSON.parse(row.lists);if(Array.isArray(ls))AppState.lists=ls;}catch(e){}
+    applyRemoteListsMerge(row); // mescla por id + tombstones (persiste cal_lists/cal_lists_del internamente)
     // Persist locally
     localStorage.setItem('cal_marlon_v8',row.events||'[]');
     localStorage.setItem('cal_notes',row.notes||'{}');
@@ -7567,7 +7648,7 @@ function applyRemotePayload(row){
     if(row.reviews)localStorage.setItem('cal_reviews',row.reviews);
     if(row.top3)localStorage.setItem('cal_top3',row.top3);
     if(row.standalone_notes)localStorage.setItem('cal_standalone_notes',row.standalone_notes);
-    if(row.lists)localStorage.setItem('cal_lists',row.lists);
+    // cal_lists / cal_lists_del já persistidos por applyRemoteListsMerge (merge por id, não substituição)
     if(row.routine_checks)try{
       const rc=JSON.parse(row.routine_checks);
       if(rc&&typeof rc==='object'){
@@ -7619,7 +7700,11 @@ async function syncFromCloud(silent=false){
         render();
         if(!silent)toast('✓ Dados atualizados da nuvem!');
       } else {
-        // Local é mais recente (inclui alterações não enviadas antes de fechar) — envia para nuvem
+        // Local é mais recente (inclui alterações não enviadas antes de fechar) — envia para nuvem.
+        // Antes, mescla as listas remotas: assim um device com listas vazias/antigas não sobrescreve
+        // (push) o que outro device criou — ele incorpora e reenvia o conjunto completo.
+        applyRemoteListsMerge(data);
+        render();
         await syncToCloud(true);
         if(!silent)toast('✓ Nuvem atualizada com dados locais!');
       }
@@ -8672,7 +8757,7 @@ setInterval(()=>getActiveSW()?.postMessage({type:'PING'}),25000);
 /* ── Verificação de nova versão via Supabase ── */
 (async()=>{
   if(!revClient)return;
-  const LOCAL_VERSION='2.3.0';
+  const LOCAL_VERSION='2.3.1';
   const CACHE_KEY='mgc_update_check';
   const CACHE_TTL=24*60*60*1000; // 24 horas
   const cached=JSON.parse(localStorage.getItem(CACHE_KEY)||'null');
@@ -8711,7 +8796,7 @@ setInterval(()=>getActiveSW()?.postMessage({type:'PING'}),25000);
   if(!deviceId){deviceId=crypto.randomUUID();localStorage.setItem('calendario_device_id',deviceId);}
   try{
     await revClient.from('app_pings').upsert(
-      {app_name:'Calendario MGC',version:'2.3.0',device_id:deviceId,ping_date:today},
+      {app_name:'Calendario MGC',version:'2.3.1',device_id:deviceId,ping_date:today},
       {onConflict:'app_name,device_id,ping_date',ignoreDuplicates:true}
     );
     localStorage.setItem(PING_KEY,today);
