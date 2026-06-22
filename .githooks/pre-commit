@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+# ── Calendário MGC — pre-commit hook ──────────────────────────────
+# Mantém as versões sincronizadas automaticamente antes de cada commit:
+#   1) semver (fonte: 1ª "## [x.y.z]" do CHANGELOG.md) nos 3 pontos do HTML:
+#      rodapé "© MGC · v…", const LOCAL_VERSION e o ping de telemetria (version:'…').
+#   2) CACHE_NAME do sw.js (cal-mgc-vNNN) — auto-incrementado quando o app
+#      (HTML ou sw.js) entra no commit, forçando o PWA a baixar a versão nova.
+#      (o cache usa numeração própria de build, não a semver — por isso +1.)
+# Portável macOS/Linux: sem "grep -P" e sem "sed -i" (usa arquivo temporário).
+# Nunca bloqueia o commit (sai 0 mesmo que algo falhe).
+# ------------------------------------------------------------------
+CHANGELOG="CHANGELOG.md"
+HTML="calendario-mgc.html"
+SW="sw.js"
+
+# ── 1) Versão semver mais recente do CHANGELOG (ex.: "## [2.3.1] — …" → 2.3.1) ──
+VERSION=$(sed -nE 's/^## \[([0-9]+\.[0-9]+\.[0-9]+)\].*/\1/p' "$CHANGELOG" 2>/dev/null | head -1)
+
+if [ -z "$VERSION" ]; then
+  echo "[pre-commit] Aviso: versão não encontrada no CHANGELOG.md — HTML não sincronizado."
+else
+  tmp=$(mktemp)
+  sed -E \
+    -e "s/© MGC · v[0-9]+\.[0-9]+\.[0-9]+/© MGC · v$VERSION/" \
+    -e "s/(const LOCAL_VERSION=')[0-9]+\.[0-9]+\.[0-9]+(')/\1$VERSION\2/" \
+    -e "s/(version:')[0-9]+\.[0-9]+\.[0-9]+(',device_id)/\1$VERSION\2/" \
+    "$HTML" > "$tmp" && mv "$tmp" "$HTML" && git add "$HTML"
+  echo "[pre-commit] Versão semver sincronizada no HTML: v$VERSION"
+fi
+
+# ── 2) Cache do sw.js: incrementa só quando o app (HTML ou sw.js) está no commit ──
+if git diff --cached --name-only | grep -qE "^(calendario-mgc\.html|sw\.js)$"; then
+  CUR=$(sed -nE 's/.*cal-mgc-v([0-9]+).*/\1/p' "$SW" 2>/dev/null | head -1)
+  if [ -n "$CUR" ]; then
+    NEXT=$((CUR + 1))
+    tmp=$(mktemp)
+    sed -E "s/cal-mgc-v[0-9]+/cal-mgc-v$NEXT/" "$SW" > "$tmp" && mv "$tmp" "$SW" && git add "$SW"
+    echo "[pre-commit] Cache do sw.js: v$CUR → v$NEXT"
+  fi
+fi
+
+exit 0
