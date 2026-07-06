@@ -229,6 +229,18 @@ function run() {
     check('quickAddParse é executável', true);
   }
 
+  /* ── Escapes e validação de URL (E5) ── */
+  check('safeMeetUrl bloqueia javascript: e aceita https://',
+    ev(`safeMeetUrl('javascript:alert(1)')==='' && safeMeetUrl('https://meet.google.com/x')!=='' && safeMeetUrl('https://a"onmouseover="x')==='https://a&quot;onmouseover=&quot;x'`) === true);
+  check('nome de calendário malicioso é escapado na sidebar',
+    ev(`(function(){
+      calendars.push({id:'xss1',name:'<img src=x onerror=window.__xss=1>',color:'#000',visible:true});
+      renderCalendarList();
+      const ok=!document.querySelector('#calendarItems img') && !window.__xss;
+      calendars=calendars.filter(c=>c.id!=='xss1');renderCalendarList();
+      return ok;
+    })()`) === true);
+
   /* ── Backup v7 completo (E4) ── */
   $('exportJsonBtn').click();
   let backup = {};

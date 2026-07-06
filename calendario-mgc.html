@@ -2994,7 +2994,7 @@ function renderCalendarList(){
   document.getElementById('calendarItems').innerHTML=calendars.map(c=>`
     <div class="cal-item${c.visible?'':' hidden-cal'}" data-calid="${c.id}">
       <span class="cal-dot" style="background:${c.color}"></span>
-      <span class="cal-name">${c.name}</span>
+      <span class="cal-name">${esc(c.name)}</span>
       <button class="cal-eye" data-toggle="${c.id}" title="${c.visible?'Ocultar':'Mostrar'}">${c.visible?'👁':'🚫'}</button>
     </div>`).join('');
   document.querySelectorAll('.cal-item').forEach(el=>{
@@ -3013,8 +3013,7 @@ function renderCalendarList(){
 
 function populateCalendarSelect(){
   const sel=document.getElementById('evCalendar');
-  // Valida color como hex/named CSS color (evita CSS injection); escapa name (evita HTML injection)
-  const safeColor=c=>/^(#[0-9a-fA-F]{3,8}|[a-zA-Z]+)$/.test(c||'')?c:'inherit';
+  // safeColor/esc globais: evitam CSS/HTML injection vindos do sync
   sel.innerHTML=calendars.map(c=>`<option value="${esc(c.id)}" style="color:${safeColor(c.color)}">${esc(c.name)}</option>`).join('');
 }
 
@@ -3106,6 +3105,11 @@ const esc=s=>String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>
 // safeHtml: sanitiza HTML rico (para notas) preservando formatação legítima
 // Se DOMPurify falhar (CDN offline), degrada para escape simples — sem formatação mas seguro
 const safeHtml=h=>(typeof DOMPurify!=='undefined')?DOMPurify.sanitize(h||''):esc(h||'');
+// safeMeetUrl: link de reunião só entra no DOM se for https:// (bloqueia javascript: e
+// quebra de atributo) — o valor vem do Google/sync, não é confiável por construção
+const safeMeetUrl=u=>{u=String(u||'');return /^https:\/\//i.test(u)?esc(u):'';};
+// safeColor: valida cor como hex/nome CSS (evita injeção via style=) — cores podem chegar pelo sync
+const safeColor=c=>/^(#[0-9a-fA-F]{3,8}|[a-zA-Z]+)$/.test(c||'')?c:'inherit';
 
 // [DOM cache movido para antes de openCalModal — ver linha ~2999]
 
@@ -3463,6 +3467,12 @@ function renderMonth(){
 function _copyMeet(btn,url){
   navigator.clipboard.writeText(url).then(()=>{btn.textContent='✓';setTimeout(()=>{btn.textContent='📋';},1500);}).catch(()=>{});
 }
+// Delegação p/ botões "copiar Meet" renderizados em template (substitui onclick inline
+// com a URL interpolada na string JS — vetor de quebra de aspas)
+document.addEventListener('click',e=>{
+  const b=e.target.closest('.meet-copy-btn[data-meet]');
+  if(b){e.stopPropagation();e.preventDefault();_copyMeet(b,b.dataset.meet);}
+});
 
 /* ═══════ DAY PANEL ═══════ */
 function renderDayPanel(dateStr){
@@ -3503,7 +3513,7 @@ function renderDayPanel(dateStr){
         </div>
         ${ev.category?`<div class="dp-ev-cat">${esc(ev.category)}${ev.rrule?' · recorrente':''}</div>`:''}
         ${ev.location?`<div class="dp-ev-loc">📍 ${esc(ev.location)}</div>`:''}
-        ${ev.meetLink?`<div class="dp-ev-loc" style="display:flex;align-items:center;gap:5px"><a class="dp-meet-link" href="${ev.meetLink}" target="_blank" rel="noopener" onclick="event.stopPropagation()">🎥 Entrar no Google Meet</a><button class="meet-copy-btn" onclick="event.stopPropagation();_copyMeet(this,'${ev.meetLink}')" title="Copiar link">📋</button></div>`:''}
+        ${safeMeetUrl(ev.meetLink)?`<div class="dp-ev-loc" style="display:flex;align-items:center;gap:5px"><a class="dp-meet-link" href="${safeMeetUrl(ev.meetLink)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">🎥 Entrar no Google Meet</a><button class="meet-copy-btn" data-meet="${safeMeetUrl(ev.meetLink)}" title="Copiar link">📋</button></div>`:''}
         ${tagsHtml}
       </div>`;
     });
@@ -4250,7 +4260,7 @@ document.addEventListener('click',e=>{if(!e.target.closest('.search-wrap'))docum
         <div class="srp-title${done?' done':''}">${esc(ev.title)}${done?' ✓':''}</div>
         <div class="srp-row">📅 <strong>${dayStr}${time?' · '+time:''}</strong></div>
         ${ev.location?`<div class="srp-row">📍 <span>${esc(ev.location)}</span></div>`:''}
-        ${ev.meetLink?`<div class="srp-row" style="align-items:center;gap:6px">🎥 <a href="${ev.meetLink}" target="_blank" rel="noopener" class="srp-meet-link" onclick="event.stopPropagation()">Entrar no Google Meet</a><button class="meet-copy-btn" onclick="event.stopPropagation();_copyMeet(this,'${ev.meetLink}')" title="Copiar link">📋</button></div>`:''}
+        ${safeMeetUrl(ev.meetLink)?`<div class="srp-row" style="align-items:center;gap:6px">🎥 <a href="${safeMeetUrl(ev.meetLink)}" target="_blank" rel="noopener" class="srp-meet-link" onclick="event.stopPropagation()">Entrar no Google Meet</a><button class="meet-copy-btn" data-meet="${safeMeetUrl(ev.meetLink)}" title="Copiar link">📋</button></div>`:''}
         ${cal&&cal.id!=='default'?`<div class="srp-row">🗂 <span>${esc(cal.name)}</span></div>`:''}
         ${(ev.tags||[]).length?`<div class="srp-row">🏷 <span>${ev.tags.map(t=>esc(t)).join(' ')}</span></div>`:''}
         ${ev.desc?`<div class="srp-row" style="align-items:flex-start">📄 <span style="white-space:pre-wrap;overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical">${esc(ev.desc)}</span></div>`:''}
@@ -4564,7 +4574,8 @@ function openEdit(id,dateCtx){
   setColor(ev.color||'#3b5bdb');applyCatColor(ev.category||'');
   document.getElementById('evCalendar').value=ev.calendarId||'default';
   const _mlf=document.getElementById('meetLinkField');const _mla=document.getElementById('meetLinkAnchor');const _mlc=document.getElementById('meetLinkCopy');
-  if(ev.meetLink){_mla.href=ev.meetLink;_mlf.style.display='';if(_mlc)_mlc.onclick=e=>{e.preventDefault();_copyMeet(_mlc,ev.meetLink);};}else _mlf.style.display='none';
+  // Só aceita https:// — meetLink vem do Google/sync (bloqueia javascript: no href)
+  if(ev.meetLink&&/^https:\/\//i.test(ev.meetLink)){_mla.href=ev.meetLink;_mlf.style.display='';if(_mlc)_mlc.onclick=e=>{e.preventDefault();_copyMeet(_mlc,ev.meetLink);};}else _mlf.style.display='none';
   setDoneUI(ev.rrule?isDoneOn(ev,editingDate):!!ev.done);
   currentTags=[...(ev.tags||[])];renderTagPills();
   DOM.overlay.classList.add('open');
@@ -5935,7 +5946,7 @@ function openMobileDaySheet(dateStr){
         <div class="mds-event-info">
           <div style="display:flex;align-items:center;gap:6px;min-width:0">
             ${noteIcon}
-            <div class="mds-event-title${done?' done':''}" style="flex:1;min-width:0">${ev.title}${done?' ✓':''}</div>
+            <div class="mds-event-title${done?' done':''}" style="flex:1;min-width:0">${esc(ev.title)}${done?' ✓':''}</div>
           </div>
           ${ev.category||ev.location?`<div class="mds-event-sub">${icon?icon+' ':''}${ev.category||''}${ev.location?' · 📍'+ev.location:''}</div>`:''}
         </div>
@@ -6213,7 +6224,7 @@ function renderRvDashboard(filterId){
       ${AppState.routines.map(r=>{const p=_rvPct(r.id,30)??0;return`
         <div class="rv-bar-row">
           <span class="rv-bar-dot" style="background:${r.color||accent}"></span>
-          <span class="rv-bar-name" title="${r.title}">${r.title}</span>
+          <span class="rv-bar-name" title="${esc(r.title)}">${esc(r.title)}</span>
           <div class="rv-bar-track"><div class="rv-bar-fill" style="width:${p}%;background:${r.color||accent}"></div></div>
           <span class="rv-bar-pct">${_rvPct(r.id,30)===null?'—':p+'%'}</span>
         </div>`;}).join('')}
@@ -6224,7 +6235,7 @@ function renderRvDashboard(filterId){
       <div class="rv-filter-row">
         <span class="rv-filter-chip${!filterId?' sel':''}" data-rv-filter="">Todas</span>
         ${AppState.routines.map(r=>`<span class="rv-filter-chip${filterId===r.id?' sel':''}" data-rv-filter="${r.id}"
-          style="${filterId===r.id?`border-color:${r.color||accent};color:${r.color||accent};background:${r.color||accent}22`:''}">${r.title}</span>`).join('')}
+          style="${filterId===r.id?`border-color:${safeColor(r.color||accent)};color:${safeColor(r.color||accent)};background:${safeColor(r.color||accent)}22`:''}">${esc(r.title)}</span>`).join('')}
       </div>
       <div class="rv-metrics">
         <div class="rv-metric-card"><div class="rv-metric-val" style="color:${color}">🔥 ${streak}</div><div class="rv-metric-lbl">Sequência atual</div></div>
@@ -6301,7 +6312,7 @@ function renderRoutinesView(){
           return `<div class="routine-card" data-rid="${r.id}">
             <span class="routine-card-dot" style="background:${r.color||'#3b5bdb'}"></span>
             <div class="routine-card-body">
-              <div class="routine-card-title">${r.title}</div>
+              <div class="routine-card-title">${esc(r.title)}</div>
               <div class="routine-card-meta">${r.time||''} · ${daysLabel}${todayDone?' · ✓ Feito hoje':''}</div>
             </div>
             <div class="routine-card-actions">
@@ -6906,7 +6917,7 @@ function renderToday(){
             </div>
             <span class="tr-title${checks.includes(r.id)?' done':''}"
                   style="color:${checks.includes(r.id)?'var(--muted)':r.color||'var(--text)'}">
-              ${r.title}
+              ${esc(r.title)}
             </span>
             <span class="tr-time">${r.time||''}</span>
           </div>`).join('')}
@@ -6924,7 +6935,7 @@ function renderToday(){
                  data-drag-id="${t.id}" data-drag-color="var(--accent)">
               <span class="tv-drag-handle">⠿</span>
               <div class="qt-check${t.done?' done':''}" data-qtcheck="${t.id}">${t.done?'✓':''}</div>
-              <span class="qt-text${t.done?' done':''}">${t.title}</span>
+              <span class="qt-text${t.done?' done':''}">${esc(t.title)}</span>
               <button class="qt-del" data-qtdel="${t.id}">✕</button>
             </div>`).join('')}
       </div>
@@ -7963,7 +7974,7 @@ async function gcalLoadCalendars(){
     const sel=document.getElementById('gcalCalendarSelect');
     const saved=localStorage.getItem(GCAL_CAL_KEY)||'primary';
     sel.innerHTML=(data.items||[]).map(c=>
-      `<option value="${c.id}"${c.id===saved?' selected':''}>${c.summary}${c.primary?' (principal)':''}</option>`
+      `<option value="${esc(c.id)}"${c.id===saved?' selected':''}>${esc(c.summary)}${c.primary?' (principal)':''}</option>`
     ).join('');
     const emailEl=document.getElementById('gcalUserEmail');
     const me=(data.items||[]).find(c=>c.primary);
@@ -8411,7 +8422,7 @@ document.getElementById('gcalDedupeBtn').addEventListener('click',()=>{
       return `<label style="display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border-bottom:1px solid var(--border);cursor:pointer;font-size:12px">
         <input type="checkbox" data-idx="${i}" style="margin-top:2px;flex-shrink:0">
         <div>
-          <div style="font-weight:600;color:var(--text)">${g.title}</div>
+          <div style="font-weight:600;color:var(--text)">${esc(g.title)}</div>
           <div style="color:var(--muted);font-size:11px">${g.evs.length} ocorrências · ${g.start} · ${from} → ${to}</div>
         </div>
       </label>`;
