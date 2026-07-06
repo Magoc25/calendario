@@ -8037,28 +8037,45 @@ function mgcToGcal(ev){
   return obj;
 }
 
+// Link do Meet de um evento Google (hangoutLink ou entryPoint de vídeo)
+function gcalMeet(gcEv){return gcEv.hangoutLink||gcEv.conferenceData?.entryPoints?.find(e=>e.entryPointType==='video')?.uri||'';}
+
+// Converte start/end do Google p/ data+hora LOCAIS do aparelho.
+// dateTime vem com offset (ex.: 2026-07-06T14:00:00-03:00) — new Date() converte
+// ao fuso do dispositivo (antes a hora "crua" saía errada p/ eventos de outro fuso).
+// All-day (só 'date') não tem hora p/ converter — fica como está.
+function gcalDateTimeParts(g){
+  if(!g)return{date:'',time:''};
+  if(g.dateTime){const d=new Date(g.dateTime);return{date:ds(d.getFullYear(),d.getMonth(),d.getDate()),time:pad(d.getHours())+':'+pad(d.getMinutes())};}
+  return{date:g.date||'',time:''};
+}
+
 // Map Google Calendar event → MGC event
 function gcalToMgc(gcEv){
-  const startRaw=gcEv.start?.dateTime||gcEv.start?.date||'';
-  const endRaw=gcEv.end?.dateTime||gcEv.end?.date||'';
   const isAllDay=!gcEv.start?.dateTime;
-  const startDate=startRaw.split('T')[0];
-  const endDate=endRaw.split('T')[0];
-  const startTime=isAllDay?'':startRaw.split('T')[1]?.slice(0,5)||'';
-  const endTime=isAllDay?'':endRaw.split('T')[1]?.slice(0,5)||'';
-  const meetLink=gcEv.hangoutLink||gcEv.conferenceData?.entryPoints?.find(e=>e.entryPointType==='video')?.uri||'';
+  const s=gcalDateTimeParts(gcEv.start),e=gcalDateTimeParts(gcEv.end);
+  const startDate=s.date;
+  let endDate=e.date;
+  // All-day do Google: end.date é EXCLUSIVO (dia seguinte) — sem o ajuste, evento
+  // de 1 dia virava barra de 2 dias no MGC
+  if(isAllDay&&endDate){const d=new Date(endDate+'T12:00:00');d.setDate(d.getDate()-1);endDate=ds(d.getFullYear(),d.getMonth(),d.getDate());}
+  if(!endDate||endDate<startDate)endDate=startDate;
+  // Remove o rodapé 'Categoria:/Tags:' que o PRÓPRIO MGC embute ao enviar —
+  // senão cada ida-e-volta duplicava as linhas na descrição
+  const _lines=(gcEv.description||'').split('\n');
+  while(_lines.length&&/^(Categoria|Tags): /.test(_lines[_lines.length-1].trim()))_lines.pop();
   const ev={
     id:uid(),
     gcalId:gcEv.id,
     gcalUpdated:gcEv.updated||new Date().toISOString(),
     title:gcEv.summary||'(sem título)',
-    desc:gcEv.description||'',
+    desc:_lines.join('\n').trim(),
     location:gcEv.location||'',
-    meetLink,
+    meetLink:gcalMeet(gcEv),
     date:startDate,
-    dateEnd:endDate!==startDate?endDate:startDate,
-    start:startTime,
-    end:endTime,
+    dateEnd:endDate,
+    start:s.time,
+    end:e.time,
     color:'#4285f4',
     calendarId:gcEv.extendedProperties?.private?.mgcCalendarId||GCAL_CALENDAR_ID,
     category:''
@@ -8084,24 +8101,30 @@ async function gcalSync(pullOnly=false){
 
   try{
     // ── PULL: fetch AppState.events from Google (last 6 months + next 12 months) ──
+    // Paginado por nextPageToken: >500 eventos na janela não são mais cortados em
+    // silêncio (o fields antigo nem devolvia o token). Guarda de 10 páginas (5000 evs).
     const tMin=new Date();tMin.setMonth(tMin.getMonth()-6);
     const tMax=new Date();tMax.setMonth(tMax.getMonth()+12);
-    const params=new URLSearchParams({
-      timeMin:tMin.toISOString(),
-      timeMax:tMax.toISOString(),
-      singleEvents:'true',
-      maxResults:'500',
-      orderBy:'startTime',
-      showDeleted:'true',
-      fields:'items(id,summary,description,location,start,end,updated,status,recurringEventId,extendedProperties,hangoutLink,conferenceData(entryPoints(uri,entryPointType)))'
-    });
-    const resp=await fetch(`${GCAL_API}/calendars/${encodeURIComponent(calId)}/events?${params}`,{
-      headers:{Authorization:`Bearer ${gcalToken}`}
-    });
-    const data=await resp.json();
-    if(data.error){gcalHandleError(data.error);if(r)r.textContent='❌ Erro: '+data.error.message;return;}
-
-    const gcalEvents=data.items||[];
+    let gcalEvents=[],pageToken='',_pages=0;
+    do{
+      const params=new URLSearchParams({
+        timeMin:tMin.toISOString(),
+        timeMax:tMax.toISOString(),
+        singleEvents:'true',
+        maxResults:'500',
+        orderBy:'startTime',
+        showDeleted:'true',
+        fields:'nextPageToken,items(id,summary,description,location,start,end,updated,status,recurringEventId,extendedProperties,hangoutLink,conferenceData(entryPoints(uri,entryPointType)))'
+      });
+      if(pageToken)params.set('pageToken',pageToken);
+      const resp=await fetch(`${GCAL_API}/calendars/${encodeURIComponent(calId)}/events?${params}`,{
+        headers:{Authorization:`Bearer ${gcalToken}`}
+      });
+      const data=await resp.json();
+      if(data.error){gcalHandleError(data.error);if(r)r.textContent='❌ Erro: '+data.error.message;return;}
+      gcalEvents=gcalEvents.concat(data.items||[]);
+      pageToken=data.nextPageToken||'';
+    }while(pageToken&&++_pages<10);
     let added=0,updated=0,pushed=0,errors=0;
 
     // ── Dedup: remove duplicados locais (título+data+HORÁRIO iguais; fica o com gcalId ou o 1º) ──
@@ -8150,15 +8173,24 @@ async function gcalSync(pullOnly=false){
       // Nunca reimportar evento que o usuário excluiu
       if(deletedIds.has(gcEv.id))continue;
       if(gcEv.recurringEventId&&deletedIds.has(gcEv.recurringEventId))continue;
-      // Skip instances of recurring series that already exist locally
-      if(gcEv.recurringEventId&&localGcalIds.has(gcEv.recurringEventId))continue;
+      // Instância de série que já existe localmente (criada no MGC e enviada ao Google):
+      // não importa a instância, MAS propaga o Meet — com singleEvents=true o Google só
+      // devolve instâncias, então o hangoutLink de série NUNCA chegava ao evento-base
+      // (era o bug dos "links Meet que não carregam").
+      if(gcEv.recurringEventId&&localGcalIds.has(gcEv.recurringEventId)){
+        const base=localByGcalId[gcEv.recurringEventId];
+        const instMeet=gcalMeet(gcEv);
+        if(base&&instMeet&&base.meetLink!==instMeet)base.meetLink=instMeet;
+        continue;
+      }
       const local=localByGcalId[gcEv.id];
       if(!local){
         // Sem match por gcalId — vincula por título+data+HORÁRIO p/ não duplicar
         // (só título+data vincularia o evento errado quando há dois no mesmo dia)
-        const gcDate=(gcEv.start?.date||gcEv.start?.dateTime||'').slice(0,10);
+        const gcParts=gcalDateTimeParts(gcEv.start);
+        const gcDate=gcParts.date;
         const gcTitle=(gcEv.summary||'').trim().toLowerCase();
-        const gcStart=gcEv.start?.dateTime?(gcEv.start.dateTime.split('T')[1]||'').slice(0,5):'';
+        const gcStart=gcParts.time;
         const titleDateMatch=AppState.events.find(ev=>
           !ev.gcalId &&
           ev.date===gcDate &&
@@ -8169,7 +8201,7 @@ async function gcalSync(pullOnly=false){
           // Same event, just missing gcalId — link them instead of duplicating
           titleDateMatch.gcalId=gcEv.id;
           titleDateMatch.gcalUpdated=gcEv.updated||new Date().toISOString();
-          titleDateMatch.meetLink=gcEv.hangoutLink||gcEv.conferenceData?.entryPoints?.find(e=>e.entryPointType==='video')?.uri||undefined;
+          titleDateMatch.meetLink=gcalMeet(gcEv)||undefined;
           localByGcalId[gcEv.id]=titleDateMatch;
         } else {
         // New event from Google → add locally
@@ -8189,12 +8221,20 @@ async function gcalSync(pullOnly=false){
           const idx=AppState.events.findIndex(e=>e.id===local.id);
           if(idx>-1){
             const existingEv=AppState.events[idx]; // re-fetch current state (may have changed since localByGcalId snapshot)
-            AppState.events[idx]={...existingEv,...updated_ev,localUpdatedAt:existingEv.localUpdatedAt};
+            // O Google é dono de título/datas/horários/local/desc/meetLink; categoria,
+            // cor, tags e calendário são enriquecimento LOCAL — a edição no Google não
+            // pode mais zerá-los (updated_ev vem com category:'' e color azul fixos).
+            AppState.events[idx]={...existingEv,...updated_ev,
+              category:existingEv.category||'',
+              color:existingEv.color||updated_ev.color,
+              tags:existingEv.tags||[],
+              calendarId:existingEv.calendarId||updated_ev.calendarId,
+              localUpdatedAt:existingEv.localUpdatedAt};
           }
           updated++;
         } else {
           // Not newer, but always sync meetLink — read-only field added after initial sync
-          const freshMeet=gcEv.hangoutLink||gcEv.conferenceData?.entryPoints?.find(e=>e.entryPointType==='video')?.uri||'';
+          const freshMeet=gcalMeet(gcEv);
           if(freshMeet!==local.meetLink){local.meetLink=freshMeet||undefined;}
         }
       }

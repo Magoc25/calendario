@@ -206,6 +206,20 @@ function run() {
   check('undo apaga o tombstone e restaura', ev(`!AppState.eventsDel['${tid}'] && !!AppState.events.find(e=>e.id==='${tid}')`));
   ev(`AppState.events=AppState.events.filter(e=>e.id!=='${tid}');save()`);
 
+  /* ── gcalToMgc (E3): all-day exclusivo, desc sem rodapé, hora no fuso local ── */
+  check('gcalToMgc: all-day de 1 dia não vira 2 dias (end exclusivo)',
+    ev(`(function(){const e=gcalToMgc({id:'g1',start:{date:'2026-07-10'},end:{date:'2026-07-11'}});return e.date==='2026-07-10'&&e.dateEnd==='2026-07-10';})()`) === true);
+  check('gcalToMgc: remove rodapé Categoria:/Tags: da descrição (round-trip)',
+    ev(`gcalToMgc({id:'g2',start:{date:'2026-07-10'},end:{date:'2026-07-11'},description:'minha nota\\nCategoria: Aula\\nTags: a, b'}).desc`) === 'minha nota');
+  check('gcalToMgc: dateTime convertido ao fuso do aparelho',
+    ev(`(function(){
+      const iso='2026-07-06T14:00:00-03:00';const d=new Date(iso);
+      const exp=String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+      return gcalToMgc({id:'g3',start:{dateTime:iso},end:{dateTime:'2026-07-06T15:00:00-03:00'}}).start===exp;
+    })()`) === true);
+  check('gcalMeet extrai hangoutLink e entryPoint de vídeo',
+    ev(`gcalMeet({hangoutLink:'https://meet.google.com/abc'})==='https://meet.google.com/abc' && gcalMeet({conferenceData:{entryPoints:[{entryPointType:'video',uri:'https://meet.google.com/xyz'}]}})==='https://meet.google.com/xyz'`) === true);
+
   /* ── Quick add (parser NL) ── */
   if (ev(`typeof window.quickAddParse==='function' || typeof quickAddParse==='function'`)) {
     check('quickAddParse é executável', true);
