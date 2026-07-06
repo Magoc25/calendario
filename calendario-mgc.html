@@ -8104,11 +8104,13 @@ async function gcalSync(pullOnly=false){
     const gcalEvents=data.items||[];
     let added=0,updated=0,pushed=0,errors=0;
 
-    // ── Dedup: remove local duplicates (same title+date, keep the one with gcalId or the first) ──
+    // ── Dedup: remove duplicados locais (título+data+HORÁRIO iguais; fica o com gcalId ou o 1º) ──
+    // O horário na chave é obrigatório: dois eventos legítimos podem ter o mesmo título
+    // no mesmo dia em horas diferentes (ex.: "Reunião" 09h e 15h) — sem ele, um sumia.
     const seen={};
     const deduped=[];
     for(const ev of AppState.events){
-      const key=(ev.title||'').trim().toLowerCase()+'|'+ev.date;
+      const key=(ev.title||'').trim().toLowerCase()+'|'+ev.date+'|'+(ev.start||'');
       if(!seen[key]){seen[key]=ev;deduped.push(ev);}
       else if(ev.gcalId&&!seen[key].gcalId){
         // prefer the one with gcalId
@@ -8152,13 +8154,16 @@ async function gcalSync(pullOnly=false){
       if(gcEv.recurringEventId&&localGcalIds.has(gcEv.recurringEventId))continue;
       const local=localByGcalId[gcEv.id];
       if(!local){
-        // No gcalId match — check by title+date to avoid duplicates
+        // Sem match por gcalId — vincula por título+data+HORÁRIO p/ não duplicar
+        // (só título+data vincularia o evento errado quando há dois no mesmo dia)
         const gcDate=(gcEv.start?.date||gcEv.start?.dateTime||'').slice(0,10);
         const gcTitle=(gcEv.summary||'').trim().toLowerCase();
+        const gcStart=gcEv.start?.dateTime?(gcEv.start.dateTime.split('T')[1]||'').slice(0,5):'';
         const titleDateMatch=AppState.events.find(ev=>
           !ev.gcalId &&
           ev.date===gcDate &&
-          (ev.title||'').trim().toLowerCase()===gcTitle
+          (ev.title||'').trim().toLowerCase()===gcTitle &&
+          (ev.start||'')===gcStart
         );
         if(titleDateMatch){
           // Same event, just missing gcalId — link them instead of duplicating
