@@ -2952,6 +2952,7 @@ const AppState={
   categories:[],
   lists:[],          // Aba Listas: [{id,title,createdAt,updatedAt,items:[{id,title,done,updatedAt}]}] — sem horário/purga
   listsDel:{},       // Tombstones de exclusão das Listas: {id:deletedAtMs} (listas e itens) — p/ sync mesclar sem ressuscitar/apagar
+  eventsDel:{},      // Tombstones de exclusão de eventos: {id:deletedAtMs} — merge por id no sync (mesmo padrão das Listas)
 };
 // ─────────────────────────────────────────────────────
 let editingId=null,editingDate=null,selectedColor='#3b5bdb',isDone=false;
@@ -2980,7 +2981,7 @@ try{
   const stored=JSON.parse(localStorage.getItem('cal_calendars')||'null');
   if(stored&&stored.length)calendars=stored;
 }catch(e){console.error('[MGC] Falha ao carregar calendários:',e);}
-function saveCalendars(){invalidateEvMapCache();localStorage.setItem('cal_calendars',JSON.stringify(calendars));localStorage.setItem('cal_local_ts',new Date().toISOString());if(sbClient){clearTimeout(_cloudSaveTimer);_cloudSaveTimer=setTimeout(()=>syncToCloud(true),1500);}}
+function saveCalendars(){invalidateEvMapCache();localStorage.setItem('cal_calendars',JSON.stringify(calendars));localStorage.setItem('cal_local_ts',new Date().toISOString());scheduleCloudPush();}
 function getCal(id){return calendars.find(c=>c.id===id)||calendars[0];}
 function getCalColor(ev){
   const cal=getCal(ev.calendarId);
@@ -3084,7 +3085,7 @@ document.getElementById('calSaveBtn').addEventListener('click',()=>{
 document.getElementById('calDeleteBtn').addEventListener('click',()=>{
   if(!editingCalId||editingCalId==='default')return;
   if(!confirm('Excluir este calendário? Os eventos serão movidos para Geral.'))return;
-  AppState.events.forEach(ev=>{if(ev.calendarId===editingCalId)ev.calendarId='default';});
+  AppState.events.forEach(ev=>{if(ev.calendarId===editingCalId){ev.calendarId='default';touchEv(ev);}});
   calendars=calendars.filter(c=>c.id!==editingCalId);
   save();saveCalendars();renderCalendarList();populateCalendarSelect();
   DOM.calOverlay.classList.remove('open');
@@ -3092,6 +3093,8 @@ document.getElementById('calDeleteBtn').addEventListener('click',()=>{
 });
 
 try{AppState.events=JSON.parse(localStorage.getItem('cal_marlon_v8')||'[]')}catch(e){console.error('[MGC] Falha ao carregar eventos:',e);toast('⚠️ Erro ao carregar eventos — verifique o armazenamento local.');}
+try{AppState.eventsDel=JSON.parse(localStorage.getItem('cal_events_del')||'{}');}catch(e){AppState.eventsDel={};}
+if(!AppState.eventsDel||typeof AppState.eventsDel!=='object'||Array.isArray(AppState.eventsDel))AppState.eventsDel={};
 try{categoryColors=JSON.parse(localStorage.getItem('cal_catcolors')||'{}')}catch(e){console.error('[MGC] Falha ao carregar cores de categorias:',e);}
 try{AppState.categories=JSON.parse(localStorage.getItem('cal_categories')||'null')||DEFAULT_CATEGORIES.map(c=>({...c}));}catch(e){AppState.categories=DEFAULT_CATEGORIES.map(c=>({...c}));}
 rebuildCatIcons();
@@ -3110,10 +3113,25 @@ const safeHtml=h=>(typeof DOMPurify!=='undefined')?DOMPurify.sanitize(h||''):esc
 let _evMapCache={};
 let _allTagsCache=null;
 const invalidateEvMapCache=()=>{_evMapCache={};_allTagsCache=null;};
-const save=()=>{invalidateEvMapCache();localStorage.setItem('cal_marlon_v8',JSON.stringify(AppState.events));localStorage.setItem('cal_local_ts',new Date().toISOString());if(sbClient){clearTimeout(_cloudSaveTimer);_cloudSaveTimer=setTimeout(()=>syncToCloud(true),1500);}};
+// ── Gate do 1º pull (guia r16) ─────────────────────────────────
+// Um push antes do 1º syncFromCloud resolver subiria estado velho por cima de
+// dados mais novos da nuvem. Enquanto o gate está fechado, todo push agendado
+// vira um pull-merge-push (syncFromCloud decide o lado vencedor e mescla).
+// _bootLocalTs congela o timestamp local de boot: saves feitos ANTES do 1º pull
+// não podem fazer o local "parecer mais novo" que a nuvem.
+let _cloudPullDone=false;
+const _bootLocalTs=localStorage.getItem('cal_local_ts')||'0';
+function scheduleCloudPush(){
+  if(!sbClient)return;
+  clearTimeout(_cloudSaveTimer);
+  _cloudSaveTimer=setTimeout(()=>{_cloudPullDone?syncToCloud(true):syncFromCloud(true);},1500);
+}
+// Carimbo de edição por evento — base do merge por id no sync multi-device
+function touchEv(ev){if(ev)ev.localUpdatedAt=new Date().toISOString();}
+const save=()=>{invalidateEvMapCache();localStorage.setItem('cal_marlon_v8',JSON.stringify(AppState.events));localStorage.setItem('cal_events_del',JSON.stringify(AppState.eventsDel||{}));localStorage.setItem('cal_local_ts',new Date().toISOString());scheduleCloudPush();};
 let _gcalDragSyncTimer=null;
 function gcalSyncAfterDrag(){clearTimeout(_gcalDragSyncTimer);_gcalDragSyncTimer=setTimeout(()=>{if(typeof gcalIsConnected==='function'&&gcalIsConnected())gcalSync(false).catch(()=>{});},3000);}
-const saveCatColors=()=>{localStorage.setItem('cal_catcolors',JSON.stringify(categoryColors));localStorage.setItem('cal_local_ts',new Date().toISOString());if(sbClient){clearTimeout(_cloudSaveTimerColors);_cloudSaveTimerColors=setTimeout(()=>syncToCloud(true),1500);}};
+const saveCatColors=()=>{localStorage.setItem('cal_catcolors',JSON.stringify(categoryColors));localStorage.setItem('cal_local_ts',new Date().toISOString());scheduleCloudPush();};
 function saveCategories(){localStorage.setItem('cal_categories',JSON.stringify(AppState.categories));localStorage.setItem('cal_local_ts',new Date().toISOString());rebuildCatIcons();renderCatTags();};
 const todayDs=()=>{const t=new Date();return ds(t.getFullYear(),t.getMonth(),t.getDate())};
 const toast=msg=>{const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2400)};
@@ -3192,6 +3210,7 @@ function toggleDone(evId,date){
   const ev=AppState.events.find(e=>e.id===evId);if(!ev)return;
   if(!ev.rrule){ev.done=!ev.done;toast(ev.done?'Concluído ✓':'Pendente');}
   else{if(!ev.doneInstances)ev.doneInstances=[];const i=ev.doneInstances.indexOf(date);if(i>-1){ev.doneInstances.splice(i,1);toast('Pendente');}else{ev.doneInstances.push(date);toast('Concluído ✓');}}
+  touchEv(ev);
   save();render();if(AppState.selectedDay)renderDayPanel(AppState.selectedDay);
 }
 
@@ -3745,7 +3764,7 @@ function renderWeek(){
         const h=Math.floor(roundedMins/60),m=roundedMins%60;
         const newEnd=`${pad(Math.max(WEEK_START_H,Math.min(WEEK_END_H,h)))}:${pad(m)}`;
         const ev=AppState.events.find(x=>x.id===evId);
-        if(ev){const[sh,sm]=ev.start.split(':').map(Number);if(h*60+m>sh*60+sm){ev.end=newEnd;save();render();toast('Duração atualizada!');}}
+        if(ev){const[sh,sm]=ev.start.split(':').map(Number);if(h*60+m>sh*60+sm){ev.end=newEnd;touchEv(ev);save();render();toast('Duração atualizada!');}}
       }
       document.addEventListener('mousemove',onMove);
       document.addEventListener('mouseup',onUp);
@@ -4679,10 +4698,13 @@ async function gcalProcessDeleteQueue(){
 function deleteEventById(id){
   const ev=AppState.events.find(e=>e.id===id);
   AppState.events=AppState.events.filter(e=>e.id!==id);
+  AppState.eventsDel[id]=Date.now(); // tombstone → exclusão propaga no sync (não ressuscita de outro device)
   save();render();if(AppState.selectedDay)renderDayPanel(AppState.selectedDay);
   if(ev?.gcalId)gcalMarkDeleted(ev.gcalId);
   toastUndo('Evento excluído.',()=>{
     if(ev){
+      delete AppState.eventsDel[id];
+      touchEv(ev); // recarimba: vence um tombstone que já tenha subido à nuvem
       AppState.events.push(ev);
       if(ev.gcalId)gcalUnmarkDeleted(ev.gcalId);
       save();render();if(AppState.selectedDay)renderDayPanel(AppState.selectedDay);
@@ -4847,6 +4869,7 @@ document.getElementById('importIcsFile').addEventListener('change',function(){
     });
     if(!imported.length){toast('Nenhum evento encontrado no arquivo .ics');return;}
     if(confirm(`Importar ${imported.length} evento(s) do arquivo .ics? Serão adicionados aos existentes.`)){
+      imported.forEach(touchEv); // carimba p/ o merge do sync tratar como edição recente
       AppState.events.push(...imported);save();render();toast(`${imported.length} eventos importados do .ics!`);
     }
   };
@@ -4919,7 +4942,7 @@ document.getElementById('exportIcsBtn').addEventListener('click',()=>{
 let notesEvId=null,notesAutoSaveTimer=null;
 let notesStore={};
 try{notesStore=JSON.parse(localStorage.getItem('cal_notes')||'{}')}catch(e){console.error('[MGC] Falha ao carregar notas de eventos:',e);}
-function saveNotes(){localStorage.setItem('cal_notes',JSON.stringify(notesStore));localStorage.setItem('cal_local_ts',new Date().toISOString());if(sbClient){clearTimeout(_cloudSaveTimer);_cloudSaveTimer=setTimeout(()=>syncToCloud(true),1500);}}
+function saveNotes(){localStorage.setItem('cal_notes',JSON.stringify(notesStore));localStorage.setItem('cal_local_ts',new Date().toISOString());scheduleCloudPush();}
 function noteKey(evId,evDate){const ev=AppState.events.find(e=>e.id===evId);return(ev&&ev.rrule&&evDate)?evId+'#'+evDate:evId;}
 
 function openNotes(evId,evDate){
@@ -6004,7 +6027,7 @@ try{AppState.routines=JSON.parse(localStorage.getItem('cal_routines')||'[]');}ca
 function saveRoutines(){
   localStorage.setItem('cal_routines',JSON.stringify(AppState.routines));
   localStorage.setItem('cal_local_ts',new Date().toISOString());
-  if(sbClient){clearTimeout(_cloudSaveTimer);_cloudSaveTimer=setTimeout(()=>syncToCloud(true),1500);}
+  scheduleCloudPush();
 }
 const ROUTINE_COLORS=['#3b5bdb','#0ca678','#e64980','#f59f00','#7048e8','#f76707','#1098ad','#e03131'];
 const FREQ_LABELS={daily:'Todos os dias',weekly:'Dias da semana'};
@@ -6032,7 +6055,7 @@ function setRoutineCheck(dateStr,routineId,done){
   else checks=checks.filter(x=>x!==routineId);
   localStorage.setItem('cal_rchecks_'+dateStr,JSON.stringify(checks));
   localStorage.setItem('cal_local_ts',new Date().toISOString());
-  if(sbClient){clearTimeout(_cloudSaveTimer);_cloudSaveTimer=setTimeout(()=>syncToCloud(true),1500);}
+  scheduleCloudPush();
 }
 
 /* ── Routines view ── */
@@ -6352,7 +6375,7 @@ function saveLists(){
   localStorage.setItem('cal_lists',JSON.stringify(AppState.lists));
   localStorage.setItem('cal_lists_del',JSON.stringify(AppState.listsDel||{}));
   localStorage.setItem('cal_local_ts',new Date().toISOString());
-  if(sbClient){clearTimeout(_cloudSaveTimer);_cloudSaveTimer=setTimeout(()=>syncToCloud(true),1500);}
+  scheduleCloudPush();
 }
 
 /* ── CRUD de listas e itens (estado local; UI chama renderListsView para refletir) ── */
@@ -6474,6 +6497,52 @@ function applyRemoteListsMerge(row){
     localStorage.setItem('cal_lists',JSON.stringify(AppState.lists));
     localStorage.setItem('cal_lists_del',JSON.stringify(AppState.listsDel));
   }catch(e){console.warn('[MGC] Falha ao mesclar listas remotas:',e);}
+}
+
+/* ── Merge de eventos (mesmo padrão das Listas): união por id + tombstones ──
+   Substitui o last-write-wins global (que fazia um device sobrescrever por
+   inteiro os eventos do outro). Conflito de mesmo id: vence o localUpdatedAt
+   mais recente; exclusão propaga por tombstone (cal_events_del) e só remove
+   se for >= à última edição do evento. */
+function _evUt(e){return e&&e.localUpdatedAt?new Date(e.localUpdatedAt).getTime():0;}
+function mergeEventCollections(localEvs,localDel,remoteEvs,remoteDel){
+  localEvs=Array.isArray(localEvs)?localEvs:[];
+  remoteEvs=Array.isArray(remoteEvs)?remoteEvs:[];
+  localDel=(localDel&&typeof localDel==='object')?localDel:{};
+  remoteDel=(remoteDel&&typeof remoteDel==='object')?remoteDel:{};
+  const del={...localDel};
+  for(const id in remoteDel){del[id]=Math.max(del[id]||0,remoteDel[id]||0);}
+  const byId=new Map();localEvs.forEach(e=>byId.set(e.id,e));
+  const novos=[];
+  remoteEvs.forEach(r=>{const cur=byId.get(r.id);
+    if(!cur){byId.set(r.id,r);novos.push(r.id);}
+    else if(_evUt(r)>_evUt(cur))byId.set(r.id,r);});
+  const ordem=[...localEvs.map(e=>e.id),...novos],vis=new Set(),merged=[];
+  ordem.forEach(id=>{if(!vis.has(id)){vis.add(id);merged.push(byId.get(id));}});
+  const kept=merged.filter(e=>!(del[e.id]&&del[e.id]>=_evUt(e)));
+  return {events:kept,del:_pruneDel(del)};
+}
+// Mescla eventos de um registro remoto (formato novo {v:2,events,del} ou array antigo).
+// Evento local removido por tombstone REMOTO que tenha gcalId entra na fila de exclusão
+// do Google — a exclusão foi decisão explícita de outro device. Mera ausência no remoto
+// NÃO apaga mais nada (era o vetor de deleções indevidas no Google Calendar).
+function applyRemoteEventsMerge(row){
+  try{
+    let re=[],rd={};
+    if(row&&row.events){
+      const p=JSON.parse(row.events);
+      if(Array.isArray(p))re=p;                                            // formato antigo: só o array
+      else if(p&&typeof p==='object'){re=Array.isArray(p.events)?p.events:[];rd=(p.del&&typeof p.del==='object')?p.del:{};}
+    }
+    AppState.events.forEach(ev=>{
+      if(ev.gcalId&&rd[ev.id]&&rd[ev.id]>=_evUt(ev))gcalMarkDeleted(ev.gcalId);
+    });
+    const mg=mergeEventCollections(AppState.events,AppState.eventsDel,re,rd);
+    AppState.events=mg.events;AppState.eventsDel=mg.del;
+    invalidateEvMapCache();
+    localStorage.setItem('cal_marlon_v8',JSON.stringify(AppState.events));
+    localStorage.setItem('cal_events_del',JSON.stringify(AppState.eventsDel));
+  }catch(e){console.warn('[MGC] Falha ao mesclar eventos remotos:',e);}
 }
 function makeListReorderable(container,itemSelector,idAttr,reorder){
   if(!container)return;
@@ -6641,7 +6710,7 @@ function saveQuickTasks(){
   AppState.quickTasks=AppState.quickTasks.filter(t=>t.date>=co);
   localStorage.setItem('cal_qtasks',JSON.stringify(AppState.quickTasks));
   localStorage.setItem('cal_local_ts',new Date().toISOString());
-  if(sbClient){clearTimeout(_cloudSaveTimer);_cloudSaveTimer=setTimeout(()=>syncToCloud(true),1500);}
+  scheduleCloudPush();
 }
 
 function openQtaskHistory(){
@@ -6689,7 +6758,7 @@ function addQuickTask(title){
 
 /* ═══════ TOP 3 FOCUS ═══════ */
 try{AppState.top3Data=JSON.parse(localStorage.getItem('cal_top3')||'{}');}catch(e){console.error('[MGC] Falha ao carregar Top 3:',e);}
-function saveTop3(){localStorage.setItem('cal_top3',JSON.stringify(AppState.top3Data));localStorage.setItem('cal_local_ts',new Date().toISOString());if(sbClient){clearTimeout(_cloudSaveTimer);_cloudSaveTimer=setTimeout(()=>syncToCloud(true),1500);}}
+function saveTop3(){localStorage.setItem('cal_top3',JSON.stringify(AppState.top3Data));localStorage.setItem('cal_local_ts',new Date().toISOString());scheduleCloudPush();}
 function getTop3(){return AppState.top3Data[todayDs()]||[{text:'',done:false},{text:'',done:false},{text:'',done:false}];}
 
 /* ═══════ TODAY VIEW ═══════ */
@@ -7031,7 +7100,7 @@ try{AppState.reviews=JSON.parse(localStorage.getItem('cal_reviews')||'{}');}catc
 function saveReviews(){
   localStorage.setItem('cal_reviews',JSON.stringify(AppState.reviews));
   localStorage.setItem('cal_local_ts',new Date().toISOString());
-  if(sbClient){clearTimeout(_cloudSaveTimer);_cloudSaveTimer=setTimeout(()=>syncToCloud(true),1500);}
+  scheduleCloudPush();
 }
 let reviewDate=todayDs();
 
@@ -7213,7 +7282,7 @@ try{AppState.standaloneNotes=JSON.parse(localStorage.getItem('cal_standalone_not
 function saveStandaloneNotes(){
   localStorage.setItem('cal_standalone_notes',JSON.stringify(AppState.standaloneNotes));
   localStorage.setItem('cal_local_ts',new Date().toISOString());
-  if(sbClient){clearTimeout(_cloudSaveTimer);_cloudSaveTimer=setTimeout(()=>syncToCloud(true),1500);}
+  scheduleCloudPush();
 }
 
 let _editingNoteId=null,_neAutoSave=null;
@@ -7599,7 +7668,7 @@ function getLocalPayload(){
     }
   }
   return {
-    events: JSON.stringify(AppState.events),
+    events: JSON.stringify({v:2,events:AppState.events,del:AppState.eventsDel||{}}), // v2: tombstones p/ merge por id (Array.isArray no pull dá retrocompat)
     notes: JSON.stringify(notesStore),
     category_colors: JSON.stringify(categoryColors),
     calendars: JSON.stringify(calendars),
@@ -7619,15 +7688,12 @@ function applyRemotePayload(row){
   if(!row) return;
   invalidateEvMapCache();
   try{
-    const remoteEvents=JSON.parse(row.events||'[]');
     const remoteNotes=JSON.parse(row.notes||'{}');
     const remoteCatColors=JSON.parse(row.category_colors||'{}');
     const remoteCalendars=JSON.parse(row.calendars||'null');
-    // Detecta eventos com gcalId que foram removidos remotamente (deletados em outro dispositivo).
-    // Marca cada um como deletado localmente para o guard do GCal sync não os reimportar.
-    const remoteIds=new Set(remoteEvents.map(e=>e.id));
-    AppState.events.forEach(ev=>{if(ev.gcalId&&!remoteIds.has(ev.id))gcalMarkDeleted(ev.gcalId);});
-    AppState.events=remoteEvents;
+    // Eventos: merge por id + tombstones (persiste cal_marlon_v8/cal_events_del internamente).
+    // Exclusão em outro device propaga por tombstone explícito — ausência não apaga.
+    applyRemoteEventsMerge(row);
     notesStore=remoteNotes;
     categoryColors=remoteCatColors;
     if(remoteCalendars&&remoteCalendars.length)calendars=remoteCalendars;
@@ -7638,8 +7704,7 @@ function applyRemotePayload(row){
     if(row.top3)try{const t3=JSON.parse(row.top3);if(t3&&typeof t3==='object')AppState.top3Data=t3;}catch(e){}
     if(row.standalone_notes)try{const sn=JSON.parse(row.standalone_notes);if(Array.isArray(sn))AppState.standaloneNotes=sn;}catch(e){}
     applyRemoteListsMerge(row); // mescla por id + tombstones (persiste cal_lists/cal_lists_del internamente)
-    // Persist locally
-    localStorage.setItem('cal_marlon_v8',row.events||'[]');
+    // Persist locally (eventos já persistidos pelo merge acima)
     localStorage.setItem('cal_notes',row.notes||'{}');
     localStorage.setItem('cal_catcolors',row.category_colors||'{}');
     if(remoteCalendars)localStorage.setItem('cal_calendars',row.calendars);
@@ -7692,17 +7757,20 @@ async function syncFromCloud(silent=false){
     }
     if(data){
       const remoteTs=new Date(data.updated_at||0).getTime();
-      const localTs=new Date(localStorage.getItem('cal_local_ts')||0).getTime();
-      sessionStorage.setItem('cal_session_synced','1');
+      // Guia r16: no 1º pull da sessão compara contra o ts congelado no boot — um save()
+      // feito enquanto o pull estava em voo não pode fazer o local "parecer mais novo".
+      const localTs=new Date((_cloudPullDone?localStorage.getItem('cal_local_ts'):_bootLocalTs)||0).getTime();
+      _cloudPullDone=true;
       if(remoteTs>localTs){
-        // Nuvem tem dados mais recentes — aplica localmente
+        // Nuvem tem dados mais recentes — aplica localmente (eventos/listas por merge)
         applyRemotePayload(data);
         render();
         if(!silent)toast('✓ Dados atualizados da nuvem!');
       } else {
         // Local é mais recente (inclui alterações não enviadas antes de fechar) — envia para nuvem.
-        // Antes, mescla as listas remotas: assim um device com listas vazias/antigas não sobrescreve
-        // (push) o que outro device criou — ele incorpora e reenvia o conjunto completo.
+        // Antes, mescla eventos e listas remotos: assim um device com estado vazio/antigo não
+        // sobrescreve (push) o que outro device criou — ele incorpora e reenvia o conjunto completo.
+        applyRemoteEventsMerge(data);
         applyRemoteListsMerge(data);
         render();
         await syncToCloud(true);
@@ -7710,6 +7778,7 @@ async function syncFromCloud(silent=false){
       }
     } else {
       // No cloud data yet — push local to cloud
+      _cloudPullDone=true;
       await syncToCloud(true);
       if(!silent)toast('✓ Dados enviados para a nuvem pela primeira vez!');
     }
@@ -7719,16 +7788,8 @@ async function syncFromCloud(silent=false){
   }catch(e){setSyncStatus('error');if(!silent)toast('Erro de conexão com a nuvem.');return false;}
 }
 
-// Patch save() to also push to cloud (debounced)
+// Timer do push debounced à nuvem (agendado por scheduleCloudPush)
 let _cloudSaveTimer=null;
-let _cloudSaveTimerColors=null;
-const _localSave=()=>localStorage.setItem('cal_marlon_v8',JSON.stringify(AppState.events));
-function _scheduleSbSync(){
-  if(sbClient){clearTimeout(_cloudSaveTimer);_cloudSaveTimer=setTimeout(()=>syncToCloud(true),1500);}
-}
-// Override the const save with a function that also syncs
-// (We can't re-declare const, so we shadow it via a wrapper called after save)
-
 
 // Helper: pré-preenche formulário Supabase com valores salvos
 const _prefillSbForm=()=>{
@@ -8056,6 +8117,8 @@ async function gcalSync(pullOnly=false){
       }
     }
     if(deduped.length<AppState.events.length){
+      const kept=new Set(deduped.map(e=>e.id));
+      AppState.events.forEach(e=>{if(!kept.has(e.id))AppState.eventsDel[e.id]=Date.now();}); // tombstone: o duplicado não volta pelo sync
       AppState.events.length=0;AppState.events.push(...deduped);
     }
 
@@ -8074,6 +8137,7 @@ async function gcalSync(pullOnly=false){
       if(gcEv.status==='cancelled'&&localByGcalId[gcEv.id]){
         const localId=localByGcalId[gcEv.id].id;
         AppState.events=AppState.events.filter(e=>e.id!==localId);
+        AppState.eventsDel[localId]=Date.now(); // tombstone: a exclusão do Google propaga aos outros devices via sync
         removed++;
       }
     }
@@ -8304,6 +8368,7 @@ document.getElementById('gcalDedupeDeleteBtn').addEventListener('click',()=>{
   checked.forEach(i=>dupes[i].evs.forEach(ev=>idsToDelete.add(ev.id)));
   const before=AppState.events.length;
   AppState.events=AppState.events.filter(ev=>!idsToDelete.has(ev.id));
+  idsToDelete.forEach(id=>{AppState.eventsDel[id]=Date.now();}); // tombstones: exclusão propaga no sync
   save();render();
   document.getElementById('gcalDedupeOverlay').classList.remove('open');
   toast(`🗑 ${before-AppState.events.length} eventos excluídos.`);
@@ -8324,6 +8389,9 @@ window.addEventListener('load',()=>{
     const clientId=localStorage.getItem(GCAL_CLIENT_ID_KEY);
     if(clientId){
       setTimeout(async()=>{
+        // Guia r16: espera o 1º pull do Supabase assentar antes do sync do Google —
+        // o gcalSync chama save()/saveCalendars() e não pode carimbar o estado pré-pull.
+        if(window._firstPullPromise){try{await window._firstPullPromise;}catch(e){}}
         if(!gcalIsConnected()){
           try{ await gcalSilentRefresh(); }catch(e){ return; }
         }
@@ -8429,7 +8497,7 @@ let appReviews=[];
 try{appReviews=JSON.parse(localStorage.getItem('cal_app_reviews')||'[]');}catch(e){}
 function saveAppReviews(){
   localStorage.setItem('cal_app_reviews',JSON.stringify(appReviews));
-  if(sbClient){clearTimeout(_cloudSaveTimer);_cloudSaveTimer=setTimeout(()=>syncToCloud(true),1500);}
+  scheduleCloudPush();
 }
 
 let pixSelectedAmount=0,pixSelectedRating=0;
@@ -8598,7 +8666,8 @@ setTimeout(scheduleAlerts,1500);
 // Init Supabase and auto-sync from cloud on page load
 const _sbReady=initSupabase();
 if(_sbReady){
-  syncFromCloud(true).then(()=>{render();});
+  // Promessa exposta p/ o auto-sync do Google aguardar o 1º pull (guia r16)
+  window._firstPullPromise=syncFromCloud(true).then(()=>{render();});
 }
 // Carrega avaliações compartilhadas de todos os usuários
 // e migra AppState.reviews locais antigas para o Supabase (roda só uma vez por dispositivo)

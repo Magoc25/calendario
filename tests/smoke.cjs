@@ -174,6 +174,38 @@ function run() {
   })()`);
   check('mergeListCollections: tombstone remove l1, l2 sobrevive', mg === '{"n":1,"ids":["l2"]}', mg);
 
+  /* ── Merge de eventos por id + tombstones (E1) ── */
+  const em = ev(`(function(){
+    const A=[{id:'e1',title:'A',localUpdatedAt:new Date(100).toISOString()},{id:'e2',title:'B-old',localUpdatedAt:new Date(100).toISOString()}];
+    const B=[{id:'e2',title:'B-new',localUpdatedAt:new Date(200).toISOString()},{id:'e3',title:'C',localUpdatedAt:new Date(200).toISOString()}];
+    const r=mergeEventCollections(A,{},B,{e1:150});
+    return JSON.stringify({ids:r.events.map(e=>e.id).sort(),b:r.events.find(e=>e.id==='e2').title});
+  })()`);
+  check('mergeEventCollections: tombstone remove e1, conflito vence o mais novo, e3 entra',
+    em === '{"ids":["e2","e3"],"b":"B-new"}', em);
+  check('mergeEventCollections: ausência remota NÃO apaga local (sem tombstone)',
+    ev(`mergeEventCollections([{id:'k1',title:'x',localUpdatedAt:new Date().toISOString()}],{},[],{}).events.length`) === 1);
+  check('applyRemoteEventsMerge aceita formato antigo (array puro)',
+    ev(`(function(){
+      applyRemoteEventsMerge({events:JSON.stringify([{id:'zz9',title:'remoto',localUpdatedAt:new Date().toISOString()}])});
+      const ok=!!AppState.events.find(e=>e.id==='zz9');
+      AppState.events=AppState.events.filter(e=>e.id!=='zz9');delete AppState.eventsDel['zz9'];save();
+      return ok;
+    })()`) === true);
+  check('payload de sync usa formato v2 {v,events,del}',
+    ev(`(function(){const p=JSON.parse(getLocalPayload().events);return p.v===2&&Array.isArray(p.events)&&typeof p.del==='object';})()`) === true);
+
+  /* excluir cria tombstone; undo o remove */
+  ev(`openNew('2026-07-12')`);
+  $('evTitle').value = 'Smoke Tumba';
+  $('saveBtn').click();
+  const tid = ev(`(AppState.events.find(e=>e.title==='Smoke Tumba')||{}).id||''`);
+  ev(`deleteEventById('${tid}')`);
+  check('excluir evento grava tombstone', ev(`!!AppState.eventsDel['${tid}']`));
+  $('toastUndoBtn').click();
+  check('undo apaga o tombstone e restaura', ev(`!AppState.eventsDel['${tid}'] && !!AppState.events.find(e=>e.id==='${tid}')`));
+  ev(`AppState.events=AppState.events.filter(e=>e.id!=='${tid}');save()`);
+
   /* ── Quick add (parser NL) ── */
   if (ev(`typeof window.quickAddParse==='function' || typeof quickAddParse==='function'`)) {
     check('quickAddParse é executável', true);
