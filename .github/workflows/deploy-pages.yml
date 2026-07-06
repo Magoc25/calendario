@@ -1,0 +1,38 @@
+# Publica o site no GitHub Pages SEM o build legado do Jekyll (guia r27) —
+# o "Deploy from a branch" às vezes trava/erra com status verde e o site fica
+# horas servindo versão antiga. Requer Settings → Pages → Source = GitHub Actions.
+name: Deploy GitHub Pages
+
+on:
+  push:
+    branches: [main]
+    # r31: o commit diário automático do stats.json não deve disparar deploy —
+    # o badge lê o stats.json pela raw, o site não muda com ele; rodadas
+    # concorrentes caíam em "Deployment failed, try again later"
+    paths-ignore:
+      - 'stats.json'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: '.'
+      - id: deployment
+        uses: actions/deploy-pages@v4

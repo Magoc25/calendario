@@ -359,6 +359,12 @@ O Calendário MGC também pode ser instalado como aplicativo no computador, sem 
 4. Nome: `calendario-mgc` · Região: **South America (São Paulo)**
 5. Crie uma senha forte para o banco de dados
 6. Aguarde ~2 minutos
+7. Se aparecer a etapa **Data API** (3 caixas), configure assim:
+   - **Enable Data API** = **LIGADO** — o app usa a API REST (`/rest/v1/`); sem isso o sync falha com `404 PGRST205`
+   - **Automatically expose new tables** = pode ficar **desligado** — o SQL do passo 2 já faz o `GRANT`
+   - **Enable automatic RLS** = **ligado** — o SQL também ativa o RLS na tabela
+
+> 💡 Se o teste de conexão der `PGRST205` ("table not found"): a tabela ainda não foi criada (rode o SQL do passo 2); se persistir, vá em **Settings → Data API → Reload schema cache**.
 
 #### 2. Criar a tabela (SQL Editor)
 
@@ -380,6 +386,7 @@ create table cal_sync (
   top3 text,
   standalone_notes text,
   lists text,
+  categories text,
   routine_checks text,
   updated_at timestamptz default now()
 );
