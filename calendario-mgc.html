@@ -4072,11 +4072,11 @@ function showNotifCard(ev,dateStr,alertMin){
 
 /* ── Schedule exact setTimeout for each upcoming alert ── */
 /* This is far more reliable than polling: setTimeout fires even in background tabs */
-let _scheduleTimer=null;
+let _alertScheduleTimer=null; // debounce do agendamento de alertas (nome genérico '_scheduleTimer' renomeado)
 function scheduleAlerts(){
   // Debounce: multiple rapid calls (init + visibilitychange) collapse into one
-  clearTimeout(_scheduleTimer);
-  _scheduleTimer=setTimeout(_doSchedule,200);
+  clearTimeout(_alertScheduleTimer);
+  _alertScheduleTimer=setTimeout(_doSchedule,200);
 }
 function _doSchedule(){
   // Clear existing timers
