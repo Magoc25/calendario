@@ -253,6 +253,24 @@ function run() {
   /* ── ICS builder produz VCALENDAR ── */
   check('buildIcs gera VCALENDAR com eventos', /BEGIN:VEVENT/.test(ev('buildIcs()')));
 
+  /* ── ICS: escaping RFC 5545 + DTEND multi-dia (E7) ── */
+  const ics = ev(`(function(){
+    const bak=AppState.events;
+    AppState.events=[{id:'i1',title:'Prova, final; teste',date:'2026-08-01',dateEnd:'2026-08-03',start:'08:00',end:'10:00'}];
+    const out=buildIcs();AppState.events=bak;return out;
+  })()`);
+  check('ICS escapa vírgula/ponto-e-vírgula no SUMMARY', ics.includes('SUMMARY:Prova\\, final\\; teste'), ics.match(/SUMMARY:[^\r]*/)?.[0]);
+  check('ICS multi-dia usa dateEnd no DTEND', ics.includes('DTSTART:20260801T080000') && ics.includes('DTEND:20260803T100000'), ics.match(/DTEND:[^\r]*/)?.[0]);
+
+  /* ── Clamp de datas no modal (E7) ── */
+  ev(`openNew('2026-07-20')`);
+  $('evTitle').value = 'Smoke Clamp';
+  $('evDate').value = '2026-07-20'; $('evDateEnd').value = '2026-07-15';
+  $('saveBtn').click();
+  check('dateEnd < date é ajustado (evento não some das views)',
+    ev(`(AppState.events.find(e=>e.title==='Smoke Clamp')||{}).dateEnd`) === '2026-07-20');
+  ev(`AppState.events=AppState.events.filter(e=>e.title!=='Smoke Clamp');save()`);
+
   /* ── Navegação de views ── */
   ['month','week','lists','routines','review','notes','today'].forEach(v => {
     try { ev(`switchView && switchView('${v}')`); } catch (e) {}

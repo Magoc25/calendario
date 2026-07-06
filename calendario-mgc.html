@@ -3136,7 +3136,7 @@ const save=()=>{invalidateEvMapCache();localStorage.setItem('cal_marlon_v8',JSON
 let _gcalDragSyncTimer=null;
 function gcalSyncAfterDrag(){clearTimeout(_gcalDragSyncTimer);_gcalDragSyncTimer=setTimeout(()=>{if(typeof gcalIsConnected==='function'&&gcalIsConnected())gcalSync(false).catch(()=>{});},3000);}
 const saveCatColors=()=>{localStorage.setItem('cal_catcolors',JSON.stringify(categoryColors));localStorage.setItem('cal_local_ts',new Date().toISOString());scheduleCloudPush();};
-function saveCategories(){localStorage.setItem('cal_categories',JSON.stringify(AppState.categories));localStorage.setItem('cal_local_ts',new Date().toISOString());rebuildCatIcons();renderCatTags();};
+function saveCategories(){localStorage.setItem('cal_categories',JSON.stringify(AppState.categories));localStorage.setItem('cal_local_ts',new Date().toISOString());scheduleCloudPush();rebuildCatIcons();renderCatTags();};
 const todayDs=()=>{const t=new Date();return ds(t.getFullYear(),t.getMonth(),t.getDate())};
 const toast=msg=>{const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2400)};
 // Debug log — só imprime em dev (localhost) ou se URL tiver ?debug=1
@@ -4212,7 +4212,6 @@ document.addEventListener('click',e=>{if(!e.target.closest('.search-wrap'))docum
        <div class="mds-footer" id="srpFooter"></div>`;
     document.body.appendChild(ov);document.body.appendChild(sh);
     ov.addEventListener('click',closeSrp);
-    sh.getElementById?.('srpClose')?.addEventListener('click',closeSrp);
     document.getElementById('srpClose').addEventListener('click',closeSrp);
   }
 
@@ -4606,6 +4605,8 @@ document.getElementById('saveBtn').addEventListener('click',()=>{
     dateEnd:evDateEnd||document.getElementById('evDate').value,
     start:document.getElementById('evStart').value,end:document.getElementById('evEnd').value,
     location:document.getElementById('evLocation').value.trim(),desc:document.getElementById('evDesc').value.trim()};
+  // Fim antes do início fazia o evento SUMIR de todas as views (getOccurrences não gera nada)
+  if(ev.dateEnd&&ev.dateEnd<ev.date){ev.dateEnd=ev.date;toast('⚠️ Data final ajustada para a data inicial.');}
   if(rrule){
     ev.rrule=rrule;if(until)ev.until=until;
     if(rrule==='CUSTOM'){ev.customDays=[...selectedCustomDays];ev.customInterval=parseInt(document.getElementById('customInterval').value)||1;}
@@ -4615,6 +4616,7 @@ document.getElementById('saveBtn').addEventListener('click',()=>{
     else if(!isDone&&editingDate)ev.doneInstances=(ev.doneInstances||[]).filter(d=>d!==editingDate);
   } else ev.done=isDone;
   ev.localUpdatedAt=new Date().toISOString();
+  const wasEditing=!!editingId; // closeModal() zera editingId antes do toast — capturado aqui
   if(editingId){
     const old=AppState.events.find(e=>e.id===editingId);
     if(old){ev.gcalId=old.gcalId;ev.gcalUpdated=old.gcalUpdated;ev.meetLink=old.meetLink;} // preserve gcal link
@@ -4626,7 +4628,7 @@ document.getElementById('saveBtn').addEventListener('click',()=>{
   }else AppState.events.push(ev);
   save();closeModal();render();if(AppState.selectedDay)renderDayPanel(AppState.selectedDay);
   rescheduleAlerts();
-  toast(editingId?'Evento atualizado!':'Evento salvo!');
+  toast(wasEditing?'Evento atualizado!':'Evento salvo!');
   }catch(err){console.error('Erro ao salvar evento:',err);toast('Erro ao salvar: '+err.message);}
 });
 
@@ -4710,6 +4712,11 @@ function deleteEventById(id){
   const ev=AppState.events.find(e=>e.id===id);
   AppState.events=AppState.events.filter(e=>e.id!==id);
   AppState.eventsDel[id]=Date.now(); // tombstone → exclusão propaga no sync (não ressuscita de outro device)
+  // Limpa as notas do evento (chaves id e id#data) — antes ficavam órfãs p/ sempre
+  // no cal_notes (crescia sem limite e sincronizava); o undo restaura
+  const _removedNotes={};
+  Object.keys(notesStore).forEach(k=>{if(k===id||k.startsWith(id+'#')){_removedNotes[k]=notesStore[k];delete notesStore[k];}});
+  if(Object.keys(_removedNotes).length)saveNotes();
   save();render();if(AppState.selectedDay)renderDayPanel(AppState.selectedDay);
   if(ev?.gcalId)gcalMarkDeleted(ev.gcalId);
   toastUndo('Evento excluído.',()=>{
@@ -4717,6 +4724,8 @@ function deleteEventById(id){
       delete AppState.eventsDel[id];
       touchEv(ev); // recarimba: vence um tombstone que já tenha subido à nuvem
       AppState.events.push(ev);
+      Object.assign(notesStore,_removedNotes);
+      if(Object.keys(_removedNotes).length)saveNotes();
       if(ev.gcalId)gcalUnmarkDeleted(ev.gcalId);
       save();render();if(AppState.selectedDay)renderDayPanel(AppState.selectedDay);
     }
@@ -4817,14 +4826,18 @@ document.getElementById('reloadBtn').addEventListener('click',()=>location.reloa
 document.addEventListener('click',()=>{DOM.backupPopup.classList.remove('open');DOM.themePopup.classList.remove('open');});
 
 /* ═══════ ICS BUILDER ═══════ */
+// Escapa texto conforme RFC 5545 (\\ ; , e quebras de linha) — título com vírgula
+// ou ponto-e-vírgula quebrava o arquivo em outros calendários
+const icsEsc=s=>String(s||'').replace(/\\/g,'\\\\').replace(/;/g,'\\;').replace(/,/g,'\\,').replace(/\r?\n/g,'\\n');
 function buildIcs(){
   const stamp=new Date().toISOString().replace(/[-:]/g,'').split('.')[0]+'Z';
   let ics='BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Calendário Marlon//PT\r\nCALSCALE:GREGORIAN\r\nMETHOD:PUBLISH\r\n';
   AppState.events.forEach(e=>{
-    const ds2=e.date.replace(/-/g,''),ts=(e.start||'08:00').replace(':',''),te=(e.end||'09:00').replace(':','');
-    ics+=`BEGIN:VEVENT\r\nUID:${e.id}@cal-marlon\r\nDTSTAMP:${stamp}\r\nDTSTART:${ds2}T${ts}00\r\nDTEND:${ds2}T${te}00\r\nSUMMARY:${e.title}\r\n`;
-    if(e.category)ics+=`CATEGORIES:${e.category}\r\n`;if(e.location)ics+=`LOCATION:${e.location}\r\n`;if(e.desc)ics+=`DESCRIPTION:${e.desc}\r\n`;
-    if((e.tags||[]).length)ics+=`X-TAGS:${e.tags.join(',')}\r\n`;
+    const ds2=e.date.replace(/-/g,''),de2=(e.dateEnd||e.date).replace(/-/g,''); // DTEND usava sempre a data inicial — multi-dia exportava errado
+    const ts=(e.start||'08:00').replace(':',''),te=(e.end||'09:00').replace(':','');
+    ics+=`BEGIN:VEVENT\r\nUID:${e.id}@cal-marlon\r\nDTSTAMP:${stamp}\r\nDTSTART:${ds2}T${ts}00\r\nDTEND:${de2}T${te}00\r\nSUMMARY:${icsEsc(e.title)}\r\n`;
+    if(e.category)ics+=`CATEGORIES:${icsEsc(e.category)}\r\n`;if(e.location)ics+=`LOCATION:${icsEsc(e.location)}\r\n`;if(e.desc)ics+=`DESCRIPTION:${icsEsc(e.desc)}\r\n`;
+    if((e.tags||[]).length)ics+=`X-TAGS:${icsEsc(e.tags.join(','))}\r\n`;
     if(e.alert!=null)ics+=`BEGIN:VALARM\r\nACTION:DISPLAY\r\nDESCRIPTION:Lembrete\r\nTRIGGER:-PT${e.alert}M\r\nEND:VALARM\r\n`;
     if(e.rrule&&e.rrule!=='CUSTOM'){const f={DAILY:'DAILY',WEEKLY:'WEEKLY',BIWEEKLY:'WEEKLY',MONTHLY:'MONTHLY',YEARLY:'YEARLY'};let rule=`FREQ=${f[e.rrule]}${e.rrule==='BIWEEKLY'?';INTERVAL=2':''}`;if(e.until)rule+=`;UNTIL=${e.until.replace(/-/g,'')}T235959Z`;ics+=`RRULE:${rule}\r\n`;}
     if(e.rrule==='CUSTOM'&&e.customDays&&e.customDays.length){let rule=`FREQ=WEEKLY;BYDAY=${e.customDays.map(d=>BYDAY[d]).join(',')}`;if(e.customInterval>1)rule+=`;INTERVAL=${e.customInterval}`;if(e.until)rule+=`;UNTIL=${e.until.replace(/-/g,'')}T235959Z`;ics+=`RRULE:${rule}\r\n`;}
@@ -7710,6 +7723,7 @@ function getLocalPayload(){
     events: JSON.stringify({v:2,events:AppState.events,del:AppState.eventsDel||{}}), // v2: tombstones p/ merge por id (Array.isArray no pull dá retrocompat)
     notes: JSON.stringify(notesStore),
     category_colors: JSON.stringify(categoryColors),
+    categories: JSON.stringify(AppState.categories), // nomes/ícones — as CORES já sincronizavam mas as categorias não (coluna nova; fallback r9 abaixo cobre tabela antiga)
     calendars: JSON.stringify(calendars),
     theme: currentTheme,
     routines: JSON.stringify(AppState.routines),
@@ -7737,6 +7751,7 @@ function applyRemotePayload(row){
     categoryColors=remoteCatColors;
     if(remoteCalendars&&remoteCalendars.length)calendars=remoteCalendars;
     if(row.theme)applyTheme(row.theme);
+    if(row.categories)try{const cs=JSON.parse(row.categories);if(Array.isArray(cs)&&cs.length){AppState.categories=cs;localStorage.setItem('cal_categories',row.categories);rebuildCatIcons();if(typeof renderCatTags==='function')renderCatTags();}}catch(e){}
     if(row.routines)try{const r=JSON.parse(row.routines);if(Array.isArray(r))AppState.routines=r;}catch(e){}
     if(row.quick_tasks)try{const q=JSON.parse(row.quick_tasks);if(Array.isArray(q))AppState.quickTasks=q;}catch(e){}
     if(row.reviews)try{const rv=JSON.parse(row.reviews);if(rv&&typeof rv==='object')AppState.reviews=rv;}catch(e){}
@@ -7770,11 +7785,17 @@ async function syncToCloud(silent=false){
   try{
     const payload=getLocalPayload();
     let{error}=await sbClient.from('cal_sync').upsert({id:'mgc',...payload},{onConflict:'id'});
-    // Retrocompat: tabela antiga sem a coluna 'lists' → reenvia sem ela (o resto do sync não quebra).
-    // Listas ficam local-only até o usuário rodar: alter table cal_sync add column if not exists lists text;
-    if(error&&/lists/i.test(error.message||'')){
-      const {lists:_omit,...legacy}=payload;
-      ({error}=await sbClient.from('cal_sync').upsert({id:'mgc',...legacy},{onConflict:'id'}));
+    // Retrocompat (guia r9) GENÉRICA: tabela antiga sem uma coluna nova (lists,
+    // categories, …) → remove a coluna citada no erro e reenvia (o resto sincroniza;
+    // o campo fica local-only até o ALTER TABLE documentado no CHANGELOG).
+    let _colTries=0;
+    while(error&&_colTries<3){
+      const m=(error.message||'').match(/'([a-zA-Z_]+)' column|column "?([a-zA-Z_]+)"?/);
+      const col=m&&(m[1]||m[2]);
+      if(!col||!(col in payload))break;
+      delete payload[col];
+      ({error}=await sbClient.from('cal_sync').upsert({id:'mgc',...payload},{onConflict:'id'}));
+      _colTries++;
     }
     if(error){setSyncStatus('error','☁️ Erro: '+error.message);if(!silent)toast('Erro ao sincronizar: '+error.message);return false;}
     setSyncStatus('ok');
@@ -8549,8 +8570,9 @@ async function migrateLocalReviews(){
   if(localStorage.getItem('cal_reviews_migrated')==='1')return;
   if(!appReviews.length){localStorage.setItem('cal_reviews_migrated','1');return;}
   try{
-    // Busca ids já existentes no Supabase para não duplicar
-    const{data}=await revClient.from('app_reviews').select('id');
+    // Busca ids já existentes DESTE projeto para não duplicar (sem o filtro,
+    // varria as reviews de todos os apps do backend compartilhado)
+    const{data}=await revClient.from('app_reviews').select('id').eq('project_id',PROJECT_ID);
     const remoteIds=new Set((data||[]).map(r=>r.id));
     const pendentes=appReviews.filter(r=>r.id&&!remoteIds.has(r.id));
     for(const r of pendentes){
@@ -8944,7 +8966,7 @@ setInterval(()=>getActiveSW()?.postMessage({type:'PING'}),25000);
   if(!el)return;
   const CACHE_KEY='mgc_app_version';
   const CACHE_TTL=6*60*60*1000; // 6 horas
-  const cached=JSON.parse(localStorage.getItem(CACHE_KEY)||'null');
+  let cached=null;try{cached=JSON.parse(localStorage.getItem(CACHE_KEY)||'null');}catch(e){} // valor corrompido não pode matar a IIFE
   if(cached&&Date.now()-cached.ts<CACHE_TTL){
     el.textContent='© MGC · '+cached.v;
     return;
@@ -8967,7 +8989,7 @@ setInterval(()=>getActiveSW()?.postMessage({type:'PING'}),25000);
   const LOCAL_VERSION='2.3.1';
   const CACHE_KEY='mgc_update_check';
   const CACHE_TTL=24*60*60*1000; // 24 horas
-  const cached=JSON.parse(localStorage.getItem(CACHE_KEY)||'null');
+  let cached=null;try{cached=JSON.parse(localStorage.getItem(CACHE_KEY)||'null');}catch(e){} // valor corrompido não pode matar o banner de update
   if(cached&&Date.now()-cached.ts<CACHE_TTL)return;
   try{
     const{data,error}=await revClient.from('app_config').select('value').eq('project_id',PROJECT_ID).eq('key','version').single();
