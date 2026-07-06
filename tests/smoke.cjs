@@ -70,6 +70,10 @@ const dom = new JSDOM(html, {
       addEventListener(){}, removeEventListener(){}, dispatchEvent(){ return false; }
     }));
     window.scrollTo = () => {};
+    window.URL.createObjectURL = window.URL.createObjectURL || (() => 'blob:mock');
+    window.URL.revokeObjectURL = window.URL.revokeObjectURL || (() => {});
+    const OrigBlob = window.Blob;
+    window.Blob = function(parts, opts){ window.__lastBlob = (parts||[]).join(''); return new OrigBlob(parts||[], opts); };
     window.Element.prototype.scrollIntoView = () => {};
     window.structuredClone = window.structuredClone || structuredClone;
     window.requestAnimationFrame = window.requestAnimationFrame || ((cb) => setTimeout(cb, 0));
@@ -224,6 +228,15 @@ function run() {
   if (ev(`typeof window.quickAddParse==='function' || typeof quickAddParse==='function'`)) {
     check('quickAddParse é executável', true);
   }
+
+  /* ── Backup v7 completo (E4) ── */
+  $('exportJsonBtn').click();
+  let backup = {};
+  try { backup = JSON.parse(ev('window.__lastBlob') || '{}'); } catch (e) {}
+  check('backup exporta v7 com standaloneNotes/calendars/categories/routineChecks',
+    backup.version === 7 && 'standaloneNotes' in backup && 'calendars' in backup &&
+    'categories' in backup && 'routineChecks' in backup && Array.isArray(backup.events),
+    'keys: ' + Object.keys(backup).join(','));
 
   /* ── ICS builder produz VCALENDAR ── */
   check('buildIcs gera VCALENDAR com eventos', /BEGIN:VEVENT/.test(ev('buildIcs()')));

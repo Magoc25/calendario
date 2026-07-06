@@ -4878,9 +4878,15 @@ document.getElementById('importIcsFile').addEventListener('change',function(){
 
 /* ═══════ JSON BACKUP ═══════ */
 document.getElementById('exportJsonBtn').addEventListener('click',()=>{
-  const data={version:6,theme:currentTheme,categoryColors,notes:notesStore,
+  // v7: backup COMPLETO — antes faltavam standaloneNotes (aba Notas), calendars,
+  // categories e routineChecks; restaurar numa máquina nova perdia esses dados
+  const data={version:7,theme:currentTheme,categoryColors,notes:notesStore,
     routines:AppState.routines,quickTasks:AppState.quickTasks,reviews:AppState.reviews,top3:AppState.top3Data,
     lists:AppState.lists,
+    standaloneNotes:AppState.standaloneNotes,
+    calendars,
+    categories:AppState.categories,
+    routineChecks:collectRoutineChecks(),
     exportedAt:new Date().toISOString(),events:AppState.events};
   const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
   const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`backup-calendario-${new Date().toISOString().slice(0,10)}.json`;a.click();URL.revokeObjectURL(url);
@@ -4894,15 +4900,32 @@ document.getElementById('importFile').addEventListener('change',function(){
     try{const data=JSON.parse(e.target.result);const imp=Array.isArray(data)?data:(data.events||[]);
       if(!imp.length){toast('Arquivo vazio ou inválido.');return;}
       if(confirm(`Importar ${imp.length} evento(s)? Os dados atuais serão substituídos.`)){
-        AppState.events=imp;if(data.categoryColors)categoryColors=data.categoryColors;
-        if(data.notes)notesStore=data.notes;
+        // Restauração explícita: recarimba eventos como recentes e zera tombstones
+        // p/ o merge do sync não reapagar o que foi restaurado
+        const _nowIso=new Date().toISOString();
+        AppState.events=imp.map(ev=>({...ev,localUpdatedAt:_nowIso}));
+        AppState.eventsDel={};
+        if(data.categoryColors)categoryColors=data.categoryColors;
+        if(data.notes){notesStore=data.notes;saveNotes();} // antes o import nem persistia as notas (cal_notes ficava velho)
         if(Array.isArray(data.lists)){
           // Restauração explícita: recarimba como recente e zera tombstones p/ o sync não reapagar o importado
           const _now=Date.now();
           AppState.lists=data.lists.map(l=>({...l,updatedAt:_now,items:Array.isArray(l.items)?l.items.map(it=>({...it,updatedAt:_now})):[]}));
           AppState.listsDel={};saveLists();
         }
-        save();saveCatColors();if(data.theme)applyTheme(data.theme);render();toast(`${imp.length} eventos importados!`);
+        // v7: restaura o restante do backup (o import antigo ignorava o que o export incluía)
+        if(Array.isArray(data.routines)){AppState.routines=data.routines;saveRoutines();}
+        if(Array.isArray(data.quickTasks)){AppState.quickTasks=data.quickTasks;saveQuickTasks();}
+        if(data.reviews&&typeof data.reviews==='object'&&!Array.isArray(data.reviews)){AppState.reviews=data.reviews;localStorage.setItem('cal_reviews',JSON.stringify(AppState.reviews));}
+        if(data.top3&&typeof data.top3==='object'&&!Array.isArray(data.top3)){AppState.top3Data=data.top3;saveTop3();}
+        if(Array.isArray(data.standaloneNotes)){AppState.standaloneNotes=data.standaloneNotes;saveStandaloneNotes();}
+        if(Array.isArray(data.calendars)&&data.calendars.length){calendars=data.calendars;saveCalendars();renderCalendarList();populateCalendarSelect();}
+        if(Array.isArray(data.categories)&&data.categories.length){AppState.categories=data.categories;saveCategories();}
+        if(data.routineChecks&&typeof data.routineChecks==='object'){
+          Object.entries(data.routineChecks).forEach(([date,ids])=>{if(Array.isArray(ids))localStorage.setItem('cal_rchecks_'+date,JSON.stringify(ids));});
+        }
+        save();saveCatColors();if(data.theme)applyTheme(data.theme);render();rescheduleAlerts();
+        toast(`${imp.length} eventos importados!`);
       }
     }catch(err){toast('Erro ao ler JSON.');}
   };
@@ -7658,8 +7681,8 @@ function setSyncStatus(status,title){
   btn.title=title||(labels[status]||'Sincronizar');
 }
 
-function getLocalPayload(){
-  // Coleta todos os checks de rotinas por data
+// Coleta todos os checks de rotinas por data (usado no sync e no backup)
+function collectRoutineChecks(){
   const rchecks={};
   for(let i=0;i<localStorage.length;i++){
     const k=localStorage.key(i);
@@ -7667,6 +7690,11 @@ function getLocalPayload(){
       try{rchecks[k.replace('cal_rchecks_','')]=JSON.parse(localStorage.getItem(k)||'[]');}catch(e){}
     }
   }
+  return rchecks;
+}
+
+function getLocalPayload(){
+  const rchecks=collectRoutineChecks();
   return {
     events: JSON.stringify({v:2,events:AppState.events,del:AppState.eventsDel||{}}), // v2: tombstones p/ merge por id (Array.isArray no pull dá retrocompat)
     notes: JSON.stringify(notesStore),
