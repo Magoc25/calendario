@@ -6,7 +6,7 @@
    3. Periodic Background Sync (Android Chrome)
 ═══════════════════════════════════════════════════════ */
 
-const CACHE_NAME = 'cal-mgc-v187';
+const CACHE_NAME = 'cal-mgc-v188';
 const DB_NAME = 'cal-mgc-sw';
 const DB_VERSION = 1;
 const STORE_ALERTS = 'pending_alerts';
@@ -20,10 +20,12 @@ let catIcons = { 'Aula':'📚','Reunião':'👥','Rotina':'🔄','Pessoal':'👤
 let _lastFetchCheck = 0;
 const FETCH_CHECK_INTERVAL = 30000; // 30s
 
-// ── Install: skip waiting immediately ──────────────────
-self.addEventListener('install', event => {
-  self.skipWaiting();
-});
+// ── Install ────────────────────────────────────────────
+// Sem skipWaiting automático: o SW novo fica em "waiting" até o app mandar
+// SKIP_WAITING (botão Atualizar). Ativar no meio de uma sessão apagava o cache
+// antigo enquanto a página velha ainda o usava — janela de estados quebrados
+// no reload (suspeito do travamento no Safari/macOS durante updates).
+self.addEventListener('install', event => {});
 
 // ── Activate: limpa caches antigos e assume controle ───
 self.addEventListener('activate', event => {
@@ -54,7 +56,8 @@ self.addEventListener('fetch', event => {
             event.request.url.includes('manifest.json') ||
             event.request.url.includes('icon-')) {
           const clone = response.clone();
-          caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+          // waitUntil: sem ele o SW podia ser encerrado antes do put concluir
+          event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone)));
         }
         return response;
       }).catch(() => cached || new Response('Offline', { status: 503 }));
@@ -73,6 +76,13 @@ self.addEventListener('periodicsync', event => {
 // ── Messages from main thread ──────────────────────────
 self.addEventListener('message', async event => {
   const { type, data } = event.data || {};
+
+  if (type === 'SKIP_WAITING') {
+    // App pediu p/ aplicar a atualização (botão Atualizar) — ativa o SW novo;
+    // a página escuta controllerchange e recarrega uma única vez.
+    self.skipWaiting();
+    return;
+  }
 
   if (type === 'STORE_ALERTS') {
     // Main thread sends upcoming alerts for SW to monitor
@@ -132,15 +142,16 @@ self.addEventListener('notificationclick', event => {
     return;
   }
 
-  if (event.action === 'snooze30' || event.action === 'snooze60' || event.action === 'snooze180') {
-    const mins = event.action === 'snooze30' ? 30 : event.action === 'snooze60' ? 60 : 180;
-    // Store snoozed alert
+  if (event.action === 'snooze30' || event.action === 'snooze60') {
+    const mins = event.action === 'snooze30' ? 30 : 60;
     const snoozeAlert = {
       ...data,
       fireAt: Date.now() + mins * 60 * 1000,
       key: data.key + '_snooze_' + Date.now()
     };
-    storeAlerts([snoozeAlert]);
+    // waitUntil: sem ele o SW podia ser encerrado antes do write no IndexedDB
+    // e o snooze se perdia em silêncio
+    event.waitUntil(storeAlerts([snoozeAlert]).then(() => _swScheduleTimers([snoozeAlert])));
     return;
   }
 
@@ -227,23 +238,34 @@ async function markFired(key) {
 
 async function clearFiredForDate(date) {
   const db = await openDB();
-  const tx = db.transaction(STORE_FIRED, 'readwrite');
-  const store = tx.objectStore(STORE_FIRED);
-  const req = store.getAll();
-  req.onsuccess = () => {
-    (req.result || []).filter(r => r.key.includes(date)).forEach(r => store.delete(r.key));
-  };
+  return new Promise((res, rej) => {
+    const tx = db.transaction(STORE_FIRED, 'readwrite');
+    const store = tx.objectStore(STORE_FIRED);
+    const req = store.getAll();
+    req.onsuccess = () => {
+      (req.result || []).filter(r => r.key.includes(date)).forEach(r => store.delete(r.key));
+    };
+    req.onerror = rej;
+    tx.oncomplete = res; tx.onerror = rej; // aguarda a transação (antes era fire-and-forget)
+  });
 }
 
 // Agenda timers internos no SW para alertas futuros.
 // Chrome mantém o SW vivo enquanto houver timers pendentes,
 // permitindo notificações mesmo com o app fechado (desde que o Chrome esteja rodando).
+// Dedup por key: era chamado a cada checkAndFireAlerts (fetch a cada 30s) e
+// acumulava dezenas de timers repetidos para o mesmo alerta.
+const _swTimers = new Map(); // key → timeout id
 function _swScheduleTimers(alerts) {
   const now = Date.now();
   for (const a of alerts) {
     const delay = a.fireAt - now;
-    if (delay > 0 && delay <= 4 * 60 * 60 * 1000) { // até 4h à frente
-      setTimeout(() => checkAndFireAlerts('sw-timer').catch(() => {}), delay + 500);
+    if (delay > 0 && delay <= 4 * 60 * 60 * 1000 && !_swTimers.has(a.key)) { // até 4h à frente
+      const t = setTimeout(() => {
+        _swTimers.delete(a.key);
+        checkAndFireAlerts('sw-timer').catch(() => {});
+      }, delay + 500);
+      _swTimers.set(a.key, t);
     }
   }
 }
@@ -255,7 +277,13 @@ async function checkAndFireAlerts(source) {
   try {
     const now = Date.now();
     const alerts = await getAllAlerts();
-    const toFire = alerts.filter(a => a.fireAt && a.fireAt <= now + 30000); // within 30s
+    // Atrasado demais (>12h) não dispara — remove ANTES do loop de disparo.
+    // (Antes, um alerta de dias atrás ainda notificava ao acordar o SW,
+    // porque a limpeza de stale rodava só DEPOIS do disparo.)
+    const STALE_MS = 12 * 60 * 60 * 1000;
+    const staleNow = alerts.filter(a => a.fireAt && a.fireAt < now - STALE_MS);
+    for (const a of staleNow) await removeAlert(a.key);
+    const toFire = alerts.filter(a => a.fireAt && a.fireAt <= now + 30000 && a.fireAt >= now - STALE_MS); // within 30s
 
     for (const alert of toFire) {
       const alreadyFired = await isFired(alert.key);
@@ -304,10 +332,7 @@ async function checkAndFireAlerts(source) {
     // Agenda timers internos para alertas futuros ainda pendentes
     const future = alerts.filter(a => a.fireAt && a.fireAt > now + 30000);
     if (future.length) _swScheduleTimers(future);
-
-    // Clean up very old alerts (>24h overdue)
-    const stale = alerts.filter(a => a.fireAt && a.fireAt < now - 86400000);
-    for (const a of stale) await removeAlert(a.key);
+    // (limpeza de alertas velhos já feita no topo, antes do disparo)
 
   } catch (err) {
     console.error('[SW] checkAndFireAlerts error:', err);
