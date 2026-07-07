@@ -76,6 +76,9 @@ const dom = new JSDOM(html, {
     window.Blob = function(parts, opts){ window.__lastBlob = (parts||[]).join(''); return new OrigBlob(parts||[], opts); };
     window.Element.prototype.scrollIntoView = () => {};
     window.structuredClone = window.structuredClone || structuredClone;
+    // jsdom não implementa execCommand/queryCommandState (editor rico)
+    window.document.execCommand = window.document.execCommand || (() => false);
+    window.document.queryCommandState = window.document.queryCommandState || (() => false);
     window.requestAnimationFrame = window.requestAnimationFrame || ((cb) => setTimeout(cb, 0));
     window.confirm = () => true;   // fluxos de exclusão seguem em frente
     window.alert = () => {};
@@ -103,8 +106,31 @@ const ev = (expr) => window.eval(expr);
 setTimeout(() => {
   try { run(); } catch (e) {
     errors.push('[harness] ' + e.message + '\n' + (e.stack||'').split('\n').slice(0,4).join('\n'));
-  } finally { finish(); }
+  }
+  // 2ª fase: fluxos com debounce (auto-save do editor de notas = 900ms)
+  setTimeout(() => {
+    try { runAsync(); } catch (e) {
+      errors.push('[harness-async] ' + e.message + '\n' + (e.stack||'').split('\n').slice(0,4).join('\n'));
+    } finally { finish(); }
+  }, 1300);
 }, 600);
+
+/* Fase assíncrona — precisa que os setTimeout do app tenham disparado */
+function runAsync() {
+  check('auto-save criou a nota avulsa do teste (após debounce)',
+    ev(`!!AppState.standaloneNotes.find(n=>n.title==='Nota Smoke')`));
+  // esvaziar nota existente persiste o vazio (bug N0-5)
+  ev(`(function(){
+    const n=AppState.standaloneNotes.find(x=>x.title==='Nota Smoke');
+    if(n){_editingNoteId=n.id;
+      document.getElementById('neEditor').innerHTML='';
+      saveNoteEdit();
+    }
+  })()`);
+  check('esvaziar nota existente persiste o vazio (não "volta" o conteúdo antigo)',
+    ev(`(AppState.standaloneNotes.find(x=>x.title==='Nota Smoke')||{}).content`) === '');
+  ev(`AppState.standaloneNotes=AppState.standaloneNotes.filter(n=>n.title!=='Nota Smoke');saveStandaloneNotes();_editingNoteId=null`);
+}
 
 function run() {
   /* Boot */
@@ -276,6 +302,17 @@ function run() {
     try { ev(`switchView && switchView('${v}')`); } catch (e) {}
   });
   check('troca de views não gera erro', errors.length === 0, errors[errors.length-1]);
+
+  /* ── Editor de notas (N0): utilitários e criação de nota ── */
+  check('helpers do editor existem (_caretInsideWord/_selInList/updateNeToolbarState)',
+    ev(`typeof _caretInsideWord==='function'&&typeof _selInList==='function'&&typeof updateNeToolbarState==='function'`));
+  check('_caretInsideWord sem seleção retorna false', ev(`_caretInsideWord()`) === false);
+  check('updateNeToolbarState roda sem erro', (() => { try { ev('updateNeToolbarState()'); return true; } catch (e) { return false; } })());
+  // cria nota avulsa e digita — o auto-save (900ms) é verificado na fase assíncrona
+  ev(`openNoteEdit(null)`);
+  $('neTitleInput').value = 'Nota Smoke';
+  $('neEditor').innerHTML = 'conteúdo de teste';
+  ev(`document.getElementById('neEditor').dispatchEvent(new Event('input',{bubbles:true}))`);
 
   /* limpeza dos dados de teste no localStorage do jsdom (efêmero, mas por higiene) */
   ev(`AppState.events=AppState.events.filter(e=>!/^(Smoke|Dupla)/.test(e.title));save()`);

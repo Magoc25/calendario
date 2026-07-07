@@ -5099,23 +5099,67 @@ function _insertListManual(editorId,tag){
   editor.dispatchEvent(new Event('input',{bubbles:true}));
 }
 
-// execCommand com setTimeout(0) para Safari; listas usam implementação manual
+// execCommand com setTimeout(0) para Safari; listas tentam o NATIVO primeiro
+// (preserva o histórico de undo) e caem no manual só quando o navegador falha.
+const _INLINE_CMDS=new Set(['bold','italic','underline','strikeThrough','foreColor','hiliteColor','fontSize']);
+function _restoreEditorSelection(editor,saved){
+  editor.focus();
+  if(saved){
+    try{const s=window.getSelection();s.removeAllRanges();s.addRange(saved.cloneRange());}catch(e){}
+  }else{
+    try{const s=window.getSelection();const r=document.createRange();r.selectNodeContents(editor);r.collapse(false);s.removeAllRanges();s.addRange(r);}catch(e){}
+  }
+}
+// Cursor colapsado ESTRITAMENTE dentro de uma palavra? (caracteres de palavra dos 2 lados)
+function _caretInsideWord(){
+  const sel=window.getSelection();if(!sel||!sel.rangeCount||!sel.isCollapsed)return false;
+  const r=sel.getRangeAt(0),n=r.startContainer;
+  if(n.nodeType!==Node.TEXT_NODE)return false;
+  const t=n.textContent,o=r.startOffset;
+  const w=/[\p{L}\p{N}_]/u;
+  return o>0&&o<t.length&&w.test(t[o-1])&&w.test(t[o]);
+}
+// A seleção atual está dentro de uma lista <tag> do editor?
+function _selInList(editor,tag){
+  const sel=window.getSelection();
+  let n=sel&&sel.rangeCount?sel.getRangeAt(0).commonAncestorContainer:null;
+  if(n&&n.nodeType===Node.TEXT_NODE)n=n.parentElement;
+  const l=n&&n.closest&&n.closest(tag);
+  return !!(l&&editor.contains(l));
+}
 function _execInEditor(editorId,cmd,value,cb){
   const editor=document.getElementById(editorId);
   if(!editor)return;
+  const saved=editorId==='notesEditor'?_notesRange:_neRange;
   if(cmd==='insertOrderedList'||cmd==='insertUnorderedList'){
-    setTimeout(()=>{_insertListManual(editorId,cmd==='insertOrderedList'?'OL':'UL');if(cb)cb();},0);
+    setTimeout(()=>{
+      const tag=cmd==='insertOrderedList'?'OL':'UL';
+      _restoreEditorSelection(editor,saved);
+      const wasIn=_selInList(editor,tag);
+      let ok=false;try{ok=document.execCommand(cmd,false,null);}catch(e){}
+      // Safari retorna true mas não faz nada — confere se o DOM realmente mudou
+      if(!ok||_selInList(editor,tag)===wasIn)_insertListManual(editorId,tag);
+      else editor.dispatchEvent(new Event('input',{bubbles:true}));
+      if(cb)cb();
+    },0);
     return;
   }
-  const saved=editorId==='notesEditor'?_notesRange:_neRange;
   setTimeout(()=>{
-    editor.focus();
-    if(saved){
-      try{const s=window.getSelection();s.removeAllRanges();s.addRange(saved.cloneRange());}catch(e){}
-    }else{
-      try{const s=window.getSelection();const r=document.createRange();r.selectNodeContents(editor);r.collapse(false);s.removeAllRanges();s.addRange(r);}catch(e){}
+    _restoreEditorSelection(editor,saved);
+    // Cursor no MEIO de uma palavra + comando inline → aplica à palavra inteira
+    // (estilo Word) — antes o clique "não fazia nada" visível
+    if(_INLINE_CMDS.has(cmd)&&_caretInsideWord()){
+      try{const s=window.getSelection();s.modify('move','forward','word');s.modify('extend','backward','word');}catch(e){}
     }
-    document.execCommand(cmd,false,value||null);
+    if(cmd==='hiliteColor'){
+      // Safari não suporta hiliteColor — cai para backColor com styleWithCSS
+      try{document.execCommand('styleWithCSS',false,true);}catch(e){}
+      let ok=false;try{ok=document.execCommand('hiliteColor',false,value||null);}catch(e){}
+      if(!ok){try{document.execCommand('backColor',false,value||null);}catch(e){}}
+      try{document.execCommand('styleWithCSS',false,false);}catch(e){}
+    }else{
+      document.execCommand(cmd,false,value||null);
+    }
     editor.dispatchEvent(new Event('input',{bubbles:true}));
     if(cb)cb();
   },0);
@@ -7364,10 +7408,14 @@ function openNoteEdit(noteId){
 
 function saveNoteEdit(){
   const title=document.getElementById('neTitleInput').value.trim()||'Sem título';
-  const content=document.getElementById('neEditor').innerHTML;
+  let content=document.getElementById('neEditor').innerHTML;
   const color=document.getElementById('neColorPick').value;
   const pinned=document.getElementById('nePinBtn').classList.contains('active');
-  if(!content.trim()||content==='<br>'){toast('Escreva algo na nota!');return;}
+  const isEmpty=!content.trim()||content==='<br>';
+  if(isEmpty){
+    if(!_editingNoteId){document.getElementById('noteEditOverlay').classList.remove('open');return;} // nota nova vazia: só fecha
+    content=''; // nota existente esvaziada de propósito: salva vazia (consistente com o auto-save)
+  }
   const now=new Date().toISOString();
   if(_editingNoteId){
     const idx=AppState.standaloneNotes.findIndex(n=>n.id===_editingNoteId);
@@ -7599,9 +7647,21 @@ document.getElementById('nePinBtn').addEventListener('click',()=>{
 document.querySelectorAll('[data-necmd]').forEach(btn=>{
   btn.addEventListener('mousedown',e=>{
     e.preventDefault();
-    _execInEditor('neEditor',btn.dataset.necmd);
+    _execInEditor('neEditor',btn.dataset.necmd,null,updateNeToolbarState);
   });
 });
+// Estado ativo dos botões (B/I/U/listas/alinhamento) — a toolbar da aba Notas
+// não tinha NENHUM feedback visual (só a de notas de evento tinha)
+function updateNeToolbarState(){
+  ['bold','italic','underline','strikeThrough','insertUnorderedList','insertOrderedList',
+   'justifyLeft','justifyCenter','justifyRight'].forEach(cmd=>{
+    const btn=document.querySelector(`.ntb[data-necmd="${cmd}"]`);
+    let on=false;try{on=document.queryCommandState(cmd);}catch(e){}
+    if(btn)btn.classList.toggle('active',on);
+  });
+}
+document.getElementById('neEditor').addEventListener('keyup',updateNeToolbarState);
+document.getElementById('neEditor').addEventListener('mouseup',updateNeToolbarState);
 document.getElementById('neFontSize').addEventListener('mousedown',()=>_saveRange('neEditor'));
 document.getElementById('neFontSize').addEventListener('change',function(){
   _execInEditor('neEditor','fontSize',this.value);
@@ -7627,10 +7687,16 @@ document.getElementById('neEditor').addEventListener('input',()=>{
   document.getElementById('neSavedLabel').textContent='…editando';
   _neAutoSave=setTimeout(()=>{
     const title=document.getElementById('neTitleInput').value.trim()||'Sem título';
-    const content=document.getElementById('neEditor').innerHTML;
+    let content=document.getElementById('neEditor').innerHTML;
     const color=document.getElementById('neColorPick').value;
     const pinned=document.getElementById('nePinBtn').classList.contains('active');
-    if(!content.trim()||content==='<br>')return;
+    const isEmpty=!content.trim()||content==='<br>';
+    // Nota NOVA vazia: nada a criar. Nota EXISTENTE esvaziada: persiste o vazio —
+    // antes o guard retornava e o conteúdo antigo "voltava" ao reabrir
+    if(isEmpty){
+      if(!_editingNoteId){document.getElementById('neSavedLabel').textContent='📝 Nova nota';return;}
+      content='';
+    }
     const now=new Date().toISOString();
     if(_editingNoteId){
       const idx=AppState.standaloneNotes.findIndex(n=>n.id===_editingNoteId);
