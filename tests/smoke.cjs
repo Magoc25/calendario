@@ -276,6 +276,29 @@ function run() {
     ev(`!!document.querySelector('#listsTagBar [data-ltag="velha"]')`));
   ev(`_listsTagFilter='';AppState.lists=AppState.lists.filter(l=>l.id!=='lm1'&&l.id!=='lm2');document.getElementById('listsBody').innerHTML='';renderListsView()`);
 
+  /* ── L1: arquivar + limpar concluídos ── */
+  ev(`(function(){
+    AppState.lists=AppState.lists.filter(l=>l.id!=='la1');
+    AppState.lists.push({id:'la1',title:'Arquiva Smoke',createdAt:Date.now(),updatedAt:Date.now(),items:[
+      {id:'la1a',title:'feito',done:true,updatedAt:Date.now()},
+      {id:'la1b',title:'pendente',done:false,updatedAt:Date.now()}]});
+    _openListId='la1';_listsSearch='';_listsTagFilter='';document.getElementById('listsBody').innerHTML='';renderListsView();
+  })()`);
+  ev(`clearDoneItems('la1')`);
+  check('limpar concluídos remove só os itens done (+ tombstone)',
+    ev(`(function(){const l=AppState.lists.find(x=>x.id==='la1');return l.items.length===1&&l.items[0].title==='pendente'&&!!AppState.listsDel['la1a'];})()`));
+  ev(`archiveList('la1')`);
+  check('arquivar marca archivedAt e sai do detalhe p/ a visão geral',
+    ev(`!!AppState.lists.find(x=>x.id==='la1').archivedAt`) && ev(`_openListId===null`));
+  ev(`_listsOpenMonths=new Set(['__arch__']);document.getElementById('listsBody').innerHTML='';renderListsView()`);
+  check('lista arquivada NÃO aparece nos grupos por mês; aparece na seção Arquivadas',
+    ev(`!document.querySelector('#listsGroups .lists-month:not(.lists-month-arch) [data-openlist="la1"]')`) &&
+    ev(`!!document.querySelector('#listsGroups .lists-month-arch [data-openlist="la1"]')`));
+  ev(`unarchiveList('la1')`);
+  check('desarquivar remove archivedAt e volta às ativas',
+    ev(`!AppState.lists.find(x=>x.id==='la1').archivedAt`));
+  ev(`AppState.lists=AppState.lists.filter(l=>l.id!=='la1');delete AppState.listsDel['la1a'];_openListId=null;saveLists();document.getElementById('listsBody').innerHTML='';renderListsView()`);
+
   // merge não ressuscita excluído nem apaga criado
   const mg = ev(`(function(){
     const A=[{id:'l1',title:'A',updatedAt:100,items:[{id:'i1',title:'x',updatedAt:100}]}];

@@ -652,6 +652,13 @@ body.design-extra.design-crystal #srpSheet{background:var(--surface-glass)}
 .lists-detail-title{flex:1;font-size:15px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .lists-del-list{background:none;border:none;cursor:pointer;font-size:14px;opacity:.6}
 .lists-del-list:hover{opacity:1}
+.lists-head-btn{background:none;border:none;cursor:pointer;font-size:14px;opacity:.6;flex-shrink:0}
+.lists-head-btn:hover{opacity:1}
+.lists-clear-done{background:var(--surface2);border:1px solid var(--border);border-radius:12px;cursor:pointer;font-size:10px;color:var(--muted);padding:2px 8px;flex-shrink:0;font-family:'DM Sans',sans-serif;white-space:nowrap}
+.lists-clear-done:hover{color:var(--text)}
+.list-card-unarch{flex-shrink:0;background:none;border:none;cursor:pointer;font-size:13px;opacity:.6}
+.list-card-unarch:hover{opacity:1}
+.lists-month-arch{opacity:.85}
 .lists-detail-sub{font-size:10px;color:var(--muted);margin-bottom:10px}
 .list-items{display:flex;flex-direction:column;gap:4px}
 .list-item{display:flex;align-items:center;gap:9px;padding:7px 9px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm)}
@@ -6595,6 +6602,36 @@ function addListItem(listId,title){
   const now=Date.now();
   l.items.push({id:uid(),title,done:false,updatedAt:now});l.updatedAt=now;saveLists();
 }
+// Arquivar (guardar sem excluir): archivedAt fica no objeto da lista → propaga no
+// sync pelo merge (a lista vence por updatedAt e carrega o archivedAt).
+function archiveList(id){
+  const l=AppState.lists.find(x=>x.id===id);if(!l)return;
+  l.archivedAt=Date.now();l.updatedAt=Date.now();
+  saveLists();
+  if(_openListId===id)_openListId=null;
+  renderListsView();
+  toastUndo('Lista arquivada.',()=>{const ll=AppState.lists.find(x=>x.id===id);if(ll){delete ll.archivedAt;ll.updatedAt=Date.now();saveLists();renderListsView();}});
+}
+function unarchiveList(id){
+  const l=AppState.lists.find(x=>x.id===id);if(!l)return;
+  delete l.archivedAt;l.updatedAt=Date.now();
+  saveLists();renderListsView();toast('Lista desarquivada.');
+}
+// Limpar itens concluídos (com tombstones p/ o sync não os ressuscitar); undo restaura.
+function clearDoneItems(id){
+  const l=AppState.lists.find(x=>x.id===id);if(!l)return;
+  const removed=l.items.filter(i=>i.done);
+  if(!removed.length)return;
+  const now=Date.now();
+  removed.forEach(it=>{AppState.listsDel[it.id]=now;});
+  l.items=l.items.filter(i=>!i.done);l.updatedAt=now;
+  saveLists();renderListsView();
+  toastUndo(`${removed.length} concluído${removed.length!==1?'s':''} removido${removed.length!==1?'s':''}.`,()=>{
+    const ll=AppState.lists.find(x=>x.id===id);if(!ll)return;
+    removed.forEach(it=>{delete AppState.listsDel[it.id];it.updatedAt=Date.now();ll.items.push(it);});
+    ll.updatedAt=Date.now();saveLists();renderListsView();
+  });
+}
 function toggleListItem(listId,itemId){
   const l=AppState.lists.find(x=>x.id===listId);if(!l)return;
   const it=l.items.find(i=>i.id===itemId);if(!it)return;
@@ -6836,9 +6873,11 @@ function renderListsView(){
       <div class="lists-detail-head">
         <button class="lists-back" id="listsBackBtn">← Listas</button>
         <span class="lists-detail-title">${esc(l.title)}</span>
+        ${done>0?`<button class="lists-clear-done" id="listsClearDoneBtn" title="Remover os itens concluídos">🧹 Limpar (${done})</button>`:''}
+        ${l.archivedAt?`<button class="lists-head-btn" id="listsUnarchiveBtn" title="Desarquivar lista">📤</button>`:`<button class="lists-head-btn" id="listsArchiveBtn" title="Arquivar lista">🗄</button>`}
         <button class="lists-del-list" data-dellist="${l.id}" title="Excluir lista">🗑</button>
       </div>
-      <div class="lists-detail-sub">${l.items.length} ${l.items.length===1?'item':'itens'} · ${done} concluído${done!==1?'s':''} · criada em ${c.getDate()} ${MONTHS[c.getMonth()].slice(0,3)} ${c.getFullYear()}</div>
+      <div class="lists-detail-sub">${l.archivedAt?'🗄 arquivada · ':''}${l.items.length} ${l.items.length===1?'item':'itens'} · ${done} concluído${done!==1?'s':''} · criada em ${c.getDate()} ${MONTHS[c.getMonth()].slice(0,3)} ${c.getFullYear()}</div>
       <div class="list-add-row">
         <input type="text" id="listItemInput" class="list-add-input" placeholder="Adicionar item…" maxlength="200">
         <button id="listItemAddBtn" class="list-add-btn" title="Adicionar">＋</button>
@@ -6853,6 +6892,9 @@ function renderListsView(){
       </div>`;
     document.getElementById('listsBackBtn').onclick=()=>{_openListId=null;renderListsView();};
     body.querySelector('.lists-del-list').onclick=()=>deleteList(_openListId);
+    document.getElementById('listsArchiveBtn')?.addEventListener('click',()=>archiveList(_openListId));
+    document.getElementById('listsUnarchiveBtn')?.addEventListener('click',()=>unarchiveList(_openListId));
+    document.getElementById('listsClearDoneBtn')?.addEventListener('click',()=>clearDoneItems(_openListId));
     const input=document.getElementById('listItemInput');
     const doAdd=()=>{if(input.value.trim()){addListItem(_openListId,input.value);input.value='';renderListsView();document.getElementById('listItemInput')?.focus();}};
     document.getElementById('listItemAddBtn').onclick=doAdd;
@@ -6910,29 +6952,42 @@ function _renderListsGroups(){
   }
   const q=(_listsSearch||'').trim().toLowerCase();
   const searching=!!q||!!_listsTagFilter;
-  let lists=AppState.lists;
-  if(q)lists=lists.filter(l=>
-    (l.title||'').toLowerCase().includes(q)||
-    (l.items||[]).some(i=>(i.title||'').toLowerCase().includes(q)));
-  if(_listsTagFilter)lists=lists.filter(l=>listTags(l).has(_listsTagFilter));
+  const matches=l=>{
+    if(q&&!((l.title||'').toLowerCase().includes(q)||(l.items||[]).some(i=>(i.title||'').toLowerCase().includes(q))))return false;
+    if(_listsTagFilter&&!listTags(l).has(_listsTagFilter))return false;
+    return true;
+  };
+  const active=AppState.lists.filter(l=>!l.archivedAt&&matches(l));
+  const archived=AppState.lists.filter(l=>l.archivedAt&&matches(l));
   if(!AppState.lists.length){
     wrap.innerHTML='<div class="lists-empty">Nenhuma lista ainda.<br><span style="font-size:10px">Crie uma acima — ex.: compras, viagem, pendências.</span></div>';
     return;
   }
-  if(!lists.length){
+  if(!active.length&&!archived.length){
     wrap.innerHTML='<div class="lists-empty">Nenhuma lista encontrada.</div>';
     return;
   }
+  const fmtD=ts=>{const d=new Date(ts||0);return pad(d.getDate())+'/'+pad(d.getMonth()+1)+'/'+d.getFullYear();};
+  const cardHtml=(l,extra)=>{
+    const doneN=l.items.filter(i=>i.done).length;
+    return `<div class="list-card" data-openlist="${l.id}">
+      <div class="list-card-main">
+        <span class="list-card-title">${esc(l.title)} <span class="list-card-date">(${fmtD(l.createdAt)})</span></span>
+        <span class="list-card-count">${doneN}/${l.items.length}</span>
+      </div>
+      ${extra||`<button class="list-card-del" data-dellist="${l.id}" title="Excluir lista">🗑</button>`}
+    </div>`;
+  };
+  // Grupos por mês (só listas ATIVAS)
   const groups=new Map();
-  lists.forEach(l=>{
+  active.forEach(l=>{
     const key=listMonthKey(l);
     if(!groups.has(key)){const d=new Date(l.createdAt||0);groups.set(key,{key,label:MONTHS[d.getMonth()]+'/'+d.getFullYear(),lists:[]});}
     groups.get(key).lists.push(l);
   });
   const ordered=[...groups.values()].sort((a,b)=>b.key.localeCompare(a.key));
   ordered.forEach(g=>g.lists.sort((a,b)=>(b.createdAt||0)-(a.createdAt||0)));
-  const fmtD=ts=>{const d=new Date(ts||0);return pad(d.getDate())+'/'+pad(d.getMonth()+1)+'/'+d.getFullYear();};
-  wrap.innerHTML=ordered.map(g=>{
+  let html=ordered.map(g=>{
     const open=searching||_listsOpenMonths.has(g.key); // busca/filtro ativos abrem tudo
     return `<div class="lists-month">
       <button class="lists-month-head" data-mtoggle="${g.key}">
@@ -6940,28 +6995,34 @@ function _renderListsGroups(){
         <span class="lists-month-label">${g.label}</span>
         <span class="lists-month-count">${g.lists.length} lista${g.lists.length!==1?'s':''}</span>
       </button>
-      ${open?'<div class="lists-grid">'+g.lists.map(l=>{
-        const done=l.items.filter(i=>i.done).length;
-        return `<div class="list-card" data-openlist="${l.id}">
-          <div class="list-card-main">
-            <span class="list-card-title">${esc(l.title)} <span class="list-card-date">(${fmtD(l.createdAt)})</span></span>
-            <span class="list-card-count">${done}/${l.items.length}</span>
-          </div>
-          <button class="list-card-del" data-dellist="${l.id}" title="Excluir lista">🗑</button>
-        </div>`;
-      }).join('')+'</div>':''}
+      ${open?'<div class="lists-grid">'+g.lists.map(l=>cardHtml(l)).join('')+'</div>':''}
     </div>`;
   }).join('');
+  // Seção Arquivadas (recolhível; chave especial p/ lembrar o estado)
+  if(archived.length){
+    const aOpen=searching||_listsOpenMonths.has('__arch__');
+    archived.sort((a,b)=>(b.archivedAt||0)-(a.archivedAt||0));
+    html+=`<div class="lists-month lists-month-arch">
+      <button class="lists-month-head" data-mtoggle="__arch__">
+        <span class="lists-month-arrow">${aOpen?'▾':'▸'}</span>
+        <span class="lists-month-label">🗄 Arquivadas</span>
+        <span class="lists-month-count">${archived.length}</span>
+      </button>
+      ${aOpen?'<div class="lists-grid">'+archived.map(l=>cardHtml(l,`<button class="list-card-unarch" data-unarch="${l.id}" title="Desarquivar">📤</button>`)).join('')+'</div>':''}
+    </div>`;
+  }
+  wrap.innerHTML=html;
   wrap.querySelectorAll('[data-mtoggle]').forEach(el=>el.addEventListener('click',()=>{
     const k=el.dataset.mtoggle;
     if(_listsOpenMonths.has(k))_listsOpenMonths.delete(k);else _listsOpenMonths.add(k);
     _saveListsOpenMonths();_renderListsGroups();
   }));
   wrap.querySelectorAll('[data-openlist]').forEach(el=>el.addEventListener('click',e=>{
-    if(e.target.closest('[data-dellist]'))return;
+    if(e.target.closest('[data-dellist],[data-unarch]'))return;
     _openListId=el.dataset.openlist;renderListsView();
   }));
   wrap.querySelectorAll('.list-card-del').forEach(el=>el.addEventListener('click',e=>{e.stopPropagation();deleteList(el.dataset.dellist);}));
+  wrap.querySelectorAll('.list-card-unarch').forEach(el=>el.addEventListener('click',e=>{e.stopPropagation();unarchiveList(el.dataset.unarch);}));
 }
 
 /* ═══════ QUICK TASKS (today's tasks - lightweight) ═══════ */
