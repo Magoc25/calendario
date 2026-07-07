@@ -120,6 +120,12 @@ setTimeout(() => {
 function runAsync() {
   check('auto-save criou a nota avulsa do teste (após debounce)',
     ev(`!!AppState.standaloneNotes.find(n=>n.title==='Nota Smoke')`));
+  /* busca global encontra a nota avulsa (N2) */
+  $('searchInput').value = 'nota smoke';
+  ev(`document.getElementById('searchInput').dispatchEvent(new Event('input',{bubbles:true}))`);
+  check('busca global lista a nota avulsa (item 🗒 com data-note-id)',
+    ev(`!!document.querySelector('#searchResults .search-item[data-note-id]')`));
+  $('searchInput').value = '';
   // esvaziar nota existente persiste o vazio (bug N0-5)
   ev(`(function(){
     const n=AppState.standaloneNotes.find(x=>x.title==='Nota Smoke');

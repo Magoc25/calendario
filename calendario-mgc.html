@@ -4183,11 +4183,21 @@ document.getElementById('searchInput').addEventListener('input',function(){
   const q=this.value.trim().toLowerCase(),res=document.getElementById('searchResults');
   if(!q){res.classList.remove('open');return;}
   const matches=AppState.events.filter(ev=>ev.title.toLowerCase().includes(q)||(ev.category||'').toLowerCase().includes(q)||(ev.location||'').toLowerCase().includes(q)||(ev.tags||[]).some(t=>t.toLowerCase().includes(q)));
-  if(!matches.length){res.innerHTML='<div class="search-item"><span style="color:var(--muted)">Nenhum resultado</span></div>';res.classList.add('open');return;}
-  res.innerHTML=matches.slice(0,8).map(e=>`<div class="search-item" data-id="${e.id}"><strong style="color:var(--text)">${CAT_ICONS[e.category]||''} ${esc(e.title)}</strong><span style="display:block;font-size:10px;color:var(--muted)">${e.date}${e.start?' '+e.start:''}${e.category?' · '+esc(e.category):''}${(e.tags||[]).length?' · '+(e.tags||[]).map(t=>esc(t)).join(' '):''}</span></div>`).join('');
+  // Notas avulsas (aba 🗒) também entram na busca global — título + texto sem tags HTML
+  const noteMatches=AppState.standaloneNotes.filter(n=>
+    (n.title||'').toLowerCase().includes(q)||
+    (n.content||'').replace(/<[^>]+>/g,' ').toLowerCase().includes(q));
+  if(!matches.length&&!noteMatches.length){res.innerHTML='<div class="search-item"><span style="color:var(--muted)">Nenhum resultado</span></div>';res.classList.add('open');return;}
+  const evHtml=matches.slice(0,8).map(e=>`<div class="search-item" data-id="${e.id}"><strong style="color:var(--text)">${CAT_ICONS[e.category]||''} ${esc(e.title)}</strong><span style="display:block;font-size:10px;color:var(--muted)">${e.date}${e.start?' '+e.start:''}${e.category?' · '+esc(e.category):''}${(e.tags||[]).length?' · '+(e.tags||[]).map(t=>esc(t)).join(' '):''}</span></div>`).join('');
+  const notePrev=h=>esc(String(h||'').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim().slice(0,70));
+  const noteHtml=noteMatches.slice(0,5).map(n=>`<div class="search-item" data-note-id="${esc(n.id)}"><strong style="color:var(--text)">🗒 ${esc(n.title||'Sem título')}</strong><span style="display:block;font-size:10px;color:var(--muted)">${notePrev(n.content)}</span></div>`).join('');
+  res.innerHTML=evHtml+noteHtml;
   res.classList.add('open');
   res.querySelectorAll('.search-item[data-id]').forEach(item=>{
     item.addEventListener('click',()=>{res.classList.remove('open');document.getElementById('searchInput').value='';window.openSearchResultPanel?.(item.dataset.id);});
+  });
+  res.querySelectorAll('.search-item[data-note-id]').forEach(item=>{
+    item.addEventListener('click',()=>{res.classList.remove('open');document.getElementById('searchInput').value='';openNoteEdit(item.dataset.noteId);});
   });
 });
 document.addEventListener('click',e=>{if(!e.target.closest('.search-wrap'))document.getElementById('searchResults').classList.remove('open');});
