@@ -1,12 +1,12 @@
 /* ═══════════════════════════════════════════════════════
-   Calendário MGC — Service Worker v2.4.0
+   Calendário MGC — Service Worker v2.5.0
    Responsável por:
    1. Cache offline (arquivos do app)
    2. Notificações de alertas em segundo plano
    3. Periodic Background Sync (Android Chrome)
 ═══════════════════════════════════════════════════════ */
 
-const CACHE_NAME = 'cal-mgc-v200';
+const CACHE_NAME = 'cal-mgc-v201';
 const DB_NAME = 'cal-mgc-sw';
 const DB_VERSION = 1;
 const STORE_ALERTS = 'pending_alerts';

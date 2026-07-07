@@ -5,6 +5,38 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 
 ---
 
+## [2.5.0] — Julho 2026
+
+Aba Notas mais rica (inspirada no app Notas do Mac), aba Listas organizada por mês e correções de usabilidade do editor.
+
+### 🆕 Adicionado — aba Notas
+- **Checklist dentro da nota (☑)** — lista de tarefas com caixinhas clicáveis: marcar tacha o texto; Enter num item marcado cria o próximo desmarcado; ☑ de novo desfaz; ☰ converte checklist↔lista comum. O check é aplicado **na linha onde o cursor está**.
+- **Estilos de título** — select "Estilo do parágrafo" (Texto / Título / Subtítulo) na toolbar; acompanha o bloco sob o cursor.
+- **Tags #hashtag** — qualquer `#palavra` no título ou texto vira tag automaticamente; barra de chips na aba filtra por tag (a tag é o próprio texto, nada extra a gerenciar).
+- **Busca global inclui as notas** — o 🔍 do header agora encontra notas avulsas (grupo 🗒 com preview); clicar abre a nota direto.
+- **URLs clicáveis** — links soltos no texto viram clicáveis ao salvar (abrem em nova aba).
+- **Tabela (⊞)** — 2×3 editável; Tab navega células (na última, cria linha); com o cursor numa célula aparece o botão **✎ Tabela** ao lado do ⊞, com o menu de operações: ＋/− linha e coluna, mover linha ↑/↓ e coluna ←/→, excluir a tabela.
+
+### 🆕 Adicionado — aba Listas
+- **Grupos por mês de criação** — as listas ficam em caixas recolhíveis ("Julho/2026"); clique para abrir; o app lembra quais meses você deixou abertos; o mês de uma lista nova já abre expandido.
+- **Título + (data de criação)** em cada lista; dentro do mês, ordenadas por data (mais recente primeiro).
+- **Busca 🔍** por título da lista ou texto dos itens (a busca expande os grupos).
+- **Tags #hashtag** no título/itens com chips de filtro (igual à aba Notas).
+- O arrastar para reordenar **listas** saiu (a ordem agora é por data); reordenar **itens** dentro da lista continua.
+
+### 🐛 Corrigido — editor de notas (o "parece que não funciona")
+- Toolbar da aba Notas ganha **estado ativo** nos botões (B/I/U/listas/alinhamento acendem).
+- Formatação com o cursor **no meio de uma palavra** aplica à palavra inteira (estilo Word) — antes o clique "não fazia nada" visível ou agia no fim da nota.
+- **Criar checklist/lista não "engole" mais a tabela** acima do cursor — converte só a linha atual; com o cursor dentro de uma tabela, a lista nasce logo abaixo dela.
+- **Desfazer (Ctrl+Z) preservado** ao criar listas (comando nativo primeiro; o manual só entra quando o navegador falha — Safari).
+- **Marca-texto no Safari** — fallback `backColor` (o `hiliteColor` não é suportado lá).
+- **Esvaziar uma nota agora salva o vazio** — o conteúdo antigo não "volta" mais ao reabrir.
+
+### 🔧 Infra
+- Smoke-test ampliado para 65 checagens (editor, checklist, tabela, tags, buscas, aba Listas).
+
+---
+
 ## [2.4.0] — Julho 2026
 
 Release de confiabilidade: auditoria completa do código + correção de tudo o que foi encontrado.
