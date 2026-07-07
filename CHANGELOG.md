@@ -5,6 +5,29 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 
 ---
 
+## [2.6.0] — Julho 2026
+
+Aba Listas turbinada: arquivar, limpar concluídos, modelos e — o destaque — fixar a lista inteira na aba Hoje.
+
+### 🆕 Adicionado — aba Listas
+- **Fixar a lista inteira na aba Hoje** (📌) — a lista aparece em ✅ Tarefas de hoje como uma linha recolhível: título + progresso (ex.: 3/8); expanda (▸) para ver e marcar os itens (o check vale nos dois sentidos — Hoje ↔ Listas). Fica fixada até você desafixar. O **check da própria lista** a conclui: ela aparece riscada/✓ na aba Listas e segue na Hoje como concluída até desafixar (ou reabra com ↩).
+- **Arquivar lista** (🗄) — guarda uma lista sem excluí-la; sai dos grupos por mês e vai para a seção recolhível **🗄 Arquivadas**; desarquivar por 📤. Desfazer restaura.
+- **Limpar concluídos** (🧹) — remove de uma vez os itens já marcados de uma lista (Desfazer restaura todos).
+- **Enviar item para outra aba** — cada item da lista ganha **📌** (manda para ✅ Tarefas de hoje) e **📅** (abre o modal de novo evento já com o título). Não removem o item da lista.
+- **Modelos de lista** (📋) — salve uma lista como modelo (guarda os itens) e crie novas listas a partir dele com um toque.
+
+### ⚠️ Migração — quem sincroniza via Supabase (opcional)
+Só para os **modelos de lista** sincronizarem entre dispositivos, rode no SQL Editor do Supabase **do calendário**:
+```sql
+alter table cal_sync add column if not exists list_templates text;
+```
+Sem rodar, tudo funciona — os modelos ficam apenas no aparelho (o resto do sync não é afetado). Fixar/concluir listas já sincroniza sem mexer no banco.
+
+### 🔧 Infra
+- Smoke-test ampliado para 84 checagens.
+
+---
+
 ## [2.5.1] — Julho 2026
 
 ### 🐛 Corrigido
