@@ -128,12 +128,12 @@ function runAsync() {
       const r=document.createRange();r.selectNodeContents(td);r.collapse(true);
       const s=window.getSelection();s.removeAllRanges();s.addRange(r);return true;
     })()`);
-    const clickTbl = (act) => ev(`document.querySelector('#neTableBar [data-tbl="${act}"]').dispatchEvent(new window.MouseEvent('mousedown',{bubbles:true,cancelable:true}))`);
+    const clickTbl = (act) => ev(`document.querySelector('#neTablePopup [data-tbl="${act}"]').dispatchEvent(new window.MouseEvent('mousedown',{bubbles:true,cancelable:true}))`);
     selCell(0, 0);
     check('_neCurrentCell acha a célula sob o cursor', ev(`!!_neCurrentCell()`));
     ev(`_neUpdateTableBar()`);
-    check('barra de tabela aparece com o cursor na célula',
-      ev(`document.getElementById('neTableBar').style.display`) === 'flex');
+    check('botão ✎ Tabela aparece com o cursor na célula',
+      ev(`document.getElementById('neTableEditBtn').style.display`) === 'flex');
     clickTbl('rowAdd');
     check('+ Linha: tabela passa a 4 linhas', ev(`document.querySelector('#neEditor table.ne-table').rows.length`) === 4);
     selCell(0, 0); clickTbl('colAdd');
@@ -146,8 +146,10 @@ function runAsync() {
     selCell(0, 0); clickTbl('rowDel');
     check('− Linha: volta a 3 linhas', ev(`document.querySelector('#neEditor table.ne-table').rows.length`) === 3);
     selCell(0, 0); clickTbl('tblDel');
-    check('🗑 Tabela remove a tabela e esconde a barra',
-      ev(`!document.querySelector('#neEditor table.ne-table')`) && ev(`document.getElementById('neTableBar').style.display`) === 'none');
+    check('🗑 remove a tabela, esconde o botão ✎ e fecha o menu',
+      ev(`!document.querySelector('#neEditor table.ne-table')`) &&
+      ev(`document.getElementById('neTableEditBtn').style.display`) === 'none' &&
+      ev(`!document.getElementById('neTablePopup').classList.contains('open')`));
   }
   check('auto-save criou a nota avulsa do teste (após debounce)',
     ev(`!!AppState.standaloneNotes.find(n=>n.title==='Nota Smoke')`));

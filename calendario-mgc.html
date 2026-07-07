@@ -1541,9 +1541,10 @@ body.large .sidebar-year{font-size:22px}
 .notes-editor a{color:var(--accent);text-decoration:underline;cursor:pointer;word-break:break-all}
 .notes-editor table.ne-table{border-collapse:collapse;margin:8px 0;width:100%}
 .notes-editor table.ne-table td{border:1px solid var(--border);padding:6px 8px;min-width:60px;font-size:13px;vertical-align:top}
-/* Barra contextual de tabela (aparece com o cursor numa célula) */
-.ne-table-bar{display:flex;gap:4px;flex-wrap:wrap;align-items:center;padding:5px 8px;background:var(--surface2);border:1px solid var(--border);border-top:none;flex-shrink:0}
-.ntb-tb{background:var(--surface);border:1px solid var(--border);border-radius:5px;color:var(--text);cursor:pointer;font-size:11px;padding:3px 8px;font-family:'DM Sans',sans-serif;white-space:nowrap}
+/* Menu compacto de tabela (botão ✎ Tabela, visível só com o cursor numa célula) */
+.ne-table-popup{display:none;position:fixed;z-index:9000;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);box-shadow:0 4px 20px rgba(0,0,0,.15);padding:6px;grid-template-columns:repeat(2,1fr);gap:4px;width:210px}
+.ne-table-popup.open{display:grid}
+.ntb-tb{background:var(--surface);border:1px solid var(--border);border-radius:5px;color:var(--text);cursor:pointer;font-size:11px;padding:5px 8px;font-family:'DM Sans',sans-serif;white-space:nowrap}
 .ntb-tb:hover{background:var(--border)}
 .notes-footer{display:flex;align-items:center;justify-content:space-between;margin-top:10px;padding-top:10px;border-top:1px solid var(--border);flex-shrink:0}
 .notes-saved{font-size:10px;color:var(--muted);font-style:italic}
@@ -2768,6 +2769,7 @@ body.large .sidebar-year{font-size:22px}
       <button class="ntb" data-necmd="insertOrderedList" title="Lista numerada">1.</button>
       <button class="ntb" id="neChecklistBtn" title="Lista de tarefas (checklist)">☑</button>
       <button class="ntb" id="neTableBtn" title="Inserir tabela (Tab navega; Tab na última célula cria linha)">⊞</button>
+      <button class="ntb" id="neTableEditBtn" title="Editar tabela (linhas e colunas)" style="display:none;width:auto;padding:0 8px;gap:3px">✎<span style="font-size:10px">Tabela</span></button>
       <button class="ntb" data-necmd="indent" title="Recuar">→</button>
       <button class="ntb" data-necmd="outdent" title="Desfazer recuo">←</button>
       <span class="ntb-sep"></span>
@@ -2800,19 +2802,17 @@ body.large .sidebar-year{font-size:22px}
       <button class="ntb" data-necmd="undo" title="Desfazer">↩</button>
       <button class="ntb" data-necmd="redo" title="Refazer">↪</button>
     </div>
-    <!-- Barra contextual de tabela — aparece quando o cursor está numa tabela -->
-    <div class="ne-table-bar" id="neTableBar" style="display:none">
+    <!-- Menu compacto de tabela — abre pelo botão ✎ Tabela (visível só com o cursor numa tabela) -->
+    <div class="ne-table-popup" id="neTablePopup">
       <button class="ntb-tb" data-tbl="rowAdd" title="Inserir linha abaixo">＋ Linha</button>
       <button class="ntb-tb" data-tbl="colAdd" title="Inserir coluna à direita">＋ Coluna</button>
       <button class="ntb-tb" data-tbl="rowDel" title="Excluir esta linha">－ Linha</button>
       <button class="ntb-tb" data-tbl="colDel" title="Excluir esta coluna">－ Coluna</button>
-      <span class="ntb-sep"></span>
       <button class="ntb-tb" data-tbl="rowUp" title="Mover linha para cima">Linha ↑</button>
       <button class="ntb-tb" data-tbl="rowDown" title="Mover linha para baixo">Linha ↓</button>
       <button class="ntb-tb" data-tbl="colLeft" title="Mover coluna para a esquerda">Col ←</button>
       <button class="ntb-tb" data-tbl="colRight" title="Mover coluna para a direita">Col →</button>
-      <span class="ntb-sep"></span>
-      <button class="ntb-tb" data-tbl="tblDel" title="Excluir a tabela inteira" style="color:#e03131">🗑 Tabela</button>
+      <button class="ntb-tb" data-tbl="tblDel" title="Excluir a tabela inteira" style="color:#e03131;grid-column:1/-1">🗑 Excluir tabela</button>
     </div>
     <div class="notes-editor" id="neEditor" contenteditable="true" placeholder="Escreva sua nota aqui…" style="min-height:320px"></div>
     <div class="notes-footer">
@@ -7824,10 +7824,11 @@ document.getElementById('neTableBtn').addEventListener('mousedown',e=>{
   },0);
 });
 
-/* ── Barra contextual de tabela ───────────────────────────────
-   Aparece quando o cursor está numa célula. Reposicionar é por botões
-   (Linha ↑/↓, Col ←/→) — mais previsível que arrastar dentro de um editor
-   de texto, e funciona igual no celular. */
+/* ── Ferramentas de tabela ────────────────────────────────────
+   Com o cursor numa célula, o botão "✎ Tabela" aparece na toolbar (ao lado do ⊞)
+   e abre um menu compacto com as operações — a toolbar não fica carregada.
+   Reposicionar é por botões (Linha ↑/↓, Col ←/→): mais previsível que arrastar
+   dentro de um editor de texto, e funciona igual no celular. */
 function _neCurrentCell(){
   const sel=window.getSelection();
   let n=sel&&sel.rangeCount?sel.getRangeAt(0).commonAncestorContainer:null;
@@ -7836,10 +7837,28 @@ function _neCurrentCell(){
   return td&&document.getElementById('neEditor').contains(td)?td:null;
 }
 function _neUpdateTableBar(){
-  const bar=document.getElementById('neTableBar');
-  if(bar)bar.style.display=_neCurrentCell()?'flex':'none';
+  const btn=document.getElementById('neTableEditBtn');
+  const pop=document.getElementById('neTablePopup');
+  const inTable=!!_neCurrentCell();
+  if(btn)btn.style.display=inTable?'flex':'none';
+  if(!inTable&&pop)pop.classList.remove('open'); // saiu da tabela → fecha o menu
 }
-document.querySelectorAll('#neTableBar [data-tbl]').forEach(btn=>{
+// Botão ✎ Tabela abre/fecha o menu, posicionado logo abaixo dele
+document.getElementById('neTableEditBtn').addEventListener('mousedown',e=>{
+  e.preventDefault();e.stopPropagation();
+  const pop=document.getElementById('neTablePopup');
+  if(pop.classList.contains('open')){pop.classList.remove('open');return;}
+  const r=e.currentTarget.getBoundingClientRect();
+  pop.style.left=Math.max(8,Math.min(r.left,window.innerWidth-230))+'px';
+  pop.style.top=(r.bottom+6)+'px';
+  pop.classList.add('open');
+});
+// Clique fora fecha o menu
+document.addEventListener('mousedown',e=>{
+  const pop=document.getElementById('neTablePopup');
+  if(pop&&pop.classList.contains('open')&&!e.target.closest('#neTablePopup,#neTableEditBtn'))pop.classList.remove('open');
+});
+document.querySelectorAll('#neTablePopup [data-tbl]').forEach(btn=>{
   btn.addEventListener('mousedown',e=>{
     e.preventDefault();
     const td=_neCurrentCell();if(!td)return;
