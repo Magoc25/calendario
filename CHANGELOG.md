@@ -5,6 +5,41 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 
 ---
 
+## [2.4.0] — Julho 2026
+
+Release de confiabilidade: auditoria completa do código + correção de tudo o que foi encontrado.
+
+### 🐛 Corrigido — sincronização (o mais importante)
+- **Eventos não se sobrescrevem mais entre dispositivos** — o sync de eventos agora mescla por `id` com tombstones (mesmo padrão que salvou as Listas na 2.3.1): um aparelho com estado antigo não apaga mais o que o outro criou; exclusões propagam sem "ressuscitar" eventos.
+- **Fim das exclusões indevidas no Google Calendar** — um evento ausente no payload da nuvem não entra mais na fila de exclusão do Google; só exclusão explícita feita em outro dispositivo.
+- **Corrida na abertura do app** — um save feito enquanto o primeiro pull da nuvem ainda estava em voo não empurra mais estado velho por cima de dados mais novos; o sync do Google espera o primeiro pull do Supabase.
+- **Dedup do Google Calendar** passou a considerar o horário — dois eventos legítimos com o mesmo título no mesmo dia (ex.: "Reunião" 9h e 15h) não se apagam mais silenciosamente.
+
+### 🐛 Corrigido — Google Calendar
+- **Links do Meet em eventos recorrentes** agora carregam (o link das instâncias propaga ao evento-base) e o pull é **paginado** (mais de 500 eventos não são mais cortados).
+- Horários importados são convertidos ao **fuso do aparelho**; evento de dia inteiro de 1 dia não vira mais barra de 2 dias; editar no Google **não zera mais** categoria/cor/tags locais; a descrição não duplica mais "Categoria:/Tags:" a cada sincronização.
+
+### 🐛 Corrigido — geral
+- **Backup completo (v7)**: exporta e restaura também notas avulsas, calendários, categorias e checks de rotinas (antes o restore perdia esses dados em silêncio); o import agora persiste as notas e reagenda os alertas.
+- **Atualização do app controlada**: a nova versão só é aplicada ao clicar **Atualizar** no banner (elimina o estado quebrado no meio da sessão — provável causa do travamento no Safari/macOS ao atualizar); o app checa atualização a cada hora.
+- **Alertas**: alerta atrasado há mais de 12h não dispara mais ao acordar o app; o adiar (+30min/+1h) não se perde mais.
+- **Segurança**: escape de HTML nos pontos que faltavam (nomes de calendário, títulos em vários painéis) e link do Meet só aceita `https://`.
+- **Exportação .ics**: eventos de vários dias exportam a data final correta; títulos com vírgula/ponto-e-vírgula não quebram mais o arquivo.
+- Evento com data final anterior à inicial não "some" mais (ajuste automático com aviso); categorias (nomes/ícones) sincronizam entre dispositivos; notas de evento excluído são limpas (Desfazer restaura); toast de edição correto; e outras correções menores.
+
+### 🔧 Infra
+- Smoke-test automatizado (`tests/smoke.cjs`, 35 checagens) rodado antes de cada mudança.
+- Deploy do site via GitHub Actions (sem o build legado do Jekyll); o commit diário de estatísticas não dispara mais deploy.
+
+### ⚠️ Migração — quem sincroniza via Supabase (1x por conta)
+Rode no **SQL Editor** do projeto Supabase **do calendário** (o mesmo do botão ☁️):
+```sql
+alter table cal_sync add column if not exists categories text;
+```
+Sem rodar, tudo continua funcionando — só as categorias ficam locais até o comando ser executado. Abra a **2.4.0 em todos os aparelhos**; enquanto um aparelho estiver na 2.3.x ele não lê o formato novo de eventos, mas **não há perda de dados** (ao atualizar, tudo aparece mesclado).
+
+---
+
 ## [2.3.1] — Junho 2026
 
 ### 🐛 Corrigido
