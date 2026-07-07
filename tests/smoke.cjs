@@ -340,6 +340,28 @@ function run() {
   check('excluir modelo remove do estado', ev(`!AppState.listTemplates.some(t=>t.id==='tp1')`));
   ev(`AppState.listTemplates=[];AppState.lists=AppState.lists.filter(l=>l.id!=='lt1'&&l.id!=='${newLid}');_openListId=null;saveLists();saveListTemplates();document.getElementById('listsBody').innerHTML='';renderListsView()`);
 
+  /* ── L4: fixar lista na aba Hoje + concluir (colapsável, check bidirecional) ── */
+  ev(`AppState.lists=AppState.lists.filter(l=>l.id!=='lf1');AppState.lists.push({id:'lf1',title:'Supermercado',createdAt:Date.now(),updatedAt:Date.now(),pinnedToday:true,items:[{id:'lf1a',title:'Leite',done:false,updatedAt:Date.now()},{id:'lf1b',title:'Pão',done:false,updatedAt:Date.now()}]});_todayListsExpanded=new Set();AppState.viewMode='today';renderToday()`);
+  check('lista fixada aparece na aba Hoje (colapsada, com progresso 0/2)',
+    ev(`!!document.querySelector('.tv-pinlists [data-tldone="lf1"]')`) &&
+    ev(`document.querySelector('.tv-pinlists .tl-prog').textContent`) === '0/2' &&
+    ev(`document.querySelectorAll('.tv-pinlists .tl-item').length`) === 0);
+  ev(`document.querySelector('.tv-pinlists [data-tlexp="lf1"]').click()`);
+  check('expandir a lista mostra os itens', ev(`document.querySelectorAll('.tv-pinlists .tl-item').length`) === 2);
+  ev(`document.querySelector('.tv-pinlists [data-tlitem="lf1|lf1a"]').click()`);
+  check('checar item na Hoje marca o item REAL da lista (bidirecional) e atualiza o progresso',
+    ev(`AppState.lists.find(l=>l.id==='lf1').items[0].done`) === true &&
+    ev(`document.querySelector('.tv-pinlists .tl-prog').textContent`) === '1/2');
+  ev(`document.querySelector('.tv-pinlists [data-tldone="lf1"]').click()`);
+  check('check da própria lista a marca como concluída (done)',
+    ev(`AppState.lists.find(l=>l.id==='lf1').done`) === true);
+  ev(`AppState.viewMode='lists';_openListId=null;_listsSearch='';_listsTagFilter='';_listsOpenMonths=new Set([listMonthKey(AppState.lists.find(l=>l.id==='lf1'))]);document.getElementById('listsBody').innerHTML='';renderListsView()`);
+  check('na aba Listas o card mostra 📌 (fixada) e ✓ (concluída, riscada)',
+    ev(`(function(){const c=document.querySelector('#listsGroups .list-card[data-openlist="lf1"]');return !!c&&c.classList.contains('list-card-done')&&c.textContent.includes('📌')&&c.textContent.includes('✓');})()`));
+  ev(`toggleListPinToday('lf1')`);
+  check('desafixar remove pinnedToday (e some da Hoje)', ev(`!AppState.lists.find(l=>l.id==='lf1').pinnedToday`));
+  ev(`AppState.lists=AppState.lists.filter(l=>l.id!=='lf1');_openListId=null;_todayListsExpanded=new Set();AppState.viewMode='today';saveLists();renderToday()`);
+
   // merge não ressuscita excluído nem apaga criado
   const mg = ev(`(function(){
     const A=[{id:'l1',title:'A',updatedAt:100,items:[{id:'i1',title:'x',updatedAt:100}]}];
