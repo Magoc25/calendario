@@ -665,6 +665,8 @@ body.design-extra.design-crystal #srpSheet{background:var(--surface-glass)}
 .list-item-check{font-size:14px;cursor:pointer;flex-shrink:0;user-select:none}
 .list-item-title{flex:1;font-size:13px;color:var(--text);word-break:break-word}
 .list-item.done .list-item-title{text-decoration:line-through;color:var(--muted)}
+.list-item-act{flex-shrink:0;background:none;border:none;cursor:pointer;font-size:13px;opacity:.45;transition:opacity .15s;padding:0 1px}
+.list-item-act:hover{opacity:1}
 .list-item-del{flex-shrink:0;background:none;border:none;color:var(--muted);cursor:pointer;font-size:13px;opacity:.5;transition:opacity .15s}
 .list-item-del:hover{opacity:1;color:#dc2626}
 .lists-empty{text-align:center;color:var(--muted);font-size:12px;padding:30px 10px;line-height:1.7}
@@ -6617,6 +6619,21 @@ function unarchiveList(id){
   delete l.archivedAt;l.updatedAt=Date.now();
   saveLists();renderListsView();toast('Lista desarquivada.');
 }
+// Ponte: manda o item para ✅ Tarefas de hoje (não remove da lista — é um atalho).
+function listItemToToday(listId,itemId){
+  const l=AppState.lists.find(x=>x.id===listId);if(!l)return;
+  const it=l.items.find(i=>i.id===itemId);if(!it)return;
+  addQuickTask(it.title);
+  if(typeof renderToday==='function'&&AppState.viewMode==='today')renderToday();
+  toast('📌 Enviado para Tarefas de hoje.');
+}
+// Ponte: abre o modal de novo evento já com o título do item (usuário define data/hora).
+function listItemToEvent(listId,itemId){
+  const l=AppState.lists.find(x=>x.id===listId);if(!l)return;
+  const it=l.items.find(i=>i.id===itemId);if(!it)return;
+  openNew(todayDs());
+  const t=document.getElementById('evTitle');if(t)t.value=it.title;
+}
 // Limpar itens concluídos (com tombstones p/ o sync não os ressuscitar); undo restaura.
 function clearDoneItems(id){
   const l=AppState.lists.find(x=>x.id===id);if(!l)return;
@@ -6887,6 +6904,8 @@ function renderListsView(){
           l.items.map(it=>`<div class="list-item${it.done?' done':''}" data-itid="${it.id}">
             <span class="list-item-check" data-itcheck="${it.id}">${it.done?'✅':'⬜'}</span>
             <span class="list-item-title">${esc(it.title)}</span>
+            <button class="list-item-act" data-ittoday="${it.id}" title="Enviar para Tarefas de hoje">📌</button>
+            <button class="list-item-act" data-itevent="${it.id}" title="Transformar em evento">📅</button>
             <button class="list-item-del" data-itdel="${it.id}" title="Excluir item">✕</button>
           </div>`).join('')}
       </div>`;
@@ -6901,6 +6920,8 @@ function renderListsView(){
     input.addEventListener('keydown',e=>{if(e.key==='Enter')doAdd();});
     body.querySelectorAll('[data-itcheck]').forEach(el=>el.onclick=()=>{toggleListItem(_openListId,el.dataset.itcheck);renderListsView();});
     body.querySelectorAll('[data-itdel]').forEach(el=>el.onclick=()=>deleteListItem(_openListId,el.dataset.itdel));
+    body.querySelectorAll('[data-ittoday]').forEach(el=>el.onclick=()=>listItemToToday(_openListId,el.dataset.ittoday));
+    body.querySelectorAll('[data-itevent]').forEach(el=>el.onclick=()=>listItemToEvent(_openListId,el.dataset.itevent));
     makeListReorderable(body.querySelector('.list-items'),'.list-item','data-itid',reorderListItems);
   }else{
     // Esqueleto estático (nova lista + busca + barra de tags) montado uma vez —

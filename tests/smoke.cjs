@@ -299,6 +299,24 @@ function run() {
     ev(`!AppState.lists.find(x=>x.id==='la1').archivedAt`));
   ev(`AppState.lists=AppState.lists.filter(l=>l.id!=='la1');delete AppState.listsDel['la1a'];_openListId=null;saveLists();document.getElementById('listsBody').innerHTML='';renderListsView()`);
 
+  /* ── L2: ponte item → Hoje / evento ── */
+  ev(`(function(){
+    AppState.lists=AppState.lists.filter(l=>l.id!=='lp1');
+    AppState.lists.push({id:'lp1',title:'Ponte Smoke',createdAt:Date.now(),updatedAt:Date.now(),items:[{id:'lp1a',title:'Comprar café',done:false,updatedAt:Date.now()}]});
+    _openListId='lp1';document.getElementById('listsBody').innerHTML='';renderListsView();
+  })()`);
+  const qtBefore = ev(`AppState.quickTasks.length`);
+  ev(`listItemToToday('lp1','lp1a')`);
+  check('item → Hoje cria quickTask com o título (e não remove da lista)',
+    ev(`AppState.quickTasks.some(t=>t.title==='Comprar café'&&t.date===todayDs())`) &&
+    ev(`AppState.quickTasks.length`) === qtBefore + 1 &&
+    ev(`AppState.lists.find(x=>x.id==='lp1').items.length`) === 1);
+  ev(`listItemToEvent('lp1','lp1a')`);
+  check('item → evento abre o modal com o título preenchido',
+    ev(`document.getElementById('overlay').classList.contains('open')`) &&
+    ev(`document.getElementById('evTitle').value`) === 'Comprar café');
+  ev(`closeModal();AppState.quickTasks=AppState.quickTasks.filter(t=>t.title!=='Comprar café');AppState.lists=AppState.lists.filter(l=>l.id!=='lp1');_openListId=null;saveLists();saveQuickTasks();document.getElementById('listsBody').innerHTML='';renderListsView()`);
+
   // merge não ressuscita excluído nem apaga criado
   const mg = ev(`(function(){
     const A=[{id:'l1',title:'A',updatedAt:100,items:[{id:'i1',title:'x',updatedAt:100}]}];
