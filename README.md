@@ -6,7 +6,7 @@ Desenvolvido por **Marlon Gomes da Costa (MGC Dev)**
 
 > ⚠️ **Este é um projeto pessoal**, desenvolvido de forma independente pelo autor. Não representa, não é financiado e não tem vínculo institucional com o IFMA ou qualquer outra organização. O autor é professor do IFMA Campus São Raimundo das Mangabeiras, mas o Calendário MGC é uma iniciativa exclusivamente pessoal.
 
-[![Versão](https://img.shields.io/badge/versão-2.3.0-blue)](#changelog)
+[![Versão](https://img.shields.io/badge/versão-2.4.0-blue)](./CHANGELOG.md)
 [![Licença](https://img.shields.io/badge/licença-não%20comercial-orange)](#licença)
 [![PIX](https://img.shields.io/badge/apoie-PIX-brightgreen)](#apoiar)
 [![Dispositivos ativos](https://img.shields.io/badge/dynamic/json?url=https://raw.githubusercontent.com/Magoc25/calendario/main/stats.json&query=$.active_30d&label=dispositivos%20ativos%20(30d)&color=blue&suffix=%20dispositivos)](./stats.json)
@@ -32,6 +32,8 @@ Depois de abrir a URL acima, dá para instalar como aplicativo, com ícone na te
 | **iPhone / iPad (Safari)** | Compartilhar (□↑) → **Adicionar à Tela de Início** |
 
 > 💡 Quer **sincronizar entre dispositivos** (PC + celular) ou rodar o seu **próprio** deploy? Isso é opcional — veja os cenários e guias mais abaixo.
+
+> 🔄 **Atualizações:** quando sai uma versão nova, o app baixa em segundo plano e mostra o banner **"Atualização baixada — Atualizar"**. Clique em **Atualizar** para aplicar (um recarregamento rápido). O app nunca troca de versão sozinho no meio do uso.
 
 ---
 
@@ -548,7 +550,11 @@ Na primeira sincronização, eventos recorrentes podem gerar cópias. Para remov
 | `sw.js` | Service Worker — cache offline, alertas e notificações em segundo plano | Todos |
 | `manifest.json` | Define o app como PWA: nome, ícones e modo de exibição ao instalar no celular, Windows e macOS | Cenários 2, 3 e 4 |
 | `icon-192.png` / `icon-512.png` | Ícones do app usados na tela inicial do celular e em notificações | Cenários 2, 3 e 4 |
+| `CHANGELOG.md` | Histórico de todas as versões e mudanças | Todos |
+| `tests/smoke.cjs` | Teste automatizado do app (uso do desenvolvedor — não requer ação do usuário) | — |
 | `.github/workflows/keep-alive.yml` | Mantém o banco de avaliações compartilhadas ativo — configurado pelo desenvolvedor, não requer ação do usuário. Para manter seu próprio Supabase ativo, use o **Bloco extra pg_cron** acima | Cenários 2, 3 e 4 |
+| `.github/workflows/update-stats.yml` + `stats.json` | Atualiza diariamente o contador de dispositivos ativos exibido no badge acima (configurado pelo desenvolvedor) | — |
+| `.github/workflows/deploy-pages.yml` | Publica o site no GitHub Pages a cada push (configurado pelo desenvolvedor) | — |
 
 ---
 
@@ -587,7 +593,7 @@ Você perde a sincronização em nuvem, mas seus dados continuam locais no `loca
 
 Faça backup semanalmente: **💾 Backup → Exportar JSON**
 
-O arquivo JSON inclui: eventos, notas, rotinas, tarefas, revisões, avaliações, configurações e temas.
+O arquivo JSON inclui **tudo**: eventos, notas de eventos, notas avulsas (aba 🗒), rotinas e seus checks diários, tarefas do dia, listas, Top 3, revisões, avaliações, calendários, categorias, cores e tema. Importar o backup em outro dispositivo restaura o conjunto completo.
 
 ---
 
