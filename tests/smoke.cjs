@@ -79,6 +79,7 @@ const dom = new JSDOM(html, {
     // jsdom não implementa execCommand/queryCommandState (editor rico)
     window.document.execCommand = window.document.execCommand || (() => false);
     window.document.queryCommandState = window.document.queryCommandState || (() => false);
+    window.document.queryCommandValue = window.document.queryCommandValue || (() => '');
     window.requestAnimationFrame = window.requestAnimationFrame || ((cb) => setTimeout(cb, 0));
     window.confirm = () => true;   // fluxos de exclusão seguem em frente
     window.alert = () => {};
@@ -308,6 +309,26 @@ function run() {
     ev(`typeof _caretInsideWord==='function'&&typeof _selInList==='function'&&typeof updateNeToolbarState==='function'`));
   check('_caretInsideWord sem seleção retorna false', ev(`_caretInsideWord()`) === false);
   check('updateNeToolbarState roda sem erro', (() => { try { ev('updateNeToolbarState()'); return true; } catch (e) { return false; } })());
+  /* ── Checklist e títulos (N1) ── */
+  ev(`(function(){
+    const ed=document.getElementById('neEditor');ed.innerHTML='';
+    _neRange=null; // sem seleção salva → lista entra no fim do editor
+    _insertListManual('neEditor','UL','ne-cklist');
+  })()`);
+  check('☑ cria ul.ne-cklist com li[data-ck="0"]',
+    ev(`!!document.querySelector('#neEditor ul.ne-cklist>li[data-ck="0"]')`));
+  ev(`(function(){
+    const li=document.querySelector('#neEditor ul.ne-cklist>li');
+    li.dispatchEvent(new window.MouseEvent('click',{bubbles:true,clientX:1}));
+  })()`);
+  check('clique na caixinha marca o item (data-ck=1)',
+    ev(`document.querySelector('#neEditor ul.ne-cklist>li').getAttribute('data-ck')`) === '1');
+  ev(`_insertListManual('neEditor','UL','ne-cklist')`); // dentro dela → toggle off
+  check('☑ de novo desfaz a checklist (toggle)',
+    ev(`!document.querySelector('#neEditor ul.ne-cklist')`));
+  check('select de estilo de bloco existe (Texto/Título/Subtítulo)',
+    $('neBlockStyle') && $('neBlockStyle').options.length === 3);
+
   // cria nota avulsa e digita — o auto-save (900ms) é verificado na fase assíncrona
   ev(`openNoteEdit(null)`);
   $('neTitleInput').value = 'Nota Smoke';

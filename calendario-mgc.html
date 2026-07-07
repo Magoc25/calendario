@@ -1527,6 +1527,15 @@ body.large .sidebar-year{font-size:22px}
 .notes-editor[placeholder]:empty::before{content:attr(placeholder);color:var(--hint);pointer-events:none}
 .notes-editor ol,.notes-editor ul{padding-left:1.6em;margin:.25em 0}
 .notes-editor li{margin:.1em 0}
+/* Estilos de título (select "Estilo do parágrafo") */
+.notes-editor h2{font-size:20px;font-weight:700;margin:10px 0 4px;line-height:1.3}
+.notes-editor h3{font-size:16px;font-weight:600;margin:8px 0 3px;line-height:1.3}
+/* Checklist (lista de tarefas) — ul.ne-cklist > li[data-ck] */
+.notes-editor ul.ne-cklist{list-style:none;padding-left:4px;margin:6px 0}
+.notes-editor ul.ne-cklist li{position:relative;padding:2px 0 2px 30px;min-height:22px;margin:2px 0}
+.notes-editor ul.ne-cklist li::before{content:'';position:absolute;left:2px;top:3px;width:17px;height:17px;border:2px solid var(--accent);border-radius:5px;cursor:pointer;background:transparent;box-sizing:border-box;font-size:12px;line-height:13px;text-align:center;color:#fff}
+.notes-editor ul.ne-cklist li[data-ck="1"]::before{content:'✓';background:var(--accent)}
+.notes-editor ul.ne-cklist li[data-ck="1"]{text-decoration:line-through;color:var(--muted)}
 .notes-footer{display:flex;align-items:center;justify-content:space-between;margin-top:10px;padding-top:10px;border-top:1px solid var(--border);flex-shrink:0}
 .notes-saved{font-size:10px;color:var(--muted);font-style:italic}
 .notes-history{font-size:10px;color:var(--muted)}
@@ -2748,6 +2757,7 @@ body.large .sidebar-year{font-size:22px}
       <span class="ntb-sep"></span>
       <button class="ntb" data-necmd="insertUnorderedList" title="Lista">☰</button>
       <button class="ntb" data-necmd="insertOrderedList" title="Lista numerada">1.</button>
+      <button class="ntb" id="neChecklistBtn" title="Lista de tarefas (checklist)">☑</button>
       <button class="ntb" data-necmd="indent" title="Recuar">→</button>
       <button class="ntb" data-necmd="outdent" title="Desfazer recuo">←</button>
       <span class="ntb-sep"></span>
@@ -2755,6 +2765,11 @@ body.large .sidebar-year{font-size:22px}
       <button class="ntb" data-necmd="justifyCenter" title="Centro">↔</button>
       <button class="ntb" data-necmd="justifyRight" title="Direita">➡</button>
       <span class="ntb-sep"></span>
+      <select id="neBlockStyle" title="Estilo do parágrafo" style="font-size:11px;padding:2px 4px;border:1px solid var(--border);border-radius:4px;background:var(--input-bg);color:var(--text);height:28px">
+        <option value="div" selected>Texto</option>
+        <option value="h2">Título</option>
+        <option value="h3">Subtítulo</option>
+      </select>
       <select id="neFontSize" style="font-size:11px;padding:2px 4px;border:1px solid var(--border);border-radius:4px;background:var(--input-bg);color:var(--text);height:28px">
         <option value="1">Pequeno</option>
         <option value="3" selected>Normal</option>
@@ -5048,8 +5063,9 @@ document.addEventListener('selectionchange',()=>{_saveRange('notesEditor');_save
   document.getElementById('neEditor').addEventListener(evt,()=>_saveRange('neEditor'),{passive:true});
 });
 
-// Inserção manual de lista — execCommand('insertOrderedList') falha silenciosamente no Safari
-function _insertListManual(editorId,tag){
+// Inserção manual de lista — execCommand('insertOrderedList') falha silenciosamente no Safari.
+// klass opcional: 'ne-cklist' cria a LISTA DE TAREFAS (li com data-ck, check no clique).
+function _insertListManual(editorId,tag,klass){
   const editor=document.getElementById(editorId);
   if(!editor)return;
   const saved=editorId==='notesEditor'?_notesRange:_neRange;
@@ -5059,23 +5075,37 @@ function _insertListManual(editorId,tag){
   // Nó atual
   let node=sel&&sel.rangeCount>0?sel.getRangeAt(0).commonAncestorContainer:editor;
   if(node.nodeType===Node.TEXT_NODE)node=node.parentElement;
-  // Verifica se já está dentro de uma lista deste tipo → toggle off
+  // Já está numa lista deste tipo?
   const existingList=node.closest&&node.closest(tag);
   if(existingList&&editor.contains(existingList)){
-    const frag=document.createDocumentFragment();
-    Array.from(existingList.children).forEach(li=>{
-      const div=document.createElement('div');
-      while(li.firstChild)div.appendChild(li.firstChild);
-      frag.appendChild(div);
-    });
-    existingList.parentNode.insertBefore(frag,existingList);
-    existingList.parentNode.removeChild(existingList);
+    const isCk=existingList.classList.contains('ne-cklist');
+    if(klass&&!isCk){
+      // Lista comum → vira checklist (adiciona classe + data-ck)
+      existingList.classList.add(klass);
+      Array.from(existingList.children).forEach(li=>{if(!li.hasAttribute('data-ck'))li.setAttribute('data-ck','0');});
+    }else if(!klass&&isCk){
+      // Checklist → vira lista comum (remove classe + data-ck)
+      existingList.classList.remove('ne-cklist');
+      Array.from(existingList.children).forEach(li=>li.removeAttribute('data-ck'));
+    }else{
+      // Mesmo tipo → toggle off (desfaz a lista)
+      const frag=document.createDocumentFragment();
+      Array.from(existingList.children).forEach(li=>{
+        const div=document.createElement('div');
+        while(li.firstChild)div.appendChild(li.firstChild);
+        frag.appendChild(div);
+      });
+      existingList.parentNode.insertBefore(frag,existingList);
+      existingList.parentNode.removeChild(existingList);
+    }
   }else{
     // Sobe até filho direto do editor (bloco atual)
     let block=node;
     while(block&&block.parentElement!==editor)block=block.parentElement;
     const list=document.createElement(tag);
+    if(klass)list.className=klass;
     const li=document.createElement('li');
+    if(klass)li.setAttribute('data-ck','0');
     if(block&&block!==editor){
       while(block.firstChild)li.appendChild(block.firstChild);
       list.appendChild(li);
@@ -7659,9 +7689,50 @@ function updateNeToolbarState(){
     let on=false;try{on=document.queryCommandState(cmd);}catch(e){}
     if(btn)btn.classList.toggle('active',on);
   });
+  // Select de estilo segue o bloco sob o cursor
+  try{
+    const v=String(document.queryCommandValue('formatBlock')||'').toLowerCase();
+    const sel=document.getElementById('neBlockStyle');
+    if(sel)sel.value=(v==='h2'||v==='h3')?v:'div';
+  }catch(e){}
 }
 document.getElementById('neEditor').addEventListener('keyup',updateNeToolbarState);
 document.getElementById('neEditor').addEventListener('mouseup',updateNeToolbarState);
+
+/* ── Checklist (lista de tarefas) na aba Notas ─────────────────
+   ul.ne-cklist > li[data-ck] — clique na caixinha (zona esquerda) marca/desmarca;
+   o texto continua editável normalmente. Sobrevive ao DOMPurify (class e data-*
+   são permitidos por padrão) e sincroniza como HTML comum. */
+document.getElementById('neChecklistBtn').addEventListener('mousedown',e=>{
+  e.preventDefault();
+  setTimeout(()=>{_insertListManual('neEditor','UL','ne-cklist');updateNeToolbarState();},0);
+});
+document.getElementById('neEditor').addEventListener('click',e=>{
+  const li=e.target.closest&&e.target.closest('ul.ne-cklist>li');
+  if(!li)return;
+  const r=li.getBoundingClientRect();
+  if(e.clientX-r.left>26)return; // só a zona da caixinha — o resto é edição de texto
+  e.preventDefault();
+  li.setAttribute('data-ck',li.getAttribute('data-ck')==='1'?'0':'1');
+  document.getElementById('neEditor').dispatchEvent(new Event('input',{bubbles:true}));
+});
+// Enter num item MARCADO: o navegador clona o li (com data-ck="1") — o item novo nasce limpo
+document.getElementById('neEditor').addEventListener('keydown',e=>{
+  if(e.key!=='Enter')return;
+  setTimeout(()=>{
+    const sel=window.getSelection();
+    let n=sel&&sel.rangeCount?sel.getRangeAt(0).commonAncestorContainer:null;
+    if(n&&n.nodeType===Node.TEXT_NODE)n=n.parentElement;
+    const li=n&&n.closest&&n.closest('ul.ne-cklist>li');
+    if(li&&li.getAttribute('data-ck')==='1')li.setAttribute('data-ck','0');
+  },0);
+});
+
+/* ── Estilo de bloco (Texto/Título/Subtítulo) ── */
+document.getElementById('neBlockStyle').addEventListener('mousedown',()=>_saveRange('neEditor'));
+document.getElementById('neBlockStyle').addEventListener('change',function(){
+  _execInEditor('neEditor','formatBlock','<'+this.value+'>',updateNeToolbarState);
+});
 document.getElementById('neFontSize').addEventListener('mousedown',()=>_saveRange('neEditor'));
 document.getElementById('neFontSize').addEventListener('change',function(){
   _execInEditor('neEditor','fontSize',this.value);
