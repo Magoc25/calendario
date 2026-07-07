@@ -118,6 +118,10 @@ setTimeout(() => {
 
 /* Fase assíncrona — precisa que os setTimeout do app tenham disparado */
 function runAsync() {
+  if (window.__tableCheckPending) {
+    check('⊞ insere tabela ne-table 2×3 no editor',
+      ev(`document.querySelectorAll('#neEditor table.ne-table td').length`) === 6);
+  }
   check('auto-save criou a nota avulsa do teste (após debounce)',
     ev(`!!AppState.standaloneNotes.find(n=>n.title==='Nota Smoke')`));
   /* tags # nas notas (N3) */
@@ -346,6 +350,19 @@ function run() {
     ev(`!document.querySelector('#neEditor ul.ne-cklist')`));
   check('select de estilo de bloco existe (Texto/Título/Subtítulo)',
     $('neBlockStyle') && $('neBlockStyle').options.length === 3);
+
+  /* ── URLs clicáveis + tabela (N4) ── */
+  const lk = ev(`linkifyNoteHtml('veja <b>isto</b>: https://exemplo.com/x e https://outro.io')`);
+  check('linkifyNoteHtml converte URLs soltas em <a rel=noopener>',
+    (lk.match(/<a /g) || []).length === 2 && lk.includes('href="https://exemplo.com/x"') && lk.includes('rel="noopener"'), lk);
+  check('linkifyNoteHtml não re-envolve URL que já é link',
+    (ev(`linkifyNoteHtml('<a href="https://a.bc">https://a.bc</a>')`).match(/<a /g) || []).length === 1);
+  ev(`(function(){
+    const ed=document.getElementById('neEditor');ed.innerHTML='';_neRange=null;
+    document.getElementById('neTableBtn').dispatchEvent(new window.MouseEvent('mousedown',{bubbles:true,cancelable:true}));
+  })()`);
+  // o insert roda num setTimeout(0) — verificado na fase assíncrona
+  window.__tableCheckPending = true;
 
   // cria nota avulsa e digita — o auto-save (900ms) é verificado na fase assíncrona
   ev(`openNoteEdit(null)`);

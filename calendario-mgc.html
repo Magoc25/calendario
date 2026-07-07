@@ -1537,6 +1537,10 @@ body.large .sidebar-year{font-size:22px}
 .notes-editor ul.ne-cklist li::before{content:'';position:absolute;left:2px;top:3px;width:17px;height:17px;border:2px solid var(--accent);border-radius:5px;cursor:pointer;background:transparent;box-sizing:border-box;font-size:12px;line-height:13px;text-align:center;color:#fff}
 .notes-editor ul.ne-cklist li[data-ck="1"]::before{content:'✓';background:var(--accent)}
 .notes-editor ul.ne-cklist li[data-ck="1"]{text-decoration:line-through;color:var(--muted)}
+/* Links e tabela dentro da nota */
+.notes-editor a{color:var(--accent);text-decoration:underline;cursor:pointer;word-break:break-all}
+.notes-editor table.ne-table{border-collapse:collapse;margin:8px 0;width:100%}
+.notes-editor table.ne-table td{border:1px solid var(--border);padding:6px 8px;min-width:60px;font-size:13px;vertical-align:top}
 .notes-footer{display:flex;align-items:center;justify-content:space-between;margin-top:10px;padding-top:10px;border-top:1px solid var(--border);flex-shrink:0}
 .notes-saved{font-size:10px;color:var(--muted);font-style:italic}
 .notes-history{font-size:10px;color:var(--muted)}
@@ -2759,6 +2763,7 @@ body.large .sidebar-year{font-size:22px}
       <button class="ntb" data-necmd="insertUnorderedList" title="Lista">☰</button>
       <button class="ntb" data-necmd="insertOrderedList" title="Lista numerada">1.</button>
       <button class="ntb" id="neChecklistBtn" title="Lista de tarefas (checklist)">☑</button>
+      <button class="ntb" id="neTableBtn" title="Inserir tabela (Tab navega; Tab na última célula cria linha)">⊞</button>
       <button class="ntb" data-necmd="indent" title="Recuar">→</button>
       <button class="ntb" data-necmd="outdent" title="Desfazer recuo">←</button>
       <span class="ntb-sep"></span>
@@ -7456,7 +7461,7 @@ function saveNoteEdit(){
   if(isEmpty){
     if(!_editingNoteId){document.getElementById('noteEditOverlay').classList.remove('open');return;} // nota nova vazia: só fecha
     content=''; // nota existente esvaziada de propósito: salva vazia (consistente com o auto-save)
-  }
+  }else content=linkifyNoteHtml(content); // URLs soltas viram links clicáveis
   const now=new Date().toISOString();
   if(_editingNoteId){
     const idx=AppState.standaloneNotes.findIndex(n=>n.id===_editingNoteId);
@@ -7774,6 +7779,79 @@ document.getElementById('neBlockStyle').addEventListener('mousedown',()=>_saveRa
 document.getElementById('neBlockStyle').addEventListener('change',function(){
   _execInEditor('neEditor','formatBlock','<'+this.value+'>',updateNeToolbarState);
 });
+
+/* ── Tabela simples (⊞) ───────────────────────────────────────
+   2 colunas × 3 linhas no ponto do cursor; edição é nativa do contenteditable.
+   Tab pula para a próxima célula; Tab na última cria uma linha nova. */
+document.getElementById('neTableBtn').addEventListener('mousedown',e=>{
+  e.preventDefault();
+  setTimeout(()=>{
+    const editor=document.getElementById('neEditor');
+    _restoreEditorSelection(editor,_neRange);
+    const html='<table class="ne-table"><tbody>'+'<tr><td><br></td><td><br></td></tr>'.repeat(3)+'</tbody></table><div><br></div>';
+    let ok=false;try{ok=document.execCommand('insertHTML',false,html);}catch(e2){}
+    if(!ok||!editor.querySelector('table.ne-table')){
+      const tpl=document.createElement('template');tpl.innerHTML=html;
+      editor.appendChild(tpl.content);
+    }
+    editor.dispatchEvent(new Event('input',{bubbles:true}));
+  },0);
+});
+document.getElementById('neEditor').addEventListener('keydown',e=>{
+  if(e.key!=='Tab')return;
+  const sel=window.getSelection();
+  let n=sel&&sel.rangeCount?sel.getRangeAt(0).commonAncestorContainer:null;
+  if(n&&n.nodeType===Node.TEXT_NODE)n=n.parentElement;
+  const td=n&&n.closest&&n.closest('table.ne-table td');
+  if(!td)return;
+  e.preventDefault();
+  const cells=[...td.closest('table').querySelectorAll('td')];
+  let idx=cells.indexOf(td)+(e.shiftKey?-1:1);
+  if(idx>=cells.length){
+    const row=td.closest('tr'),nr=row.cloneNode(false);
+    for(let i=0;i<row.children.length;i++){const c=document.createElement('td');c.innerHTML='<br>';nr.appendChild(c);}
+    row.parentNode.appendChild(nr);
+    cells.push(...nr.querySelectorAll('td'));
+  }
+  if(idx<0)idx=0;
+  try{const r=document.createRange();r.selectNodeContents(cells[idx]);r.collapse(true);sel.removeAllRanges();sel.addRange(r);}catch(e2){}
+  document.getElementById('neEditor').dispatchEvent(new Event('input',{bubbles:true}));
+});
+
+/* ── URLs clicáveis ───────────────────────────────────────────
+   linkifyNoteHtml roda ao salvar: converte URLs soltas em <a> (só text nodes
+   fora de <a>; só http/https). No editor, clique no link abre em nova aba. */
+function linkifyNoteHtml(html){
+  try{
+    const tpl=document.createElement('template');
+    tpl.innerHTML=html;
+    const walker=document.createTreeWalker(tpl.content,NodeFilter.SHOW_TEXT,null);
+    const targets=[];let n;
+    while((n=walker.nextNode())){
+      if(n.parentElement&&n.parentElement.closest('a'))continue;
+      if(/https?:\/\/[^\s<>"']+/i.test(n.textContent))targets.push(n);
+    }
+    targets.forEach(node=>{
+      const frag=document.createDocumentFragment();
+      node.textContent.split(/(https?:\/\/[^\s<>"']+)/gi).forEach(p=>{
+        if(/^https?:\/\//i.test(p)){
+          const a=document.createElement('a');
+          a.href=p;a.textContent=p;a.setAttribute('rel','noopener');
+          frag.appendChild(a);
+        }else if(p)frag.appendChild(document.createTextNode(p));
+      });
+      node.parentNode.replaceChild(frag,node);
+    });
+    return tpl.innerHTML;
+  }catch(e){return html;}
+}
+document.getElementById('neEditor').addEventListener('click',e=>{
+  const a=e.target.closest&&e.target.closest('a[href]');
+  if(!a)return;
+  e.preventDefault();
+  const href=a.getAttribute('href')||'';
+  if(/^https?:\/\//i.test(href))window.open(href,'_blank','noopener');
+});
 document.getElementById('neFontSize').addEventListener('mousedown',()=>_saveRange('neEditor'));
 document.getElementById('neFontSize').addEventListener('change',function(){
   _execInEditor('neEditor','fontSize',this.value);
@@ -7808,7 +7886,7 @@ document.getElementById('neEditor').addEventListener('input',()=>{
     if(isEmpty){
       if(!_editingNoteId){document.getElementById('neSavedLabel').textContent='📝 Nova nota';return;}
       content='';
-    }
+    }else content=linkifyNoteHtml(content); // URLs soltas viram links clicáveis
     const now=new Date().toISOString();
     if(_editingNoteId){
       const idx=AppState.standaloneNotes.findIndex(n=>n.id===_editingNoteId);
