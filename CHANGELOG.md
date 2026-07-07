@@ -5,6 +5,15 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 
 ---
 
+## [2.5.1] — Julho 2026
+
+### 🐛 Corrigido
+- **Versão exibida no rodapé** — depois de atualizar o app, o rodapé continuava mostrando a versão anterior por até 6 horas (era buscada do CHANGELOG e guardada num cache de 6h). Agora reflete **imediatamente** a versão do app que está rodando. Detectar que há uma versão nova disponível continua sendo feito pelo aviso de atualização.
+
+> 💡 **Se o app ainda mostra uma versão antiga:** é o cache do app (PWA). Feche o Calendário **completamente** (todas as janelas/abas) e reabra — ao reabrir, a versão nova entra. No app instalado, encerre e abra de novo; se aparecer o aviso **"Atualização baixada — Atualizar"**, clique nele.
+
+---
+
 ## [2.5.0] — Julho 2026
 
 Aba Notas mais rica (inspirada no app Notas do Mac), aba Listas organizada por mês e correções de usabilidade do editor.

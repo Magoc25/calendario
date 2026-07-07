@@ -189,6 +189,8 @@ function run() {
   check('boot sem erro de runtime', errors.length === 0, errors[0]);
   check('render inicial rodou (today view visível)', $('todayCard') && !$('todayCard').hidden);
   check('AppState existe e expõe events[]', ev('Array.isArray(AppState.events)'));
+  check('rodapé mostra a versão do app no formato correto (© MGC · vX.Y.Z)',
+    /^© MGC · v\d+\.\d+\.\d+$/.test(($('appVersion').textContent||'').trim()), $('appVersion').textContent);
 
   /* ── Evento: criar via modal ── */
   const n0 = ev('AppState.events.length');

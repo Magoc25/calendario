@@ -2310,7 +2310,7 @@ body.large .sidebar-year{font-size:22px}
             </a>
             <button class="footer-link-btn pix-btn" id="pixBtn" title="Apoiar o projeto">☕ Apoiar</button>
             <button class="footer-link-btn" id="reviewsBtn" title="Ver avaliações">⭐ Avaliações</button>
-            <span id="appVersion" style="font-size:11px;color:var(--text);user-select:none">© MGC · v2.5.0</span>
+            <span id="appVersion" style="font-size:11px;color:var(--text);user-select:none">© MGC · v2.5.1</span>
           </span>
         </div>
       </div>
@@ -9426,33 +9426,18 @@ setInterval(()=>getActiveSW()?.postMessage({type:'PING'}),25000);
   if(params.get('view')==='today'){AppState.viewMode='today';render();}
 })();
 
-/* ── Versão automática via CHANGELOG.md ── */
-(async()=>{
-  const el=document.getElementById('appVersion');
-  if(!el)return;
-  const CACHE_KEY='mgc_app_version';
-  const CACHE_TTL=6*60*60*1000; // 6 horas
-  let cached=null;try{cached=JSON.parse(localStorage.getItem(CACHE_KEY)||'null');}catch(e){} // valor corrompido não pode matar a IIFE
-  if(cached&&Date.now()-cached.ts<CACHE_TTL){
-    el.textContent='© MGC · '+cached.v;
-    return;
-  }
-  try{
-    const res=await fetch('./CHANGELOG.md?_='+Date.now(),{cache:'no-cache'});
-    if(!res.ok)return;
-    const text=await res.text();
-    const match=text.match(/##\s+\[(\d+\.\d+\.\d+)\]/);
-    if(!match)return;
-    const v='v'+match[1];
-    el.textContent='© MGC · '+v;
-    localStorage.setItem(CACHE_KEY,JSON.stringify({v,ts:Date.now()}));
-  }catch(e){/* offline — mantém valor hardcoded */}
-})();
+/* ── Versão no rodapé: vem do span ESTÁTICO (o hook pre-commit o sincroniza a
+   partir do CHANGELOG a cada release), refletindo sempre a versão do código que
+   está rodando. Antes, uma IIFE buscava o CHANGELOG em runtime e cacheava por 6h
+   → depois de atualizar, o rodapé mostrava a versão ANTIGA por horas (parecia que
+   não atualizou). A detecção de "existe versão nova no servidor" continua no
+   banner do Supabase (app_config) logo abaixo. */
+try{localStorage.removeItem('mgc_app_version');}catch(e){} // remove o cache de versão antigo (não é mais usado)
 
 /* ── Verificação de nova versão via Supabase ── */
 (async()=>{
   if(!revClient)return;
-  const LOCAL_VERSION='2.5.0';
+  const LOCAL_VERSION='2.5.1';
   const CACHE_KEY='mgc_update_check';
   const CACHE_TTL=24*60*60*1000; // 24 horas
   let cached=null;try{cached=JSON.parse(localStorage.getItem(CACHE_KEY)||'null');}catch(e){} // valor corrompido não pode matar o banner de update
@@ -9491,7 +9476,7 @@ setInterval(()=>getActiveSW()?.postMessage({type:'PING'}),25000);
   if(!deviceId){deviceId=crypto.randomUUID();localStorage.setItem('calendario_device_id',deviceId);}
   try{
     await revClient.from('app_pings').upsert(
-      {app_name:'Calendario MGC',version:'2.5.0',device_id:deviceId,ping_date:today},
+      {app_name:'Calendario MGC',version:'2.5.1',device_id:deviceId,ping_date:today},
       {onConflict:'app_name,device_id,ping_date',ignoreDuplicates:true}
     );
     localStorage.setItem(PING_KEY,today);
