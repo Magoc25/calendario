@@ -247,6 +247,33 @@ function run() {
   const iid = ev(`AppState.lists.find(l=>l.id==='${lid}').items[0].id`);
   ev(`toggleListItem('${lid}','${iid}')`);
   check('toggle de item marca done', ev(`AppState.lists.find(l=>l.id==='${lid}').items[0].done`) === true);
+  /* ── Aba Listas: grupos por mês + busca + tags ── */
+  ev(`(function(){
+    AppState.lists.push(
+      {id:'lm1',title:'Antiga #velha',createdAt:new Date('2026-05-10T12:00:00').getTime(),updatedAt:Date.now(),items:[{id:'lm1i',title:'comprar pão',done:false,updatedAt:Date.now()}]},
+      {id:'lm2',title:'Recente',createdAt:new Date('2026-07-02T12:00:00').getTime(),updatedAt:Date.now(),items:[]}
+    );
+    _openListId=null;_listsSearch='';_listsTagFilter='';_listsOpenMonths=new Set();
+    document.getElementById('listsBody').innerHTML='';
+    renderListsView();
+  })()`);
+  check('aba Listas agrupa por mês de criação (Maio e Julho/2026 presentes)',
+    ev(`(function(){const t=document.getElementById('listsGroups').textContent;return t.includes('Maio/2026')&&t.includes('Julho/2026');})()`));
+  check('grupos começam recolhidos (sem cards visíveis)',
+    ev(`document.querySelectorAll('#listsGroups .list-card').length`) === 0);
+  ev(`document.querySelector('#listsGroups [data-mtoggle="2026-05"]').click()`);
+  check('clicar no mês abre e mostra a lista com título + (data de criação)',
+    ev(`(function(){const c=document.querySelector('#listsGroups .list-card .list-card-title');return !!c&&c.textContent.includes('Antiga')&&c.textContent.includes('(10/05/2026)');})()`));
+  ev(`_listsSearch='pão';_renderListsGroups()`);
+  check('busca por termo de ITEM encontra a lista (e expande os grupos)',
+    ev(`document.querySelectorAll('#listsGroups .list-card').length`) === 1 &&
+    ev(`document.querySelector('#listsGroups .list-card-title').textContent.includes('Antiga')`));
+  ev(`_listsSearch='';_listsTagFilter='velha';_renderListsGroups()`);
+  check('filtro #tag da aba Listas funciona',
+    ev(`document.querySelectorAll('#listsGroups .list-card').length`) === 1 &&
+    ev(`!!document.querySelector('#listsTagBar [data-ltag="velha"]')`));
+  ev(`_listsTagFilter='';AppState.lists=AppState.lists.filter(l=>l.id!=='lm1'&&l.id!=='lm2');document.getElementById('listsBody').innerHTML='';renderListsView()`);
+
   // merge não ressuscita excluído nem apaga criado
   const mg = ev(`(function(){
     const A=[{id:'l1',title:'A',updatedAt:100,items:[{id:'i1',title:'x',updatedAt:100}]}];

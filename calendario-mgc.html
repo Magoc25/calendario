@@ -631,6 +631,15 @@ body.design-extra.design-crystal #srpSheet{background:var(--surface-glass)}
 .list-add-input:focus{outline:none;border-color:var(--accent)}
 .list-add-btn{flex-shrink:0;width:38px;border:none;border-radius:var(--radius-sm);background:var(--accent);color:#fff;font-size:18px;cursor:pointer;font-weight:700}
 .lists-grid{display:flex;flex-direction:column;gap:7px}
+/* Grupos por mês de criação (caixa recolhível) */
+.lists-month{margin-top:10px}
+.lists-month-head{display:flex;align-items:center;gap:8px;width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:9px 12px;cursor:pointer;font-family:'DM Sans',sans-serif;color:var(--text);text-align:left}
+.lists-month-head:hover{background:var(--border)}
+.lists-month-arrow{font-size:11px;color:var(--muted);flex-shrink:0;width:12px}
+.lists-month-label{font-size:13px;font-weight:700;flex:1}
+.lists-month-count{font-size:11px;color:var(--muted);flex-shrink:0}
+.lists-month .lists-grid{margin-top:7px}
+.list-card-date{font-size:10px;color:var(--muted);font-weight:400}
 .list-card{display:flex;align-items:center;gap:10px;padding:11px 13px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;transition:all .15s}
 .list-card:hover{background:var(--surface2);border-color:var(--accent)}
 .list-card-main{flex:1;display:flex;align-items:center;justify-content:space-between;gap:10px;min-width:0}
@@ -6548,12 +6557,27 @@ function saveLists(){
   scheduleCloudPush();
 }
 
+/* ── Visão geral agrupada por mês + busca + tags ─────────────── */
+let _listsSearch='',_listsTagFilter='';
+let _listsOpenMonths=new Set(); // meses expandidos ('YYYY-MM'), persistido por dispositivo
+try{_listsOpenMonths=new Set(JSON.parse(localStorage.getItem('cal_lists_open_months')||'[]'));}catch(e){}
+function _saveListsOpenMonths(){localStorage.setItem('cal_lists_open_months',JSON.stringify([..._listsOpenMonths]));}
+function listMonthKey(l){const d=new Date(l.createdAt||0);return d.getFullYear()+'-'+pad(d.getMonth()+1);}
+// Tags #hashtag no título da lista e nos itens (mesmo padrão da aba Notas)
+function listTags(l){
+  const txt=(l.title||'')+' '+(l.items||[]).map(i=>i.title||'').join(' ');
+  const s=new Set();const re=/#([\p{L}\p{N}_-]{2,30})/gu;let m;
+  while((m=re.exec(txt)))s.add(m[1].toLowerCase());
+  return s;
+}
+
 /* ── CRUD de listas e itens (estado local; UI chama renderListsView para refletir) ── */
 function createList(title){
   title=(title||'').trim();if(!title)return null;
   const now=Date.now();
   const l={id:uid(),title,createdAt:now,updatedAt:now,items:[]};
   AppState.lists.unshift(l); // mais recente no topo (decisão fechada 2026-06-20)
+  _listsOpenMonths.add(listMonthKey(l));_saveListsOpenMonths(); // o mês da lista nova já abre expandido
   saveLists();return l;
 }
 function deleteList(id){
@@ -6597,13 +6621,8 @@ function reorderListItems(fromId,toId){
   l.updatedAt=Date.now();
   saveLists();renderListsView();
 }
-function reorderLists(fromId,toId){
-  const from=AppState.lists.findIndex(l=>l.id===fromId),to=AppState.lists.findIndex(l=>l.id===toId);
-  if(from<0||to<0||from===to)return;
-  const[m]=AppState.lists.splice(from,1);AppState.lists.splice(to,0,m);
-  m.updatedAt=Date.now();
-  saveLists();renderListsView();
-}
+// (reorderLists removida: com o agrupamento por mês a ordem das LISTAS é por
+//  data de criação; o drag continua valendo para os ITENS dentro da lista)
 
 /* ── Merge de listas (sincronização multi-dispositivo) ───────────────────────
    A nuvem guarda tudo num único registro JSON com 1 timestamp global. Antes,
@@ -6842,34 +6861,107 @@ function renderListsView(){
     body.querySelectorAll('[data-itdel]').forEach(el=>el.onclick=()=>deleteListItem(_openListId,el.dataset.itdel));
     makeListReorderable(body.querySelector('.list-items'),'.list-item','data-itid',reorderListItems);
   }else{
-    body.innerHTML=`
-      <div class="list-add-row">
-        <input type="text" id="listNewInput" class="list-add-input" placeholder="Nova lista (ex.: Supermercado)…" maxlength="120">
-        <button id="listNewBtn" class="list-add-btn" title="Criar lista">＋</button>
-      </div>
-      ${AppState.lists.length===0?'<div class="lists-empty">Nenhuma lista ainda.<br><span style="font-size:10px">Crie uma acima — ex.: compras, viagem, pendências.</span></div>':
-        '<div class="lists-grid">'+AppState.lists.map(l=>{
-          const done=l.items.filter(i=>i.done).length;
-          return `<div class="list-card" data-openlist="${l.id}">
-            <div class="list-card-main">
-              <span class="list-card-title">${esc(l.title)}</span>
-              <span class="list-card-count">${done}/${l.items.length}</span>
-            </div>
-            <button class="list-card-del" data-dellist="${l.id}" title="Excluir lista">🗑</button>
-          </div>`;
-        }).join('')+'</div>'}`;
-    const ni=document.getElementById('listNewInput');
-    const doNew=()=>{if(ni.value.trim()){const l=createList(ni.value);ni.value='';_openListId=l.id;renderListsView();}};
-    document.getElementById('listNewBtn').onclick=doNew;
-    ni.addEventListener('keydown',e=>{if(e.key==='Enter')doNew();});
-    body.querySelectorAll('[data-openlist]').forEach(el=>el.addEventListener('click',e=>{
-      if(_listDragJustEnded)return; // ignora click acidental após reordenar
-      if(e.target.closest('[data-dellist]'))return;
-      _openListId=el.dataset.openlist;renderListsView();
-    }));
-    body.querySelectorAll('.list-card-del').forEach(el=>el.addEventListener('click',e=>{e.stopPropagation();deleteList(el.dataset.dellist);}));
-    makeListReorderable(body.querySelector('.lists-grid'),'.list-card','data-openlist',reorderLists);
+    // Esqueleto estático (nova lista + busca + barra de tags) montado uma vez —
+    // a busca re-renderiza SÓ os grupos, sem perder o foco do campo
+    if(!document.getElementById('listsGroups')){
+      body.innerHTML=`
+        <div class="list-add-row">
+          <input type="text" id="listNewInput" class="list-add-input" placeholder="Nova lista (ex.: Supermercado)…" maxlength="120">
+          <button id="listNewBtn" class="list-add-btn" title="Criar lista">＋</button>
+        </div>
+        <div class="list-add-row" style="margin-top:6px">
+          <input type="text" id="listsSearchInput" class="list-add-input" placeholder="🔍 Pesquisar listas ou itens…">
+        </div>
+        <div id="listsTagBar" class="nv-tagbar" style="display:none;margin:10px 0 0"></div>
+        <div id="listsGroups"></div>`;
+      const ni=document.getElementById('listNewInput');
+      const doNew=()=>{if(ni.value.trim()){const l=createList(ni.value);ni.value='';_openListId=l.id;renderListsView();}};
+      document.getElementById('listNewBtn').onclick=doNew;
+      ni.addEventListener('keydown',e=>{if(e.key==='Enter')doNew();});
+      const si=document.getElementById('listsSearchInput');
+      si.value=_listsSearch;
+      si.addEventListener('input',function(){_listsSearch=this.value;_renderListsGroups();});
+      document.getElementById('listsTagBar').addEventListener('click',e=>{
+        const c=e.target.closest('[data-ltag]');if(!c)return;
+        const t=c.dataset.ltag||'';
+        _listsTagFilter=(t===_listsTagFilter)?'':t;
+        _renderListsGroups();
+      });
+    }
+    _renderListsGroups();
   }
+}
+
+/* Grupos por mês de criação (mais recente primeiro; listas do mês por data) */
+function _renderListsGroups(){
+  const wrap=document.getElementById('listsGroups');
+  if(!wrap)return;
+  // Barra de tags (#tag no título da lista ou nos itens)
+  const bar=document.getElementById('listsTagBar');
+  if(bar){
+    const all=new Set();AppState.lists.forEach(l=>listTags(l).forEach(t=>all.add(t)));
+    if(_listsTagFilter&&!all.has(_listsTagFilter))_listsTagFilter='';
+    if(!all.size){bar.style.display='none';bar.innerHTML='';}
+    else{
+      bar.style.display='flex';
+      bar.innerHTML=[...all].sort().map(t=>`<span class="tag-chip-filter${_listsTagFilter===t?' active':''}" data-ltag="${esc(t)}">#${esc(t)}</span>`).join('')
+        +(_listsTagFilter?`<span class="tag-chip-filter" data-ltag="" style="opacity:.75">✕ limpar</span>`:'');
+    }
+  }
+  const q=(_listsSearch||'').trim().toLowerCase();
+  const searching=!!q||!!_listsTagFilter;
+  let lists=AppState.lists;
+  if(q)lists=lists.filter(l=>
+    (l.title||'').toLowerCase().includes(q)||
+    (l.items||[]).some(i=>(i.title||'').toLowerCase().includes(q)));
+  if(_listsTagFilter)lists=lists.filter(l=>listTags(l).has(_listsTagFilter));
+  if(!AppState.lists.length){
+    wrap.innerHTML='<div class="lists-empty">Nenhuma lista ainda.<br><span style="font-size:10px">Crie uma acima — ex.: compras, viagem, pendências.</span></div>';
+    return;
+  }
+  if(!lists.length){
+    wrap.innerHTML='<div class="lists-empty">Nenhuma lista encontrada.</div>';
+    return;
+  }
+  const groups=new Map();
+  lists.forEach(l=>{
+    const key=listMonthKey(l);
+    if(!groups.has(key)){const d=new Date(l.createdAt||0);groups.set(key,{key,label:MONTHS[d.getMonth()]+'/'+d.getFullYear(),lists:[]});}
+    groups.get(key).lists.push(l);
+  });
+  const ordered=[...groups.values()].sort((a,b)=>b.key.localeCompare(a.key));
+  ordered.forEach(g=>g.lists.sort((a,b)=>(b.createdAt||0)-(a.createdAt||0)));
+  const fmtD=ts=>{const d=new Date(ts||0);return pad(d.getDate())+'/'+pad(d.getMonth()+1)+'/'+d.getFullYear();};
+  wrap.innerHTML=ordered.map(g=>{
+    const open=searching||_listsOpenMonths.has(g.key); // busca/filtro ativos abrem tudo
+    return `<div class="lists-month">
+      <button class="lists-month-head" data-mtoggle="${g.key}">
+        <span class="lists-month-arrow">${open?'▾':'▸'}</span>
+        <span class="lists-month-label">${g.label}</span>
+        <span class="lists-month-count">${g.lists.length} lista${g.lists.length!==1?'s':''}</span>
+      </button>
+      ${open?'<div class="lists-grid">'+g.lists.map(l=>{
+        const done=l.items.filter(i=>i.done).length;
+        return `<div class="list-card" data-openlist="${l.id}">
+          <div class="list-card-main">
+            <span class="list-card-title">${esc(l.title)} <span class="list-card-date">(${fmtD(l.createdAt)})</span></span>
+            <span class="list-card-count">${done}/${l.items.length}</span>
+          </div>
+          <button class="list-card-del" data-dellist="${l.id}" title="Excluir lista">🗑</button>
+        </div>`;
+      }).join('')+'</div>':''}
+    </div>`;
+  }).join('');
+  wrap.querySelectorAll('[data-mtoggle]').forEach(el=>el.addEventListener('click',()=>{
+    const k=el.dataset.mtoggle;
+    if(_listsOpenMonths.has(k))_listsOpenMonths.delete(k);else _listsOpenMonths.add(k);
+    _saveListsOpenMonths();_renderListsGroups();
+  }));
+  wrap.querySelectorAll('[data-openlist]').forEach(el=>el.addEventListener('click',e=>{
+    if(e.target.closest('[data-dellist]'))return;
+    _openListId=el.dataset.openlist;renderListsView();
+  }));
+  wrap.querySelectorAll('.list-card-del').forEach(el=>el.addEventListener('click',e=>{e.stopPropagation();deleteList(el.dataset.dellist);}));
 }
 
 /* ═══════ QUICK TASKS (today's tasks - lightweight) ═══════ */
