@@ -5133,22 +5133,37 @@ function _insertListManual(editorId,tag,klass){
       existingList.parentNode.removeChild(existingList);
     }
   }else{
-    // Sobe até filho direto do editor (bloco atual)
+    // Converte SÓ a LINHA do cursor (menor bloco) — subir até o filho direto do
+    // editor podia engolir um wrapper com a tabela e vários parágrafos numa
+    // tacada (bug real: checklist "aplicada" na tabela acima do cursor)
+    const rng=sel&&sel.rangeCount?sel.getRangeAt(0):null;
+    const caretNode=rng?rng.startContainer:node;
+    const cell=node.closest&&node.closest('td,th');
+    const BLOCKS={DIV:1,P:1,H1:1,H2:1,H3:1,H4:1,H5:1,H6:1,BLOCKQUOTE:1,PRE:1};
     let block=node;
-    while(block&&block.parentElement!==editor)block=block.parentElement;
+    while(block&&block!==editor&&!BLOCKS[block.tagName])block=block.parentElement;
     const list=document.createElement(tag);
     if(klass)list.className=klass;
     const li=document.createElement('li');
     if(klass)li.setAttribute('data-ck','0');
-    if(block&&block!==editor){
-      while(block.firstChild)li.appendChild(block.firstChild);
-      list.appendChild(li);
-      block.parentNode.replaceChild(list,block);
-    }else{
-      // Sem bloco — insere no final do editor
+    list.appendChild(li);
+    if(cell&&editor.contains(cell)){
+      // Cursor dentro de uma tabela: nunca converte a tabela — lista nova logo abaixo
       li.appendChild(document.createElement('br'));
-      list.appendChild(li);
-      editor.appendChild(list);
+      cell.closest('table').after(list);
+    }else if(block&&block!==editor&&!(block.querySelector&&block.querySelector('table'))){
+      // Linha comum: converte só ela
+      while(block.firstChild)li.appendChild(block.firstChild);
+      block.parentNode.replaceChild(list,block);
+    }else if(caretNode&&caretNode.nodeType===Node.TEXT_NODE&&caretNode.parentNode===editor){
+      // Linha "solta" (text node direto no editor): vira o item da lista
+      editor.replaceChild(list,caretNode);
+      li.appendChild(caretNode);
+    }else{
+      // Sem linha convertível (wrapper contendo tabela, editor vazio…):
+      // lista vazia após o bloco atual (ou no fim do editor)
+      li.appendChild(document.createElement('br'));
+      if(block&&block!==editor)block.after(list);else editor.appendChild(list);
     }
     // Posiciona cursor dentro do li
     try{

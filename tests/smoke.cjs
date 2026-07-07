@@ -380,6 +380,43 @@ function run() {
   check('select de estilo de bloco existe (Texto/Título/Subtítulo)',
     $('neBlockStyle') && $('neBlockStyle').options.length === 3);
 
+  /* ── Regressão: checklist com tabela acima (cenário do usuário) ──
+     tabela + título + texto; cursor no TEXTO → só a linha do texto vira
+     checklist; a tabela e o título ficam intactos */
+  const ck1 = ev(`(function(){
+    const ed=document.getElementById('neEditor');
+    ed.innerHTML='<table class="ne-table"><tbody><tr><td>celula</td></tr></tbody></table><h2>Titulo</h2><div id="_ckTgt">texto alvo</div>';
+    const t=document.getElementById('_ckTgt').firstChild;
+    const r=document.createRange();r.setStart(t,3);r.collapse(true);
+    const s=window.getSelection();s.removeAllRanges();s.addRange(r);
+    _neRange=r.cloneRange();
+    _insertListManual('neEditor','UL','ne-cklist');
+    return JSON.stringify({
+      tabelaIntacta: !!ed.querySelector(':scope>table.ne-table td') && !ed.querySelector('li table'),
+      tituloIntacto: !!ed.querySelector('h2'),
+      itemCerto: (ed.querySelector('ul.ne-cklist>li')||{}).textContent==='texto alvo',
+      umaLista: ed.querySelectorAll('ul.ne-cklist').length===1
+    });
+  })()`);
+  check('checklist converte SÓ a linha do cursor (tabela/título intactos)',
+    ck1 === '{"tabelaIntacta":true,"tituloIntacto":true,"itemCerto":true,"umaLista":true}', ck1);
+  const ck2 = ev(`(function(){
+    const ed=document.getElementById('neEditor');
+    ed.innerHTML='<table class="ne-table"><tbody><tr><td id="_ckTd">celula</td></tr></tbody></table>';
+    const t=document.getElementById('_ckTd').firstChild;
+    const r=document.createRange();r.setStart(t,2);r.collapse(true);
+    const s=window.getSelection();s.removeAllRanges();s.addRange(r);
+    _neRange=r.cloneRange();
+    _insertListManual('neEditor','UL','ne-cklist');
+    return JSON.stringify({
+      tabelaIntacta: !!ed.querySelector(':scope>table.ne-table td') && !ed.querySelector('li table'),
+      listaDepois: ed.querySelector('table.ne-table')?.nextElementSibling?.classList.contains('ne-cklist')===true
+    });
+  })()`);
+  check('☑ com cursor DENTRO da tabela cria a lista abaixo dela (não converte)',
+    ck2 === '{"tabelaIntacta":true,"listaDepois":true}', ck2);
+  ev(`document.getElementById('neEditor').innerHTML='';_neRange=null`);
+
   /* ── URLs clicáveis + tabela (N4) ── */
   const lk = ev(`linkifyNoteHtml('veja <b>isto</b>: https://exemplo.com/x e https://outro.io')`);
   check('linkifyNoteHtml converte URLs soltas em <a rel=noopener>',
