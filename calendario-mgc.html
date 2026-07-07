@@ -1449,6 +1449,7 @@ body.large .sidebar-year{font-size:22px}
 .notes-view{padding:0!important;overflow-y:auto}
 .nv-wrap{padding:18px 20px 80px}
 .nv-topbar{display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap}
+.nv-tagbar{display:flex;flex-wrap:wrap;gap:6px;margin:-6px 0 14px}
 .nv-title{font-size:16px;font-weight:700;color:var(--text);flex-shrink:0}
 .nv-search{flex:1;min-width:140px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:6px 10px;font-size:12px;background:var(--input-bg);color:var(--text);font-family:'DM Sans',sans-serif;outline:none}
 .nv-search:focus{border-color:var(--accent)}
@@ -7478,12 +7479,34 @@ function deleteNote(noteId){
   toastUndo('Nota excluída.',()=>{if(delN){AppState.standaloneNotes.push(delN);saveStandaloneNotes();renderNotesView();}});
 }
 
+/* ── Tags #hashtag nas notas (estilo Apple Notes) ──────────────
+   Qualquer #palavra no título ou no texto vira tag; a barra de chips na aba
+   filtra por tag. Nada é persistido além do próprio texto — a tag É o texto. */
+let _noteTagFilter='';
+function noteTags(n){
+  const txt=((n.title||'')+' '+String(n.content||'').replace(/<[^>]+>/g,' '));
+  const s=new Set();const re=/#([\p{L}\p{N}_-]{2,30})/gu;let m;
+  while((m=re.exec(txt)))s.add(m[1].toLowerCase());
+  return s;
+}
+function _renderNoteTagBar(){
+  const bar=document.getElementById('nvTagBar');if(!bar)return;
+  const all=new Set();AppState.standaloneNotes.forEach(n=>noteTags(n).forEach(t=>all.add(t)));
+  if(_noteTagFilter&&!all.has(_noteTagFilter))_noteTagFilter='';
+  if(!all.size){bar.style.display='none';bar.innerHTML='';return;}
+  bar.style.display='flex';
+  bar.innerHTML=[...all].sort().map(t=>`<span class="tag-chip-filter${_noteTagFilter===t?' active':''}" data-ntag="${esc(t)}">#${esc(t)}</span>`).join('')
+    +(_noteTagFilter?`<span class="tag-chip-filter" data-ntag="" style="opacity:.75">✕ limpar</span>`:'');
+}
+
 function _renderNotesGrid(search){
+  _renderNoteTagBar();
   const s=(search||'').toLowerCase();
-  const filtered=AppState.standaloneNotes.filter(n=>
+  let filtered=AppState.standaloneNotes.filter(n=>
     !s||(n.title||'').toLowerCase().includes(s)||
     (n.content||'').replace(/<[^>]+>/g,'').toLowerCase().includes(s)
   );
+  if(_noteTagFilter)filtered=filtered.filter(n=>noteTags(n).has(_noteTagFilter));
   const ordered=[...filtered.filter(n=>n.pinned),...filtered.filter(n=>!n.pinned)];
   const fmtDate=iso=>{if(!iso)return'';const d=new Date(iso);return`${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()}`;};
   const preview=html=>html.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim().slice(0,120);
@@ -7662,12 +7685,20 @@ function renderNotesView(){
         <input type="text" class="nv-search" id="nvSearch" placeholder="Buscar notas…">
         <button class="nv-new-btn" id="nvNewBtn">+ Nova nota</button>
       </div>
+      <div id="nvTagBar" class="nv-tagbar" style="display:none"></div>
       <div id="nvGrid"></div>
     </div>`;
     document.getElementById('nvSearch').addEventListener('input',function(){
       _renderNotesGrid(this.value);
     });
     document.getElementById('nvNewBtn').addEventListener('click',()=>openNoteEdit(null));
+    // Chips de tag: clique filtra; clique na ativa (ou no ✕) limpa
+    document.getElementById('nvTagBar').addEventListener('click',e=>{
+      const c=e.target.closest('[data-ntag]');if(!c)return;
+      const t=c.dataset.ntag||'';
+      _noteTagFilter=(t===_noteTagFilter)?'':t;
+      _renderNotesGrid(document.getElementById('nvSearch')?.value||'');
+    });
   }
   _renderNotesGrid(document.getElementById('nvSearch')?.value||'');
 }

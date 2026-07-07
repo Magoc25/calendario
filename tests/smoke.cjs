@@ -120,6 +120,18 @@ setTimeout(() => {
 function runAsync() {
   check('auto-save criou a nota avulsa do teste (após debounce)',
     ev(`!!AppState.standaloneNotes.find(n=>n.title==='Nota Smoke')`));
+  /* tags # nas notas (N3) */
+  check('noteTags extrai hashtags do título e do conteúdo',
+    ev(`JSON.stringify([...noteTags({title:'Plano #trabalho',content:'<div>ver #Mercado e #trabalho</div>'})].sort())`) === '["mercado","trabalho"]');
+  ev(`AppState.standaloneNotes.unshift({id:'tsm1',title:'Tag Smoke #teste',content:'x',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()})`);
+  ev(`renderNotesView()`);
+  check('barra de chips mostra a tag #teste na aba Notas',
+    ev(`!!document.querySelector('#nvTagBar [data-ntag="teste"]')`));
+  ev(`_noteTagFilter='teste';_renderNotesGrid('')`);
+  check('filtro por tag mostra só as notas com a tag',
+    ev(`document.querySelectorAll('#nvGrid .note-card').length`) === 1);
+  ev(`_noteTagFilter='';AppState.standaloneNotes=AppState.standaloneNotes.filter(n=>n.id!=='tsm1');renderNotesView()`);
+
   /* busca global encontra a nota avulsa (N2) */
   $('searchInput').value = 'nota smoke';
   ev(`document.getElementById('searchInput').dispatchEvent(new Event('input',{bubbles:true}))`);
