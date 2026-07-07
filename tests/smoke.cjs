@@ -121,6 +121,33 @@ function runAsync() {
   if (window.__tableCheckPending) {
     check('⊞ insere tabela ne-table 2×3 no editor',
       ev(`document.querySelectorAll('#neEditor table.ne-table td').length`) === 6);
+    /* barra contextual de tabela: cursor numa célula → operações */
+    const selCell = (row, col) => ev(`(function(){
+      const tbl=document.querySelector('#neEditor table.ne-table');if(!tbl)return false;
+      const td=tbl.rows[${row}]&&tbl.rows[${row}].children[${col}];if(!td)return false;
+      const r=document.createRange();r.selectNodeContents(td);r.collapse(true);
+      const s=window.getSelection();s.removeAllRanges();s.addRange(r);return true;
+    })()`);
+    const clickTbl = (act) => ev(`document.querySelector('#neTableBar [data-tbl="${act}"]').dispatchEvent(new window.MouseEvent('mousedown',{bubbles:true,cancelable:true}))`);
+    selCell(0, 0);
+    check('_neCurrentCell acha a célula sob o cursor', ev(`!!_neCurrentCell()`));
+    ev(`_neUpdateTableBar()`);
+    check('barra de tabela aparece com o cursor na célula',
+      ev(`document.getElementById('neTableBar').style.display`) === 'flex');
+    clickTbl('rowAdd');
+    check('+ Linha: tabela passa a 4 linhas', ev(`document.querySelector('#neEditor table.ne-table').rows.length`) === 4);
+    selCell(0, 0); clickTbl('colAdd');
+    check('+ Coluna: linhas passam a 3 células', ev(`document.querySelector('#neEditor table.ne-table').rows[0].children.length`) === 3);
+    // marca a célula (0,1), move a coluna p/ a esquerda e confere que mudou de lugar
+    ev(`document.querySelector('#neEditor table.ne-table').rows[0].children[1].textContent='MARCA'`);
+    selCell(0, 1); clickTbl('colLeft');
+    check('Col ←: célula marcada foi para a coluna 0',
+      ev(`document.querySelector('#neEditor table.ne-table').rows[0].children[0].textContent`) === 'MARCA');
+    selCell(0, 0); clickTbl('rowDel');
+    check('− Linha: volta a 3 linhas', ev(`document.querySelector('#neEditor table.ne-table').rows.length`) === 3);
+    selCell(0, 0); clickTbl('tblDel');
+    check('🗑 Tabela remove a tabela e esconde a barra',
+      ev(`!document.querySelector('#neEditor table.ne-table')`) && ev(`document.getElementById('neTableBar').style.display`) === 'none');
   }
   check('auto-save criou a nota avulsa do teste (após debounce)',
     ev(`!!AppState.standaloneNotes.find(n=>n.title==='Nota Smoke')`));

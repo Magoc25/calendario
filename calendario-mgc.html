@@ -1541,6 +1541,10 @@ body.large .sidebar-year{font-size:22px}
 .notes-editor a{color:var(--accent);text-decoration:underline;cursor:pointer;word-break:break-all}
 .notes-editor table.ne-table{border-collapse:collapse;margin:8px 0;width:100%}
 .notes-editor table.ne-table td{border:1px solid var(--border);padding:6px 8px;min-width:60px;font-size:13px;vertical-align:top}
+/* Barra contextual de tabela (aparece com o cursor numa célula) */
+.ne-table-bar{display:flex;gap:4px;flex-wrap:wrap;align-items:center;padding:5px 8px;background:var(--surface2);border:1px solid var(--border);border-top:none;flex-shrink:0}
+.ntb-tb{background:var(--surface);border:1px solid var(--border);border-radius:5px;color:var(--text);cursor:pointer;font-size:11px;padding:3px 8px;font-family:'DM Sans',sans-serif;white-space:nowrap}
+.ntb-tb:hover{background:var(--border)}
 .notes-footer{display:flex;align-items:center;justify-content:space-between;margin-top:10px;padding-top:10px;border-top:1px solid var(--border);flex-shrink:0}
 .notes-saved{font-size:10px;color:var(--muted);font-style:italic}
 .notes-history{font-size:10px;color:var(--muted)}
@@ -2795,6 +2799,20 @@ body.large .sidebar-year{font-size:22px}
       <span class="ntb-sep"></span>
       <button class="ntb" data-necmd="undo" title="Desfazer">↩</button>
       <button class="ntb" data-necmd="redo" title="Refazer">↪</button>
+    </div>
+    <!-- Barra contextual de tabela — aparece quando o cursor está numa tabela -->
+    <div class="ne-table-bar" id="neTableBar" style="display:none">
+      <button class="ntb-tb" data-tbl="rowAdd" title="Inserir linha abaixo">＋ Linha</button>
+      <button class="ntb-tb" data-tbl="colAdd" title="Inserir coluna à direita">＋ Coluna</button>
+      <button class="ntb-tb" data-tbl="rowDel" title="Excluir esta linha">－ Linha</button>
+      <button class="ntb-tb" data-tbl="colDel" title="Excluir esta coluna">－ Coluna</button>
+      <span class="ntb-sep"></span>
+      <button class="ntb-tb" data-tbl="rowUp" title="Mover linha para cima">Linha ↑</button>
+      <button class="ntb-tb" data-tbl="rowDown" title="Mover linha para baixo">Linha ↓</button>
+      <button class="ntb-tb" data-tbl="colLeft" title="Mover coluna para a esquerda">Col ←</button>
+      <button class="ntb-tb" data-tbl="colRight" title="Mover coluna para a direita">Col →</button>
+      <span class="ntb-sep"></span>
+      <button class="ntb-tb" data-tbl="tblDel" title="Excluir a tabela inteira" style="color:#e03131">🗑 Tabela</button>
     </div>
     <div class="notes-editor" id="neEditor" contenteditable="true" placeholder="Escreva sua nota aqui…" style="min-height:320px"></div>
     <div class="notes-footer">
@@ -7741,6 +7759,7 @@ function updateNeToolbarState(){
     const sel=document.getElementById('neBlockStyle');
     if(sel)sel.value=(v==='h2'||v==='h3')?v:'div';
   }catch(e){}
+  _neUpdateTableBar(); // barra de tabela aparece/some conforme o cursor
 }
 document.getElementById('neEditor').addEventListener('keyup',updateNeToolbarState);
 document.getElementById('neEditor').addEventListener('mouseup',updateNeToolbarState);
@@ -7794,8 +7813,73 @@ document.getElementById('neTableBtn').addEventListener('mousedown',e=>{
       const tpl=document.createElement('template');tpl.innerHTML=html;
       editor.appendChild(tpl.content);
     }
+    // Cursor na 1ª célula da tabela recém-criada + barra contextual visível
+    try{
+      const tbls=editor.querySelectorAll('table.ne-table');
+      const td=tbls[tbls.length-1]?.querySelector('td');
+      if(td){const r=document.createRange();r.selectNodeContents(td);r.collapse(true);const s=window.getSelection();s.removeAllRanges();s.addRange(r);}
+    }catch(e2){}
     editor.dispatchEvent(new Event('input',{bubbles:true}));
+    _neUpdateTableBar();
   },0);
+});
+
+/* ── Barra contextual de tabela ───────────────────────────────
+   Aparece quando o cursor está numa célula. Reposicionar é por botões
+   (Linha ↑/↓, Col ←/→) — mais previsível que arrastar dentro de um editor
+   de texto, e funciona igual no celular. */
+function _neCurrentCell(){
+  const sel=window.getSelection();
+  let n=sel&&sel.rangeCount?sel.getRangeAt(0).commonAncestorContainer:null;
+  if(n&&n.nodeType===Node.TEXT_NODE)n=n.parentElement;
+  const td=n&&n.closest&&n.closest('table.ne-table td');
+  return td&&document.getElementById('neEditor').contains(td)?td:null;
+}
+function _neUpdateTableBar(){
+  const bar=document.getElementById('neTableBar');
+  if(bar)bar.style.display=_neCurrentCell()?'flex':'none';
+}
+document.querySelectorAll('#neTableBar [data-tbl]').forEach(btn=>{
+  btn.addEventListener('mousedown',e=>{
+    e.preventDefault();
+    const td=_neCurrentCell();if(!td)return;
+    const tr=td.closest('tr'),tbl=td.closest('table');
+    const rowIdx=[...tbl.rows].indexOf(tr),colIdx=[...tr.children].indexOf(td);
+    const act=btn.dataset.tbl;
+    const mkTd=()=>{const c=document.createElement('td');c.innerHTML='<br>';return c;};
+    if(act==='rowAdd'){
+      const nr=document.createElement('tr');
+      for(let i=0;i<tr.children.length;i++)nr.appendChild(mkTd());
+      tr.after(nr);
+    }else if(act==='rowDel'){
+      if(tbl.rows.length<=1)tbl.remove();else tr.remove();
+    }else if(act==='colAdd'){
+      [...tbl.rows].forEach(r=>{const ref=r.children[colIdx];if(ref)ref.after(mkTd());else r.appendChild(mkTd());});
+    }else if(act==='colDel'){
+      if(tr.children.length<=1)tbl.remove();
+      else [...tbl.rows].forEach(r=>{if(r.children[colIdx])r.children[colIdx].remove();});
+    }else if(act==='rowUp'){
+      if(rowIdx>0)tr.previousElementSibling.before(tr);
+    }else if(act==='rowDown'){
+      if(tr.nextElementSibling)tr.nextElementSibling.after(tr);
+    }else if(act==='colLeft'){
+      if(colIdx>0)[...tbl.rows].forEach(r=>{const c=r.children[colIdx];if(c&&c.previousElementSibling)c.previousElementSibling.before(c);});
+    }else if(act==='colRight'){
+      [...tbl.rows].forEach(r=>{const c=r.children[colIdx];if(c&&c.nextElementSibling)c.nextElementSibling.after(c);});
+    }else if(act==='tblDel'){
+      tbl.remove();
+    }
+    // Devolve o cursor a uma célula viva (ou esconde a barra se a tabela sumiu)
+    try{
+      if(tbl.isConnected){
+        const rr=tbl.rows[Math.min(Math.max(rowIdx,0),tbl.rows.length-1)];
+        const cc=rr&&rr.children[Math.min(Math.max(colIdx,0),rr.children.length-1)];
+        if(cc){const r=document.createRange();r.selectNodeContents(cc);r.collapse(true);const s=window.getSelection();s.removeAllRanges();s.addRange(r);}
+      }
+    }catch(e2){}
+    document.getElementById('neEditor').dispatchEvent(new Event('input',{bubbles:true}));
+    _neUpdateTableBar();
+  });
 });
 document.getElementById('neEditor').addEventListener('keydown',e=>{
   if(e.key!=='Tab')return;
