@@ -659,6 +659,20 @@ body.design-extra.design-crystal #srpSheet{background:var(--surface-glass)}
 .list-card-unarch{flex-shrink:0;background:none;border:none;cursor:pointer;font-size:13px;opacity:.6}
 .list-card-unarch:hover{opacity:1}
 .lists-month-arch{opacity:.85}
+/* Ações do detalhe (limpar concluídos / salvar como modelo) */
+.lists-detail-actions{display:flex;flex-wrap:wrap;gap:6px;margin:-4px 0 10px}
+.lists-act-btn{background:var(--surface2);border:1px solid var(--border);border-radius:12px;cursor:pointer;font-size:10px;color:var(--muted);padding:3px 9px;font-family:'DM Sans',sans-serif;white-space:nowrap}
+.lists-act-btn:hover{color:var(--text)}
+/* Painel de modelos de lista */
+.list-tpl-panel{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:9px 11px;margin-top:8px}
+.list-tpl-empty{font-size:11px;color:var(--muted);line-height:1.6}
+.list-tpl-hint{font-size:10px;color:var(--muted);margin-bottom:7px}
+.list-tpl-chips{display:flex;flex-wrap:wrap;gap:6px}
+.list-tpl-chip{display:inline-flex;align-items:center;gap:5px;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:4px 6px 4px 10px;font-size:12px;color:var(--text);cursor:pointer}
+.list-tpl-chip:hover{border-color:var(--accent)}
+.list-tpl-n{font-size:10px;color:var(--muted)}
+.list-tpl-del{background:none;border:none;cursor:pointer;font-size:11px;color:var(--muted);opacity:.6;padding:0 2px;border-radius:8px}
+.list-tpl-del:hover{opacity:1;color:#dc2626}
 .lists-detail-sub{font-size:10px;color:var(--muted);margin-bottom:10px}
 .list-items{display:flex;flex-direction:column;gap:4px}
 .list-item{display:flex;align-items:center;gap:9px;padding:7px 9px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm)}
@@ -4974,6 +4988,7 @@ document.getElementById('exportJsonBtn').addEventListener('click',()=>{
   const data={version:7,theme:currentTheme,categoryColors,notes:notesStore,
     routines:AppState.routines,quickTasks:AppState.quickTasks,reviews:AppState.reviews,top3:AppState.top3Data,
     lists:AppState.lists,
+    listTemplates:AppState.listTemplates,
     standaloneNotes:AppState.standaloneNotes,
     calendars,
     categories:AppState.categories,
@@ -5004,6 +5019,7 @@ document.getElementById('importFile').addEventListener('change',function(){
           AppState.lists=data.lists.map(l=>({...l,updatedAt:_now,items:Array.isArray(l.items)?l.items.map(it=>({...it,updatedAt:_now})):[]}));
           AppState.listsDel={};saveLists();
         }
+        if(Array.isArray(data.listTemplates)){AppState.listTemplates=data.listTemplates;saveListTemplates();}
         // v7: restaura o restante do backup (o import antigo ignorava o que o export incluía)
         if(Array.isArray(data.routines)){AppState.routines=data.routines;saveRoutines();}
         if(Array.isArray(data.quickTasks)){AppState.quickTasks=data.quickTasks;saveQuickTasks();}
@@ -6559,11 +6575,46 @@ function openRvForm(id,keepOpen=false){
 try{AppState.lists=JSON.parse(localStorage.getItem('cal_lists')||'[]');}catch(e){console.error('[MGC] Falha ao carregar listas:',e);AppState.lists=[];}
 try{AppState.listsDel=JSON.parse(localStorage.getItem('cal_lists_del')||'{}');}catch(e){AppState.listsDel={};}
 if(!AppState.listsDel||typeof AppState.listsDel!=='object'||Array.isArray(AppState.listsDel))AppState.listsDel={};
+try{AppState.listTemplates=JSON.parse(localStorage.getItem('cal_list_templates')||'[]');}catch(e){AppState.listTemplates=[];}
+if(!Array.isArray(AppState.listTemplates))AppState.listTemplates=[];
 function saveLists(){
   localStorage.setItem('cal_lists',JSON.stringify(AppState.lists));
   localStorage.setItem('cal_lists_del',JSON.stringify(AppState.listsDel||{}));
   localStorage.setItem('cal_local_ts',new Date().toISOString());
   scheduleCloudPush();
+}
+// Modelos de lista (reutilizáveis). Sincronizam pela coluna list_templates com o
+// fallback genérico r9 (degrada p/ local-only se a coluna não existir). LWW é ok
+// aqui (raramente se edita o mesmo modelo em 2 aparelhos ao mesmo tempo).
+function saveListTemplates(){
+  localStorage.setItem('cal_list_templates',JSON.stringify(AppState.listTemplates));
+  localStorage.setItem('cal_local_ts',new Date().toISOString());
+  scheduleCloudPush();
+}
+function saveListAsTemplate(listId,name){
+  const l=AppState.lists.find(x=>x.id===listId);if(!l)return null;
+  name=(name||'').trim()||l.title||'Modelo';
+  const items=(l.items||[]).map(i=>({title:i.title}));
+  const tpl={id:uid(),name,items,createdAt:Date.now()};
+  AppState.listTemplates.unshift(tpl);saveListTemplates();
+  return tpl;
+}
+function createListFromTemplate(templateId){
+  const tpl=AppState.listTemplates.find(t=>t.id===templateId);if(!tpl)return null;
+  const now=Date.now();
+  const l={id:uid(),title:tpl.name,createdAt:now,updatedAt:now,
+    items:(tpl.items||[]).map(it=>({id:uid(),title:it.title||'',done:false,updatedAt:now}))};
+  AppState.lists.unshift(l);
+  _listsOpenMonths.add(listMonthKey(l));_saveListsOpenMonths();
+  saveLists();
+  return l;
+}
+function deleteListTemplate(templateId){
+  const tpl=AppState.listTemplates.find(t=>t.id===templateId);
+  const idx=AppState.listTemplates.findIndex(t=>t.id===templateId);if(idx<0)return;
+  AppState.listTemplates.splice(idx,1);saveListTemplates();
+  _renderListTemplates();
+  if(tpl)toastUndo('Modelo excluído.',()=>{AppState.listTemplates.splice(Math.min(idx,AppState.listTemplates.length),0,tpl);saveListTemplates();_renderListTemplates();});
 }
 
 /* ── Visão geral agrupada por mês + busca + tags ─────────────── */
@@ -6890,11 +6941,14 @@ function renderListsView(){
       <div class="lists-detail-head">
         <button class="lists-back" id="listsBackBtn">← Listas</button>
         <span class="lists-detail-title">${esc(l.title)}</span>
-        ${done>0?`<button class="lists-clear-done" id="listsClearDoneBtn" title="Remover os itens concluídos">🧹 Limpar (${done})</button>`:''}
         ${l.archivedAt?`<button class="lists-head-btn" id="listsUnarchiveBtn" title="Desarquivar lista">📤</button>`:`<button class="lists-head-btn" id="listsArchiveBtn" title="Arquivar lista">🗄</button>`}
         <button class="lists-del-list" data-dellist="${l.id}" title="Excluir lista">🗑</button>
       </div>
       <div class="lists-detail-sub">${l.archivedAt?'🗄 arquivada · ':''}${l.items.length} ${l.items.length===1?'item':'itens'} · ${done} concluído${done!==1?'s':''} · criada em ${c.getDate()} ${MONTHS[c.getMonth()].slice(0,3)} ${c.getFullYear()}</div>
+      <div class="lists-detail-actions">
+        ${done>0?`<button class="lists-act-btn" id="listsClearDoneBtn">🧹 Limpar concluídos (${done})</button>`:''}
+        ${l.items.length?`<button class="lists-act-btn" id="listsSaveTplBtn">📋 Salvar como modelo</button>`:''}
+      </div>
       <div class="list-add-row">
         <input type="text" id="listItemInput" class="list-add-input" placeholder="Adicionar item…" maxlength="200">
         <button id="listItemAddBtn" class="list-add-btn" title="Adicionar">＋</button>
@@ -6914,6 +6968,13 @@ function renderListsView(){
     document.getElementById('listsArchiveBtn')?.addEventListener('click',()=>archiveList(_openListId));
     document.getElementById('listsUnarchiveBtn')?.addEventListener('click',()=>unarchiveList(_openListId));
     document.getElementById('listsClearDoneBtn')?.addEventListener('click',()=>clearDoneItems(_openListId));
+    document.getElementById('listsSaveTplBtn')?.addEventListener('click',()=>{
+      const l=AppState.lists.find(x=>x.id===_openListId);if(!l)return;
+      const name=prompt('Nome do modelo:',l.title||'');
+      if(name===null)return; // cancelou
+      const tpl=saveListAsTemplate(_openListId,name.trim()||l.title);
+      if(tpl)toast('📋 Modelo salvo!');
+    });
     const input=document.getElementById('listItemInput');
     const doAdd=()=>{if(input.value.trim()){addListItem(_openListId,input.value);input.value='';renderListsView();document.getElementById('listItemInput')?.focus();}};
     document.getElementById('listItemAddBtn').onclick=doAdd;
@@ -6934,7 +6995,9 @@ function renderListsView(){
         </div>
         <div class="list-add-row" style="margin-top:6px">
           <input type="text" id="listsSearchInput" class="list-add-input" placeholder="🔍 Pesquisar listas ou itens…">
+          <button id="listTemplatesBtn" class="list-add-btn" title="Modelos de lista" style="width:auto;padding:0 10px;font-size:12px">📋</button>
         </div>
+        <div id="listTemplatesPanel" class="list-tpl-panel" style="display:none"></div>
         <div id="listsTagBar" class="nv-tagbar" style="display:none;margin:10px 0 0"></div>
         <div id="listsGroups"></div>`;
       const ni=document.getElementById('listNewInput');
@@ -6950,9 +7013,34 @@ function renderListsView(){
         _listsTagFilter=(t===_listsTagFilter)?'':t;
         _renderListsGroups();
       });
+      document.getElementById('listTemplatesBtn').addEventListener('click',()=>{
+        const p=document.getElementById('listTemplatesPanel');
+        const show=p.style.display==='none';
+        p.style.display=show?'block':'none';
+        if(show)_renderListTemplates();
+      });
     }
     _renderListsGroups();
   }
+}
+
+/* Painel de modelos (visão geral): criar lista a partir de um modelo + excluir modelo */
+function _renderListTemplates(){
+  const p=document.getElementById('listTemplatesPanel');
+  if(!p)return;
+  const tpls=AppState.listTemplates||[];
+  if(!tpls.length){
+    p.innerHTML='<div class="list-tpl-empty">Nenhum modelo ainda. Abra uma lista e toque em <b>📋 Salvar como modelo</b> para reutilizá-la depois.</div>';
+    return;
+  }
+  p.innerHTML='<div class="list-tpl-hint">Toque num modelo para criar uma lista com os itens dele:</div>'+
+    '<div class="list-tpl-chips">'+tpls.map(t=>`<span class="list-tpl-chip" data-usetpl="${esc(t.id)}" title="Criar lista a partir de '${esc(t.name)}'">📋 ${esc(t.name)} <span class="list-tpl-n">(${(t.items||[]).length})</span><button class="list-tpl-del" data-deltpl="${esc(t.id)}" title="Excluir modelo">✕</button></span>`).join('')+'</div>';
+  p.querySelectorAll('[data-usetpl]').forEach(el=>el.addEventListener('click',e=>{
+    if(e.target.closest('[data-deltpl]'))return;
+    const l=createListFromTemplate(el.dataset.usetpl);
+    if(l){_openListId=l.id;renderListsView();toast('Lista criada a partir do modelo!');}
+  }));
+  p.querySelectorAll('[data-deltpl]').forEach(el=>el.addEventListener('click',e=>{e.stopPropagation();deleteListTemplate(el.dataset.deltpl);}));
 }
 
 /* Grupos por mês de criação (mais recente primeiro; listas do mês por data) */
@@ -8280,6 +8368,7 @@ function getLocalPayload(){
     top3: JSON.stringify(AppState.top3Data),
     standalone_notes: JSON.stringify(AppState.standaloneNotes),
     lists: JSON.stringify({v:2,lists:AppState.lists,del:AppState.listsDel||{}}), // v2: inclui tombstones p/ merge no sync
+    list_templates: JSON.stringify(AppState.listTemplates||[]), // modelos de lista (coluna nova; fallback r9 cobre tabela antiga)
     routine_checks: JSON.stringify(rchecks),
     updated_at: new Date().toISOString()
   };
@@ -8305,6 +8394,7 @@ function applyRemotePayload(row){
     if(row.reviews)try{const rv=JSON.parse(row.reviews);if(rv&&typeof rv==='object')AppState.reviews=rv;}catch(e){}
     if(row.top3)try{const t3=JSON.parse(row.top3);if(t3&&typeof t3==='object')AppState.top3Data=t3;}catch(e){}
     if(row.standalone_notes)try{const sn=JSON.parse(row.standalone_notes);if(Array.isArray(sn))AppState.standaloneNotes=sn;}catch(e){}
+    if(row.list_templates)try{const lt=JSON.parse(row.list_templates);if(Array.isArray(lt)){AppState.listTemplates=lt;localStorage.setItem('cal_list_templates',row.list_templates);}}catch(e){}
     applyRemoteListsMerge(row); // mescla por id + tombstones (persiste cal_lists/cal_lists_del internamente)
     // Persist locally (eventos já persistidos pelo merge acima)
     localStorage.setItem('cal_notes',row.notes||'{}');

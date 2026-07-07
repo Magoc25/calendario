@@ -83,6 +83,7 @@ const dom = new JSDOM(html, {
     window.requestAnimationFrame = window.requestAnimationFrame || ((cb) => setTimeout(cb, 0));
     window.confirm = () => true;   // fluxos de exclusão seguem em frente
     window.alert = () => {};
+    window.prompt = (_m, def) => def || 'X';  // aceita o padrão sugerido
     window.onerror = (msg, src, line, col, err) => {
       errors.push('[onerror] ' + msg + ' @' + line + ':' + col + (err && err.stack ? '\n' + err.stack.split('\n').slice(0,3).join('\n') : ''));
     };
@@ -317,6 +318,28 @@ function run() {
     ev(`document.getElementById('evTitle').value`) === 'Comprar café');
   ev(`closeModal();AppState.quickTasks=AppState.quickTasks.filter(t=>t.title!=='Comprar café');AppState.lists=AppState.lists.filter(l=>l.id!=='lp1');_openListId=null;saveLists();saveQuickTasks();document.getElementById('listsBody').innerHTML='';renderListsView()`);
 
+  /* ── L3: templates de lista ── */
+  ev(`AppState.listTemplates=[];AppState.lists=AppState.lists.filter(l=>l.id!=='lt1')`);
+  ev(`AppState.lists.push({id:'lt1',title:'Viagem',createdAt:Date.now(),updatedAt:Date.now(),items:[{id:'lt1a',title:'Passaporte',done:true,updatedAt:Date.now()},{id:'lt1b',title:'Carregador',done:false,updatedAt:Date.now()}]})`);
+  const tplId = ev(`(saveListAsTemplate('lt1','Viagem')||{}).id`);
+  check('salvar como modelo captura os itens (títulos, sem status done)',
+    ev(`(function(){const t=AppState.listTemplates.find(x=>x.id==='${tplId}');return !!t&&t.items.length===2&&t.items[0].title==='Passaporte'&&!('done' in t.items[0]);})()`));
+  const newLid = ev(`(createListFromTemplate('${tplId}')||{}).id`);
+  check('criar lista a partir do modelo gera itens novos (todos desmarcados)',
+    ev(`(function(){const l=AppState.lists.find(x=>x.id==='${newLid}');return !!l&&l.title==='Viagem'&&l.items.length===2&&l.items.every(i=>i.done===false)&&l.items[0].id!=='lt1a';})()`));
+  check('payload de sync inclui list_templates (array)',
+    ev(`Array.isArray(JSON.parse(getLocalPayload().list_templates))`) === true &&
+    ev(`JSON.parse(getLocalPayload().list_templates).length`) >= 1);
+  check('applyRemotePayload carrega list_templates',
+    ev(`(function(){applyRemotePayload({events:'[]',list_templates:JSON.stringify([{id:'rt9',name:'Remoto',items:[{title:'x'}],createdAt:Date.now()}])});return AppState.listTemplates.some(t=>t.id==='rt9');})()`) === true);
+  // painel de modelos na visão geral
+  ev(`_openListId=null;AppState.listTemplates=[{id:'tp1',name:'Compras',items:[{title:'leite'}],createdAt:Date.now()}];document.getElementById('listsBody').innerHTML='';renderListsView();_renderListTemplates();document.getElementById('listTemplatesPanel').style.display='block'`);
+  check('painel de modelos mostra o chip com nome e contagem',
+    ev(`(function(){const c=document.querySelector('#listTemplatesPanel [data-usetpl="tp1"]');return !!c&&c.textContent.includes('Compras')&&c.textContent.includes('(1)');})()`));
+  ev(`deleteListTemplate('tp1')`);
+  check('excluir modelo remove do estado', ev(`!AppState.listTemplates.some(t=>t.id==='tp1')`));
+  ev(`AppState.listTemplates=[];AppState.lists=AppState.lists.filter(l=>l.id!=='lt1'&&l.id!=='${newLid}');_openListId=null;saveLists();saveListTemplates();document.getElementById('listsBody').innerHTML='';renderListsView()`);
+
   // merge não ressuscita excluído nem apaga criado
   const mg = ev(`(function(){
     const A=[{id:'l1',title:'A',updatedAt:100,items:[{id:'i1',title:'x',updatedAt:100}]}];
@@ -393,9 +416,9 @@ function run() {
   $('exportJsonBtn').click();
   let backup = {};
   try { backup = JSON.parse(ev('window.__lastBlob') || '{}'); } catch (e) {}
-  check('backup exporta v7 com standaloneNotes/calendars/categories/routineChecks',
+  check('backup exporta v7 completo (standaloneNotes/calendars/categories/routineChecks/listTemplates)',
     backup.version === 7 && 'standaloneNotes' in backup && 'calendars' in backup &&
-    'categories' in backup && 'routineChecks' in backup && Array.isArray(backup.events),
+    'categories' in backup && 'routineChecks' in backup && 'listTemplates' in backup && Array.isArray(backup.events),
     'keys: ' + Object.keys(backup).join(','));
 
   /* ── ICS builder produz VCALENDAR ── */
