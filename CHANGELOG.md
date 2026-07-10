@@ -5,6 +5,17 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 
 ---
 
+## [2.6.2] — Julho 2026
+
+### 🐛 Corrigido — banner "Atualização baixada" persistente no Safari/macOS
+- **Botão Atualizar confiável no Safari** — o clique lia o estado do Service Worker **depois** de um re-check que podia renová-lo, caindo num recarregamento cru que servia a página antiga (e o banner voltava). Agora aplica direto o SW que está esperando; e como o Safari nem sempre dispara o `controllerchange`, a página também escuta a ativação do próprio worker para recarregar uma única vez.
+- **O ✕ agora silencia o aviso por 24 horas** — antes ele só escondia até o próximo carregamento, então o banner "voltava sempre". A atualização continua sendo aplicada sozinha quando todas as janelas do app são fechadas.
+
+### 🔧 Infra
+- Smoke-test: 91 → 94 checagens (banner de update coberto).
+
+---
+
 ## [2.6.1] — Julho 2026
 
 Release de proteção do sync — elimina o vetor de perda de notas/configurações quando um dispositivo desatualizado (ou aberto há muito tempo) sobrescrevia na nuvem o que outro dispositivo tinha acabado de criar (ocorrido real: Safari/macOS com versão antiga em cache apagou nota e configurações feitas no Windows).

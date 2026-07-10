@@ -2358,7 +2358,7 @@ body.large .sidebar-year{font-size:22px}
             </a>
             <button class="footer-link-btn pix-btn" id="pixBtn" title="Apoiar o projeto">☕ Apoiar</button>
             <button class="footer-link-btn" id="reviewsBtn" title="Ver avaliações">⭐ Avaliações</button>
-            <span id="appVersion" style="font-size:11px;color:var(--text);user-select:none">© MGC · v2.6.1</span>
+            <span id="appVersion" style="font-size:11px;color:var(--text);user-select:none">© MGC · v2.6.2</span>
           </span>
         </div>
       </div>
@@ -9687,6 +9687,10 @@ function _swListenControllerChange(){
 }
 function _showSwUpdateBanner(){
   if(document.getElementById('swUpdateBanner'))return;
+  // ✕ silencia por 24h (senão o banner voltava a CADA load enquanto o SW novo
+  // esperasse — visto no Safari/macOS). O update ainda aplica sozinho quando
+  // todas as janelas do app fecharem, ou no banner do dia seguinte.
+  try{if(Date.now()<+(localStorage.getItem('mgc_sw_banner_snooze')||0))return;}catch(e){}
   const b=document.createElement('div');
   b.id='swUpdateBanner';
   b.style.cssText='position:fixed;bottom:0;left:0;right:0;z-index:9999;background:#1a73e8;color:#fff;display:flex;align-items:center;justify-content:space-between;padding:10px 16px;font-size:14px;gap:12px;';
@@ -9697,18 +9701,29 @@ function _showSwUpdateBanner(){
     </div>`;
   document.body.appendChild(b);
   document.getElementById('swUpdateApply').addEventListener('click',()=>applyAppUpdate());
-  document.getElementById('swUpdateDismiss').addEventListener('click',()=>b.remove());
+  document.getElementById('swUpdateDismiss').addEventListener('click',()=>{
+    try{localStorage.setItem('mgc_sw_banner_snooze',String(Date.now()+24*60*60*1000));}catch(e){}
+    b.remove();
+  });
 }
-// Aplica a atualização pendente: manda SKIP_WAITING ao SW em waiting;
-// sem SW esperando, força um update-check e recarrega como fallback.
+// Aplica a atualização pendente: manda SKIP_WAITING ao SW em waiting.
+// Safari/macOS: (a) ler .waiting ANTES de update() — o update() podia renovar o
+// registro e o clique caía no reload cru, que servia a página velha de novo;
+// (b) controllerchange nem sempre dispara lá → escutar também o statechange do
+// próprio worker (activated → 1 reload, mesma flag anti-loop).
+function _swReloadOnActivate(w){
+  w.addEventListener('statechange',function(){
+    if(this.state==='activated'&&!_swReloading){_swReloading=true;location.reload();}
+  });
+}
 async function applyAppUpdate(){
   try{
     if(_swReg){
-      await _swReg.update().catch(()=>{});
-      const w=_swReg.waiting;
-      if(w){w.postMessage({type:'SKIP_WAITING'});return;} // controllerchange fará o reload
+      let w=_swReg.waiting;
+      if(!w){await _swReg.update().catch(()=>{});w=_swReg.waiting;}
+      if(w){_swReloadOnActivate(w);w.postMessage({type:'SKIP_WAITING'});return;} // controllerchange OU statechange fará o reload
       const i=_swReg.installing;
-      if(i){i.addEventListener('statechange',function(){if(this.state==='installed')this.postMessage({type:'SKIP_WAITING'});});return;}
+      if(i){_swReloadOnActivate(i);i.addEventListener('statechange',function(){if(this.state==='installed')this.postMessage({type:'SKIP_WAITING'});});return;}
     }
   }catch(e){}
   location.reload();
@@ -9856,7 +9871,7 @@ try{localStorage.removeItem('mgc_app_version');}catch(e){} // remove o cache de 
 /* ── Verificação de nova versão via Supabase ── */
 (async()=>{
   if(!revClient)return;
-  const LOCAL_VERSION='2.6.1';
+  const LOCAL_VERSION='2.6.2';
   const CACHE_KEY='mgc_update_check';
   const CACHE_TTL=24*60*60*1000; // 24 horas
   let cached=null;try{cached=JSON.parse(localStorage.getItem(CACHE_KEY)||'null');}catch(e){} // valor corrompido não pode matar o banner de update
@@ -9895,7 +9910,7 @@ try{localStorage.removeItem('mgc_app_version');}catch(e){} // remove o cache de 
   if(!deviceId){deviceId=crypto.randomUUID();localStorage.setItem('calendario_device_id',deviceId);}
   try{
     await revClient.from('app_pings').upsert(
-      {app_name:'Calendario MGC',version:'2.6.1',device_id:deviceId,ping_date:today},
+      {app_name:'Calendario MGC',version:'2.6.2',device_id:deviceId,ping_date:today},
       {onConflict:'app_name,device_id,ping_date',ignoreDuplicates:true}
     );
     localStorage.setItem(PING_KEY,today);

@@ -420,6 +420,16 @@ function run() {
   check('payload de sync leva __meta nas notas e {v:2,notes,del} nas avulsas',
     ev(`(function(){const p=getLocalPayload();const n=JSON.parse(p.notes),s=JSON.parse(p.standalone_notes);return !!(n.__meta&&n.__meta.v===2&&s.v===2&&Array.isArray(s.notes));})()`) === true);
 
+  /* ── Banner de update do SW: ✕ silencia por 24h (Safari re-exibia a cada load) ── */
+  ev(`localStorage.removeItem('mgc_sw_banner_snooze');_showSwUpdateBanner()`);
+  check('banner de update do SW aparece', !!$('swUpdateBanner'));
+  ev(`document.getElementById('swUpdateDismiss').click()`);
+  check('✕ remove o banner e grava snooze de 24h',
+    !$('swUpdateBanner') && ev(`+(localStorage.getItem('mgc_sw_banner_snooze')||0)`) > Date.now());
+  ev(`_showSwUpdateBanner()`);
+  check('banner respeita o snooze (não re-aparece)', !$('swUpdateBanner'));
+  ev(`localStorage.removeItem('mgc_sw_banner_snooze')`);
+
   /* ── gcalToMgc (E3): all-day exclusivo, desc sem rodapé, hora no fuso local ── */
   check('gcalToMgc: all-day de 1 dia não vira 2 dias (end exclusivo)',
     ev(`(function(){const e=gcalToMgc({id:'g1',start:{date:'2026-07-10'},end:{date:'2026-07-11'}});return e.date==='2026-07-10'&&e.dateEnd==='2026-07-10';})()`) === true);
