@@ -403,6 +403,23 @@ function run() {
   check('undo apaga o tombstone e restaura', ev(`!AppState.eventsDel['${tid}'] && !!AppState.events.find(e=>e.id==='${tid}')`));
   ev(`AppState.events=AppState.events.filter(e=>e.id!=='${tid}');save()`);
 
+  /* ── Merge de notas no sync (v2.6.1): união por id/chave + tombstones —
+        cobre o vetor da perda de notas (device com blob velho vencia o push) ── */
+  check('merge notas avulsas: device com blob velho NÃO apaga nota remota nova',
+    ev(`(function(){const r=mergeStandaloneNoteCollections([],{},[{id:'sn1',title:'do outro device',updatedAt:100}],{});return r.notes.length===1&&r.notes[0].id==='sn1';})()`) === true);
+  check('merge notas avulsas: conflito de id vence o updatedAt mais recente',
+    ev(`(function(){const r=mergeStandaloneNoteCollections([{id:'a',title:'velha',updatedAt:1}],{},[{id:'a',title:'nova',updatedAt:2}],{});return r.notes[0].title==='nova';})()`) === true);
+  check('merge notas avulsas: tombstone remoto remove, mas edição local mais nova sobrevive',
+    ev(`(function(){const r=mergeStandaloneNoteCollections([{id:'x',updatedAt:5},{id:'y',updatedAt:20}],{},[],{x:10,y:10});return !r.notes.find(n=>n.id==='x')&&!!r.notes.find(n=>n.id==='y');})()`) === true);
+  check('excluir nota avulsa grava tombstone (diff no save)',
+    ev(`(function(){AppState.standaloneNotes.push({id:'snDel',title:'t',createdAt:1,updatedAt:1});saveStandaloneNotes();AppState.standaloneNotes=AppState.standaloneNotes.filter(n=>n.id!=='snDel');saveStandaloneNotes();return !!AppState.standaloneNotesDel['snDel'];})()`) === true);
+  check('merge notas por data: nota remota nova entra sem apagar a local',
+    ev(`(function(){notesStore={k1:'local'};notesMeta={k1:1};notesDel={};const ch=applyRemoteNotesMerge({notes:JSON.stringify({k2:'remota',__meta:{v:2,ts:{k2:2},del:{}}})},false);return ch===true&&notesStore.k1==='local'&&notesStore.k2==='remota';})()`) === true);
+  check('merge notas por data: tombstone remoto apaga a local mais antiga',
+    ev(`(function(){notesStore={k3:'antiga'};notesMeta={k3:1};notesDel={};applyRemoteNotesMerge({notes:JSON.stringify({__meta:{v:2,ts:{},del:{k3:9}}})},false);const ok=!('k3' in notesStore);notesStore={};notesMeta={};notesDel={};return ok;})()`) === true);
+  check('payload de sync leva __meta nas notas e {v:2,notes,del} nas avulsas',
+    ev(`(function(){const p=getLocalPayload();const n=JSON.parse(p.notes),s=JSON.parse(p.standalone_notes);return !!(n.__meta&&n.__meta.v===2&&s.v===2&&Array.isArray(s.notes));})()`) === true);
+
   /* ── gcalToMgc (E3): all-day exclusivo, desc sem rodapé, hora no fuso local ── */
   check('gcalToMgc: all-day de 1 dia não vira 2 dias (end exclusivo)',
     ev(`(function(){const e=gcalToMgc({id:'g1',start:{date:'2026-07-10'},end:{date:'2026-07-11'}});return e.date==='2026-07-10'&&e.dateEnd==='2026-07-10';})()`) === true);

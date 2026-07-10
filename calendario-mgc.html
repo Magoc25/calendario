@@ -2358,7 +2358,7 @@ body.large .sidebar-year{font-size:22px}
             </a>
             <button class="footer-link-btn pix-btn" id="pixBtn" title="Apoiar o projeto">☕ Apoiar</button>
             <button class="footer-link-btn" id="reviewsBtn" title="Ver avaliações">⭐ Avaliações</button>
-            <span id="appVersion" style="font-size:11px;color:var(--text);user-select:none">© MGC · v2.6.0</span>
+            <span id="appVersion" style="font-size:11px;color:var(--text);user-select:none">© MGC · v2.6.1</span>
           </span>
         </div>
       </div>
@@ -3045,6 +3045,7 @@ const AppState={
   top3Data:{},
   reviews:{},
   standaloneNotes:[],
+  standaloneNotesDel:{}, // Tombstones das notas avulsas: {id:deletedAtMs} — merge por id no sync (mesmo padrão das Listas)
   categories:[],
   lists:[],          // Aba Listas: [{id,title,createdAt,updatedAt,items:[{id,title,done,updatedAt}]}] — sem horário/purga
   listsDel:{},       // Tombstones de exclusão das Listas: {id:deletedAtMs} (listas e itens) — p/ sync mesclar sem ressuscitar/apagar
@@ -3213,10 +3214,11 @@ const safeColor=c=>/^(#[0-9a-fA-F]{3,8}|[a-zA-Z]+)$/.test(c||'')?c:'inherit';
 let _evMapCache={};
 let _allTagsCache=null;
 const invalidateEvMapCache=()=>{_evMapCache={};_allTagsCache=null;};
-// ── Gate do 1º pull (guia r16) ─────────────────────────────────
-// Um push antes do 1º syncFromCloud resolver subiria estado velho por cima de
-// dados mais novos da nuvem. Enquanto o gate está fechado, todo push agendado
-// vira um pull-merge-push (syncFromCloud decide o lado vencedor e mescla).
+// ── Pull-merge-push em TODO push (guia r16 + endurecimento v2.6.1) ─────────
+// Um push cego subiria estado velho por cima de dados mais novos da nuvem (foi o
+// vetor da perda de notas/configs quando um device desatualizado abria o app).
+// Todo push agendado vira um pull-merge-push: syncFromCloud decide o lado
+// vencedor e mescla eventos/listas/notas por id antes de subir.
 // _bootLocalTs congela o timestamp local de boot: saves feitos ANTES do 1º pull
 // não podem fazer o local "parecer mais novo" que a nuvem.
 let _cloudPullDone=false;
@@ -3224,7 +3226,7 @@ const _bootLocalTs=localStorage.getItem('cal_local_ts')||'0';
 function scheduleCloudPush(){
   if(!sbClient)return;
   clearTimeout(_cloudSaveTimer);
-  _cloudSaveTimer=setTimeout(()=>{_cloudPullDone?syncToCloud(true):syncFromCloud(true);},1500);
+  _cloudSaveTimer=setTimeout(()=>{syncFromCloud(true);},1500);
 }
 // Carimbo de edição por evento — base do merge por id no sync multi-device
 function touchEv(ev){if(ev)ev.localUpdatedAt=new Date().toISOString();}
@@ -5037,7 +5039,13 @@ document.getElementById('importFile').addEventListener('change',function(){
         AppState.events=imp.map(ev=>({...ev,localUpdatedAt:_nowIso}));
         AppState.eventsDel={};
         if(data.categoryColors)categoryColors=data.categoryColors;
-        if(data.notes){notesStore=data.notes;saveNotes();} // antes o import nem persistia as notas (cal_notes ficava velho)
+        if(data.notes){
+          // Restauração explícita: recarimba todas as chaves como recentes e zera
+          // tombstones p/ o merge do sync não reapagar o que foi restaurado (r12)
+          notesStore={...data.notes};delete notesStore.__meta;
+          const _nMs=Date.now();notesMeta={};Object.keys(notesStore).forEach(k=>notesMeta[k]=_nMs);notesDel={};
+          _persistNotes();
+        }
         if(Array.isArray(data.lists)){
           // Restauração explícita: recarimba como recente e zera tombstones p/ o sync não reapagar o importado
           const _now=Date.now();
@@ -5050,7 +5058,12 @@ document.getElementById('importFile').addEventListener('change',function(){
         if(Array.isArray(data.quickTasks)){AppState.quickTasks=data.quickTasks;saveQuickTasks();}
         if(data.reviews&&typeof data.reviews==='object'&&!Array.isArray(data.reviews)){AppState.reviews=data.reviews;localStorage.setItem('cal_reviews',JSON.stringify(AppState.reviews));}
         if(data.top3&&typeof data.top3==='object'&&!Array.isArray(data.top3)){AppState.top3Data=data.top3;saveTop3();}
-        if(Array.isArray(data.standaloneNotes)){AppState.standaloneNotes=data.standaloneNotes;saveStandaloneNotes();}
+        if(Array.isArray(data.standaloneNotes)){
+          // Restauração explícita: recarimba como recente e zera tombstones (r12, igual Listas)
+          const _snMs=Date.now();
+          AppState.standaloneNotes=data.standaloneNotes.map(n=>({...n,updatedAt:_snMs}));
+          AppState.standaloneNotesDel={};_persistStandaloneNotes();
+        }
         if(Array.isArray(data.calendars)&&data.calendars.length){calendars=data.calendars;saveCalendars();renderCalendarList();populateCalendarSelect();}
         if(Array.isArray(data.categories)&&data.categories.length){AppState.categories=data.categories;saveCategories();}
         if(data.routineChecks&&typeof data.routineChecks==='object'){
@@ -5096,8 +5109,35 @@ document.getElementById('exportIcsBtn').addEventListener('click',()=>{
 /* ═══════ NOTES SYSTEM ═══════ */
 let notesEvId=null,notesAutoSaveTimer=null;
 let notesStore={};
+let notesMeta={},notesDel={}; // carimbo por chave {k:ms} + tombstones {k:ms} — merge por chave no sync (v2.6.1)
 try{notesStore=JSON.parse(localStorage.getItem('cal_notes')||'{}')}catch(e){console.error('[MGC] Falha ao carregar notas de eventos:',e);}
-function saveNotes(){localStorage.setItem('cal_notes',JSON.stringify(notesStore));localStorage.setItem('cal_local_ts',new Date().toISOString());scheduleCloudPush();}
+delete notesStore.__meta; // chave reservada do formato de sync v2 — nunca é nota
+try{notesMeta=JSON.parse(localStorage.getItem('cal_notes_meta')||'{}')}catch(e){}
+try{notesDel=JSON.parse(localStorage.getItem('cal_notes_del')||'{}')}catch(e){}
+function _persistNotes(){
+  localStorage.setItem('cal_notes',JSON.stringify(notesStore));
+  localStorage.setItem('cal_notes_meta',JSON.stringify(notesMeta));
+  localStorage.setItem('cal_notes_del',JSON.stringify(notesDel));
+  localStorage.setItem('cal_local_ts',new Date().toISOString());
+  scheduleCloudPush();
+}
+function saveNotes(){
+  // Diff contra o último persistido: chave alterada/criada ganha carimbo; chave
+  // removida vira tombstone — assim o merge por chave do sync propaga edição e
+  // exclusão sem que um device com blob velho apague nota de outro.
+  try{
+    const prev=JSON.parse(localStorage.getItem('cal_notes')||'{}');delete prev.__meta;
+    const now=Date.now();
+    Object.keys(notesStore).forEach(k=>{
+      if(prev[k]!==notesStore[k])notesMeta[k]=now;
+      if(notesDel[k])delete notesDel[k]; // chave de volta (undo/restauração) anula a exclusão
+    });
+    Object.keys(prev).forEach(k=>{
+      if(!(k in notesStore)){notesDel[k]=now;delete notesMeta[k];}
+    });
+  }catch(e){}
+  _persistNotes();
+}
 function noteKey(evId,evDate){const ev=AppState.events.find(e=>e.id===evId);return(ev&&ev.rrule&&evDate)?evId+'#'+evDate:evId;}
 
 function openNotes(evId,evDate){
@@ -6857,11 +6897,15 @@ function applyRemoteListsMerge(row){
       if(Array.isArray(p))rl=p;                                          // formato antigo: só o array
       else if(p&&typeof p==='object'){rl=Array.isArray(p.lists)?p.lists:[];rd=(p.del&&typeof p.del==='object')?p.del:{};}
     }
+    const _before=JSON.stringify(AppState.lists);
     const mg=mergeListCollections(AppState.lists,AppState.listsDel,rl,rd);
     AppState.lists=mg.lists;AppState.listsDel=mg.del;
-    localStorage.setItem('cal_lists',JSON.stringify(AppState.lists));
+    const _after=JSON.stringify(AppState.lists);
+    localStorage.setItem('cal_lists',_after);
     localStorage.setItem('cal_lists_del',JSON.stringify(AppState.listsDel));
+    return _after!==_before;
   }catch(e){console.warn('[MGC] Falha ao mesclar listas remotas:',e);}
+  return false;
 }
 
 /* ── Merge de eventos (mesmo padrão das Listas): união por id + tombstones ──
@@ -6902,12 +6946,99 @@ function applyRemoteEventsMerge(row){
     AppState.events.forEach(ev=>{
       if(ev.gcalId&&rd[ev.id]&&rd[ev.id]>=_evUt(ev))gcalMarkDeleted(ev.gcalId);
     });
+    const _before=JSON.stringify(AppState.events);
     const mg=mergeEventCollections(AppState.events,AppState.eventsDel,re,rd);
     AppState.events=mg.events;AppState.eventsDel=mg.del;
     invalidateEvMapCache();
-    localStorage.setItem('cal_marlon_v8',JSON.stringify(AppState.events));
+    const _after=JSON.stringify(AppState.events);
+    localStorage.setItem('cal_marlon_v8',_after);
     localStorage.setItem('cal_events_del',JSON.stringify(AppState.eventsDel));
+    return _after!==_before;
   }catch(e){console.warn('[MGC] Falha ao mesclar eventos remotos:',e);}
+  return false;
+}
+
+/* ── Merge das notas avulsas (aba Notas): união por id + tombstones — mesmo
+   padrão r12 das Listas/eventos. Substitui o last-write-wins do blob
+   standalone_notes, que era o vetor da perda de notas quando um device com
+   blob velho "vencia" o push (Mac/Safari rodando v2.3.1 em cache, jul/2026).
+   Conflito de mesmo id: vence o updatedAt mais recente; exclusão propaga por
+   tombstone e só remove se for >= à última edição. ── */
+function mergeStandaloneNoteCollections(localNotes,localDel,remoteNotes,remoteDel){
+  localNotes=Array.isArray(localNotes)?localNotes:[];
+  remoteNotes=Array.isArray(remoteNotes)?remoteNotes:[];
+  localDel=(localDel&&typeof localDel==='object')?localDel:{};
+  remoteDel=(remoteDel&&typeof remoteDel==='object')?remoteDel:{};
+  const del={...localDel};
+  for(const id in remoteDel){del[id]=Math.max(del[id]||0,remoteDel[id]||0);}
+  const byId=new Map();localNotes.forEach(n=>byId.set(n.id,n));
+  const novas=[];
+  remoteNotes.forEach(r=>{const cur=byId.get(r.id);
+    if(!cur){byId.set(r.id,r);novas.push(r.id);}
+    else if(_ut(r)>_ut(cur))byId.set(r.id,r);});
+  const ordem=[...novas,...localNotes.map(n=>n.id)],vis=new Set(),merged=[]; // novas (do remoto) no topo, como o unshift
+  ordem.forEach(id=>{if(!vis.has(id)){vis.add(id);merged.push(byId.get(id));}});
+  const kept=merged.filter(n=>!(del[n.id]&&del[n.id]>=_ut(n)));
+  return {notes:kept,del:_pruneDel(del)};
+}
+// Mescla notas avulsas de um registro remoto (formato novo {v:2,notes,del} ou array antigo).
+// Retorna true se o estado local mudou (o chamador decide se re-renderiza).
+function applyRemoteStandaloneNotesMerge(row){
+  try{
+    if(!row||!row.standalone_notes)return false;
+    let rn=[],rd={};
+    const p=JSON.parse(row.standalone_notes);
+    if(Array.isArray(p))rn=p;                                              // formato antigo: só o array
+    else if(p&&typeof p==='object'){rn=Array.isArray(p.notes)?p.notes:[];rd=(p.del&&typeof p.del==='object')?p.del:{};}
+    const _before=JSON.stringify(AppState.standaloneNotes);
+    const mg=mergeStandaloneNoteCollections(AppState.standaloneNotes,AppState.standaloneNotesDel,rn,rd);
+    AppState.standaloneNotes=mg.notes;AppState.standaloneNotesDel=mg.del;
+    const _after=JSON.stringify(AppState.standaloneNotes);
+    localStorage.setItem('cal_standalone_notes',_after);
+    localStorage.setItem('cal_standalone_notes_del',JSON.stringify(AppState.standaloneNotesDel));
+    return _after!==_before;
+  }catch(e){console.warn('[MGC] Falha ao mesclar notas avulsas remotas:',e);return false;}
+}
+
+/* ── Merge das notas por data (notesStore): por chave + carimbo + tombstones.
+   Formato no sync: o próprio objeto de notas + chave reservada __meta
+   ({v:2,ts:{k:ms},del:{k:ms}}) — cliente antigo ignora a __meta (nunca casa com
+   chave de evento/data) e continua vendo as notas normalmente.
+   preferRemote decide o empate de chaves sem carimbo (dados pré-v2.6.1):
+   true no ramo "nuvem mais nova" do pull, false no ramo de push. ── */
+function applyRemoteNotesMerge(row,preferRemote){
+  try{
+    if(!row||!row.notes)return false;
+    const p=JSON.parse(row.notes);
+    if(!p||typeof p!=='object'||Array.isArray(p))return false;
+    const rMeta=(p.__meta&&typeof p.__meta==='object')?p.__meta:{};
+    const rTs=(rMeta.ts&&typeof rMeta.ts==='object')?rMeta.ts:{};
+    const rDel=(rMeta.del&&typeof rMeta.del==='object')?rMeta.del:{};
+    const remote={...p};delete remote.__meta;
+    const del={...notesDel};
+    for(const k in rDel){del[k]=Math.max(del[k]||0,rDel[k]||0);}
+    const out={},meta={};
+    new Set([...Object.keys(notesStore),...Object.keys(remote)]).forEach(k=>{
+      const lHas=(k in notesStore),rHas=(k in remote);
+      const lts=notesMeta[k]||0,rts=rTs[k]||0;
+      let v,ts;
+      if(lHas&&rHas){
+        if(rts>lts||(rts===lts&&preferRemote&&remote[k]!==notesStore[k]))v=remote[k];
+        else v=notesStore[k];
+        ts=Math.max(lts,rts);
+      } else if(lHas){v=notesStore[k];ts=lts;}
+      else{v=remote[k];ts=rts;}
+      if(del[k]&&del[k]>=ts)return; // exclusão vigente vence
+      out[k]=v;if(ts)meta[k]=ts;
+    });
+    const _before=JSON.stringify(notesStore);
+    notesStore=out;notesMeta=meta;notesDel=_pruneDel(del);
+    const _after=JSON.stringify(notesStore);
+    localStorage.setItem('cal_notes',_after);
+    localStorage.setItem('cal_notes_meta',JSON.stringify(notesMeta));
+    localStorage.setItem('cal_notes_del',JSON.stringify(notesDel));
+    return _after!==_before;
+  }catch(e){console.warn('[MGC] Falha ao mesclar notas remotas:',e);return false;}
 }
 function makeListReorderable(container,itemSelector,idAttr,reorder){
   if(!container)return;
@@ -7797,11 +7928,28 @@ function renderReviewView(){
 /* ═══════ STANDALONE NOTES ═══════ */
 let _noteDragId=null,_noteDragGhost=null,_noteDragTimer=null,_noteDragTarget=null,_noteTouchX=0,_noteTouchY=0;
 try{AppState.standaloneNotes=JSON.parse(localStorage.getItem('cal_standalone_notes')||'[]');}catch(e){console.error('[MGC] Falha ao carregar notas:',e);toast('⚠️ Erro ao carregar notas — verifique o armazenamento local.');}
+try{AppState.standaloneNotesDel=JSON.parse(localStorage.getItem('cal_standalone_notes_del')||'{}');}catch(e){}
 
-function saveStandaloneNotes(){
+function _persistStandaloneNotes(){
   localStorage.setItem('cal_standalone_notes',JSON.stringify(AppState.standaloneNotes));
+  localStorage.setItem('cal_standalone_notes_del',JSON.stringify(AppState.standaloneNotesDel||{}));
   localStorage.setItem('cal_local_ts',new Date().toISOString());
   scheduleCloudPush();
+}
+function saveStandaloneNotes(){
+  // Tombstones por diff: id que sumiu desde o último save ganha carimbo de
+  // exclusão (o merge do sync propaga sem ressuscitar); id que voltou (undo)
+  // perde o tombstone e é recarimbado como recente — senão o tombstone que já
+  // subiu à nuvem reapagaria a nota restaurada no próximo merge.
+  try{
+    const prev=JSON.parse(localStorage.getItem('cal_standalone_notes')||'[]');
+    const cur=new Set(AppState.standaloneNotes.map(n=>n.id));
+    const now=Date.now();
+    AppState.standaloneNotesDel=AppState.standaloneNotesDel||{};
+    if(Array.isArray(prev))prev.forEach(n=>{if(n&&n.id&&!cur.has(n.id))AppState.standaloneNotesDel[n.id]=now;});
+    AppState.standaloneNotes.forEach(n=>{if(AppState.standaloneNotesDel[n.id]){n.updatedAt=now;delete AppState.standaloneNotesDel[n.id];}});
+  }catch(e){}
+  _persistStandaloneNotes();
 }
 
 let _editingNoteId=null,_neAutoSave=null;
@@ -8444,7 +8592,7 @@ function getLocalPayload(){
   const rchecks=collectRoutineChecks();
   return {
     events: JSON.stringify({v:2,events:AppState.events,del:AppState.eventsDel||{}}), // v2: tombstones p/ merge por id (Array.isArray no pull dá retrocompat)
-    notes: JSON.stringify(notesStore),
+    notes: JSON.stringify({...notesStore,__meta:{v:2,ts:notesMeta,del:notesDel}}), // __meta embutida: cliente antigo ignora e segue vendo as notas
     category_colors: JSON.stringify(categoryColors),
     categories: JSON.stringify(AppState.categories), // nomes/ícones — as CORES já sincronizavam mas as categorias não (coluna nova; fallback r9 abaixo cobre tabela antiga)
     calendars: JSON.stringify(calendars),
@@ -8453,7 +8601,7 @@ function getLocalPayload(){
     quick_tasks: JSON.stringify(AppState.quickTasks),
     reviews: JSON.stringify(AppState.reviews),
     top3: JSON.stringify(AppState.top3Data),
-    standalone_notes: JSON.stringify(AppState.standaloneNotes),
+    standalone_notes: JSON.stringify({v:2,notes:AppState.standaloneNotes,del:AppState.standaloneNotesDel||{}}), // v2: tombstones p/ merge por id
     lists: JSON.stringify({v:2,lists:AppState.lists,del:AppState.listsDel||{}}), // v2: inclui tombstones p/ merge no sync
     list_templates: JSON.stringify(AppState.listTemplates||[]), // modelos de lista (coluna nova; fallback r9 cobre tabela antiga)
     routine_checks: JSON.stringify(rchecks),
@@ -8465,13 +8613,13 @@ function applyRemotePayload(row){
   if(!row) return;
   invalidateEvMapCache();
   try{
-    const remoteNotes=JSON.parse(row.notes||'{}');
     const remoteCatColors=JSON.parse(row.category_colors||'{}');
     const remoteCalendars=JSON.parse(row.calendars||'null');
     // Eventos: merge por id + tombstones (persiste cal_marlon_v8/cal_events_del internamente).
     // Exclusão em outro device propaga por tombstone explícito — ausência não apaga.
     applyRemoteEventsMerge(row);
-    notesStore=remoteNotes;
+    // Notas por data: merge por chave + carimbo (persiste cal_notes/_meta/_del internamente).
+    applyRemoteNotesMerge(row,true);
     categoryColors=remoteCatColors;
     if(remoteCalendars&&remoteCalendars.length)calendars=remoteCalendars;
     if(row.theme)applyTheme(row.theme);
@@ -8480,18 +8628,17 @@ function applyRemotePayload(row){
     if(row.quick_tasks)try{const q=JSON.parse(row.quick_tasks);if(Array.isArray(q))AppState.quickTasks=q;}catch(e){}
     if(row.reviews)try{const rv=JSON.parse(row.reviews);if(rv&&typeof rv==='object')AppState.reviews=rv;}catch(e){}
     if(row.top3)try{const t3=JSON.parse(row.top3);if(t3&&typeof t3==='object')AppState.top3Data=t3;}catch(e){}
-    if(row.standalone_notes)try{const sn=JSON.parse(row.standalone_notes);if(Array.isArray(sn))AppState.standaloneNotes=sn;}catch(e){}
+    applyRemoteStandaloneNotesMerge(row); // aba Notas: merge por id + tombstones (persiste internamente)
     if(row.list_templates)try{const lt=JSON.parse(row.list_templates);if(Array.isArray(lt)){AppState.listTemplates=lt;localStorage.setItem('cal_list_templates',row.list_templates);}}catch(e){}
     applyRemoteListsMerge(row); // mescla por id + tombstones (persiste cal_lists/cal_lists_del internamente)
-    // Persist locally (eventos já persistidos pelo merge acima)
-    localStorage.setItem('cal_notes',row.notes||'{}');
+    // Persist locally (eventos/notas/listas já persistidos pelos merges acima)
     localStorage.setItem('cal_catcolors',row.category_colors||'{}');
     if(remoteCalendars)localStorage.setItem('cal_calendars',row.calendars);
     if(row.routines)localStorage.setItem('cal_routines',row.routines);
     if(row.quick_tasks)localStorage.setItem('cal_qtasks',row.quick_tasks);
     if(row.reviews)localStorage.setItem('cal_reviews',row.reviews);
     if(row.top3)localStorage.setItem('cal_top3',row.top3);
-    if(row.standalone_notes)localStorage.setItem('cal_standalone_notes',row.standalone_notes);
+    // cal_standalone_notes já persistido por applyRemoteStandaloneNotesMerge (merge por id, não substituição)
     // cal_lists / cal_lists_del já persistidos por applyRemoteListsMerge (merge por id, não substituição)
     if(row.routine_checks)try{
       const rc=JSON.parse(row.routine_checks);
@@ -8553,11 +8700,13 @@ async function syncFromCloud(silent=false){
         if(!silent)toast('✓ Dados atualizados da nuvem!');
       } else {
         // Local é mais recente (inclui alterações não enviadas antes de fechar) — envia para nuvem.
-        // Antes, mescla eventos e listas remotos: assim um device com estado vazio/antigo não
-        // sobrescreve (push) o que outro device criou — ele incorpora e reenvia o conjunto completo.
-        applyRemoteEventsMerge(data);
-        applyRemoteListsMerge(data);
-        render();
+        // Antes, mescla eventos, listas e notas remotos: assim um device com estado vazio/antigo
+        // não sobrescreve (push) o que outro device criou — ele incorpora e reenvia o conjunto completo.
+        // render() só quando o merge trouxe algo novo do remoto: este ramo roda a cada push
+        // debounced e um re-render gratuito derrubaria o cursor de quem está digitando.
+        const _ch=[applyRemoteEventsMerge(data),applyRemoteListsMerge(data),
+                   applyRemoteStandaloneNotesMerge(data),applyRemoteNotesMerge(data,false)].some(Boolean);
+        if(_ch)render();
         await syncToCloud(true);
         if(!silent)toast('✓ Nuvem atualizada com dados locais!');
       }
@@ -8575,6 +8724,17 @@ async function syncFromCloud(silent=false){
 
 // Timer do push debounced à nuvem (agendado por scheduleCloudPush)
 let _cloudSaveTimer=null;
+
+// Pull ao voltar ao app (troca de aba/janela/desminimizar): estreita a janela de
+// dois devices abertos ao mesmo tempo — mudanças de outro device chegam sem
+// depender de reabrir o app. Guardas: só após o 1º pull do boot e no máx. 1x/min.
+let _lastVisPull=0;
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState!=='visible'||!sbClient||!_cloudPullDone)return;
+  if(Date.now()-_lastVisPull<60000)return;
+  _lastVisPull=Date.now();
+  syncFromCloud(true);
+});
 
 // Helper: pré-preenche formulário Supabase com valores salvos
 const _prefillSbForm=()=>{
@@ -9696,7 +9856,7 @@ try{localStorage.removeItem('mgc_app_version');}catch(e){} // remove o cache de 
 /* ── Verificação de nova versão via Supabase ── */
 (async()=>{
   if(!revClient)return;
-  const LOCAL_VERSION='2.6.0';
+  const LOCAL_VERSION='2.6.1';
   const CACHE_KEY='mgc_update_check';
   const CACHE_TTL=24*60*60*1000; // 24 horas
   let cached=null;try{cached=JSON.parse(localStorage.getItem(CACHE_KEY)||'null');}catch(e){} // valor corrompido não pode matar o banner de update
@@ -9735,7 +9895,7 @@ try{localStorage.removeItem('mgc_app_version');}catch(e){} // remove o cache de 
   if(!deviceId){deviceId=crypto.randomUUID();localStorage.setItem('calendario_device_id',deviceId);}
   try{
     await revClient.from('app_pings').upsert(
-      {app_name:'Calendario MGC',version:'2.6.0',device_id:deviceId,ping_date:today},
+      {app_name:'Calendario MGC',version:'2.6.1',device_id:deviceId,ping_date:today},
       {onConflict:'app_name,device_id,ping_date',ignoreDuplicates:true}
     );
     localStorage.setItem(PING_KEY,today);

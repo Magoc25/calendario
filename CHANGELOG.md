@@ -5,6 +5,23 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 
 ---
 
+## [2.6.1] — Julho 2026
+
+Release de proteção do sync — elimina o vetor de perda de notas/configurações quando um dispositivo desatualizado (ou aberto há muito tempo) sobrescrevia na nuvem o que outro dispositivo tinha acabado de criar (ocorrido real: Safari/macOS com versão antiga em cache apagou nota e configurações feitas no Windows).
+
+### 🛡️ Sync — merge em vez de sobrescrever
+- **Notas da aba Notas** agora sincronizam por **merge por id + tombstones** (mesmo padrão das Listas e dos eventos): nenhum dispositivo apaga a nota que outro criou; conflito na mesma nota vence a edição mais recente; exclusão propaga sem "ressuscitar" a nota.
+- **Notas por data/evento** sincronizam por **merge por chave com carimbo de edição** e tombstones — edição e exclusão propagam por chave, sem last-write-wins do bloco inteiro. Formato retrocompatível: dispositivo em versão antiga continua vendo as notas normalmente.
+- **Todo envio à nuvem virou pull-merge-push** — antes de subir, o app baixa o estado da nuvem e mescla eventos, listas e notas; um dispositivo com dados velhos incorpora o que há de novo em vez de sobrescrever.
+- **Sincronização ao voltar ao app** — trocar de aba/janela e voltar dispara um pull (no máx. 1×/min): mudanças feitas em outro dispositivo chegam sem precisar reabrir.
+
+> 💡 **Dispositivo ainda em versão antiga?** Abra-o, aplique a atualização (banner "Atualizar") e **confira a versão no rodapé antes de editar dados** — versões ≤2.3.1 ainda podem sobrescrever a nuvem na primeira abertura (bug corrigido na 2.4.0).
+
+### 🔧 Infra
+- Smoke-test ampliado para 91 checagens (7 novas cobrindo os merges de notas).
+
+---
+
 ## [2.6.0] — Julho 2026
 
 Aba Listas turbinada: arquivar, limpar concluídos, modelos e — o destaque — fixar a lista inteira na aba Hoje.

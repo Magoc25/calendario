@@ -6,7 +6,7 @@ Desenvolvido por **Marlon Gomes da Costa (MGC Dev)**
 
 > ⚠️ **Este é um projeto pessoal**, desenvolvido de forma independente pelo autor. Não representa, não é financiado e não tem vínculo institucional com o IFMA ou qualquer outra organização. O autor é professor do IFMA Campus São Raimundo das Mangabeiras, mas o Calendário MGC é uma iniciativa exclusivamente pessoal.
 
-[![Versão](https://img.shields.io/badge/versão-2.6.0-blue)](./CHANGELOG.md)
+[![Versão](https://img.shields.io/badge/versão-2.6.1-blue)](./CHANGELOG.md)
 [![Licença](https://img.shields.io/badge/licença-não%20comercial-orange)](#licença)
 [![PIX](https://img.shields.io/badge/apoie-PIX-brightgreen)](#apoiar)
 [![Dispositivos ativos](https://img.shields.io/badge/dynamic/json?url=https://raw.githubusercontent.com/Magoc25/calendario/main/stats.json&query=$.active_30d&label=dispositivos%20ativos%20(30d)&color=blue&suffix=%20dispositivos)](./stats.json)
