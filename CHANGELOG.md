@@ -5,6 +5,17 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 
 ---
 
+## [2.6.3] — Julho 2026
+
+### 🐛 Corrigido — banner de atualização voltando a cada abertura do app (Safari/macOS)
+- O Safari pode "ressuscitar" um Service Worker em espera a **cada abertura fria** do app — muitas vezes **idêntico** ao que já está rodando (ou uma cópia antiga do cache). O app tratava "existe worker esperando" como "existe atualização" e mostrava o banner de novo, mesmo com tudo em dia. Agora a página faz um **handshake de versão** com os dois workers antes de avisar: cópia idêntica é ativada em silêncio (sem banner e sem recarregar), cópia mais antiga é ignorada, e o banner só aparece quando a versão em espera é **realmente mais nova**.
+- Este banner pode aparecer **uma última vez** ao receber esta atualização (o worker antigo ainda não sabe responder ao handshake) — clique em Atualizar e pronto.
+
+### 🔧 Infra
+- Smoke-test: 94 → 96 checagens.
+
+---
+
 ## [2.6.2] — Julho 2026
 
 ### 🐛 Corrigido — banner "Atualização baixada" persistente no Safari/macOS

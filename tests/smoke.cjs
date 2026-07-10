@@ -429,6 +429,10 @@ function run() {
   ev(`_showSwUpdateBanner()`);
   check('banner respeita o snooze (não re-aparece)', !$('swUpdateBanner'));
   ev(`localStorage.removeItem('mgc_sw_banner_snooze')`);
+  check('_swCacheNum extrai o número do CACHE_NAME (handshake do banner)',
+    ev(`_swCacheNum('cal-mgc-v209')`) === 209 && ev(`_swCacheNum('lixo')`) === null);
+  check('_maybeShowSwUpdateBanner sem SW registrado não quebra nem exibe banner',
+    ev(`(function(){try{_maybeShowSwUpdateBanner();return !document.getElementById('swUpdateBanner');}catch(e){return false;}})()`) === true);
 
   /* ── gcalToMgc (E3): all-day exclusivo, desc sem rodapé, hora no fuso local ── */
   check('gcalToMgc: all-day de 1 dia não vira 2 dias (end exclusivo)',

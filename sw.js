@@ -1,12 +1,12 @@
 /* ═══════════════════════════════════════════════════════
-   Calendário MGC — Service Worker v2.6.2
+   Calendário MGC — Service Worker v2.6.3
    Responsável por:
    1. Cache offline (arquivos do app)
    2. Notificações de alertas em segundo plano
    3. Periodic Background Sync (Android Chrome)
 ═══════════════════════════════════════════════════════ */
 
-const CACHE_NAME = 'cal-mgc-v209';
+const CACHE_NAME = 'cal-mgc-v210';
 const DB_NAME = 'cal-mgc-sw';
 const DB_VERSION = 1;
 const STORE_ALERTS = 'pending_alerts';
@@ -81,6 +81,15 @@ self.addEventListener('message', async event => {
     // App pediu p/ aplicar a atualização (botão Atualizar) — ativa o SW novo;
     // a página escuta controllerchange e recarrega uma única vez.
     self.skipWaiting();
+    return;
+  }
+
+  if (type === 'GET_VERSION') {
+    // Handshake do banner de update: a página pergunta a versão a um worker
+    // específico (ativo E em waiting) p/ só oferecer o update quando o waiting
+    // for realmente mais novo — o Safari ressuscita um waiting idêntico ao
+    // ativo a cada abertura fria, e sem isto o banner voltava sempre.
+    event.source?.postMessage({ type: 'SW_VERSION', cache: CACHE_NAME, tag: data?.tag });
     return;
   }
 

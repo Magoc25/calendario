@@ -2358,7 +2358,7 @@ body.large .sidebar-year{font-size:22px}
             </a>
             <button class="footer-link-btn pix-btn" id="pixBtn" title="Apoiar o projeto">☕ Apoiar</button>
             <button class="footer-link-btn" id="reviewsBtn" title="Ver avaliações">⭐ Avaliações</button>
-            <span id="appVersion" style="font-size:11px;color:var(--text);user-select:none">© MGC · v2.6.2</span>
+            <span id="appVersion" style="font-size:11px;color:var(--text);user-select:none">© MGC · v2.6.3</span>
           </span>
         </div>
       </div>
@@ -9680,10 +9680,46 @@ function getActiveSW(){
    apagava o cache antigo com a página velha ainda aberta (updates quebrados /
    travamento no Safari). */
 let _swReloading=false;
+let _swSilentActivate=false; // ativação silenciosa de um waiting IDÊNTICO ao ativo (ghost do Safari) — não recarregar
 function _swListenControllerChange(){
   navigator.serviceWorker.addEventListener('controllerchange',()=>{
+    if(_swSilentActivate){_swSilentActivate=false;return;}
     if(_swReloading)return;_swReloading=true;location.reload();
   });
+}
+/* ── Handshake de versão worker↔página (cura o banner fantasma do Safari) ──
+   O Safari/macOS pode "ressuscitar" um worker em waiting a CADA abertura fria
+   do app — muitas vezes idêntico ao ativo, ou uma cópia velha do cache HTTP.
+   "Existe waiting" NÃO significa "existe update" lá. Antes de exibir o banner,
+   perguntamos o CACHE_NAME aos DOIS workers (GET_VERSION → SW_VERSION):
+   waiting == ativo → ghost: ativa em silêncio (sem banner, sem reload);
+   waiting <  ativo → sw.js velho do cache HTTP: não oferecer downgrade;
+   waiting >  ativo (ou versão desconhecida — SW antigo sem handshake) → banner. */
+function _swQueryVersion(worker){
+  return new Promise(resolve=>{
+    if(!worker){resolve(null);return;}
+    const tag='v'+Math.random().toString(36).slice(2);
+    const to=setTimeout(()=>{navigator.serviceWorker.removeEventListener('message',onMsg);resolve(null);},800);
+    function onMsg(e){
+      if(e.data?.type==='SW_VERSION'&&e.data.tag===tag){
+        clearTimeout(to);navigator.serviceWorker.removeEventListener('message',onMsg);resolve(e.data.cache||null);
+      }
+    }
+    navigator.serviceWorker.addEventListener('message',onMsg);
+    try{worker.postMessage({type:'GET_VERSION',data:{tag}});}catch(e){clearTimeout(to);navigator.serviceWorker.removeEventListener('message',onMsg);resolve(null);}
+  });
+}
+const _swCacheNum=c=>{const m=/v(\d+)$/.exec(c||'');return m?+m[1]:null;};
+async function _maybeShowSwUpdateBanner(){
+  const w=_swReg&&_swReg.waiting;
+  if(!w||!navigator.serviceWorker.controller)return;
+  const[wc,ac]=await Promise.all([_swQueryVersion(w),_swQueryVersion(_swReg.active)]);
+  const wn=_swCacheNum(wc),an=_swCacheNum(ac);
+  if(wn!=null&&an!=null){
+    if(wn===an){_swSilentActivate=true;w.postMessage({type:'SKIP_WAITING'});dlog('[PWA] waiting idêntico ao ativo ('+wc+') — ativado em silêncio');return;}
+    if(wn<an){dlog('[PWA] waiting mais antigo ('+wc+' < '+ac+') — banner suprimido');return;}
+  }
+  _showSwUpdateBanner();
 }
 function _showSwUpdateBanner(){
   if(document.getElementById('swUpdateBanner'))return;
@@ -9735,14 +9771,14 @@ async function registerSW(){
     _swReg=await navigator.serviceWorker.register('./sw.js',{scope:'./'});
     dlog('[PWA] Service Worker registrado, state:',_swReg.active?.state||'installing');
     _swListenControllerChange();
-    // Atualização já baixada em visita anterior (SW em waiting) → oferece aplicar
-    if(_swReg.waiting&&navigator.serviceWorker.controller)_showSwUpdateBanner();
-    // Atualização encontrada durante esta sessão → banner quando terminar de instalar
+    // Atualização já baixada em visita anterior (SW em waiting) → handshake decide se oferece
+    _maybeShowSwUpdateBanner();
+    // Atualização encontrada durante esta sessão → handshake quando terminar de instalar
     _swReg.addEventListener('updatefound',()=>{
       const nw=_swReg.installing;
       if(!nw)return;
       nw.addEventListener('statechange',()=>{
-        if(nw.state==='installed'&&navigator.serviceWorker.controller)_showSwUpdateBanner();
+        if(nw.state==='installed'&&navigator.serviceWorker.controller)_maybeShowSwUpdateBanner();
       });
     });
 
@@ -9871,7 +9907,7 @@ try{localStorage.removeItem('mgc_app_version');}catch(e){} // remove o cache de 
 /* ── Verificação de nova versão via Supabase ── */
 (async()=>{
   if(!revClient)return;
-  const LOCAL_VERSION='2.6.2';
+  const LOCAL_VERSION='2.6.3';
   const CACHE_KEY='mgc_update_check';
   const CACHE_TTL=24*60*60*1000; // 24 horas
   let cached=null;try{cached=JSON.parse(localStorage.getItem(CACHE_KEY)||'null');}catch(e){} // valor corrompido não pode matar o banner de update
@@ -9910,7 +9946,7 @@ try{localStorage.removeItem('mgc_app_version');}catch(e){} // remove o cache de 
   if(!deviceId){deviceId=crypto.randomUUID();localStorage.setItem('calendario_device_id',deviceId);}
   try{
     await revClient.from('app_pings').upsert(
-      {app_name:'Calendario MGC',version:'2.6.2',device_id:deviceId,ping_date:today},
+      {app_name:'Calendario MGC',version:'2.6.3',device_id:deviceId,ping_date:today},
       {onConflict:'app_name,device_id,ping_date',ignoreDuplicates:true}
     );
     localStorage.setItem(PING_KEY,today);
