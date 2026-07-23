@@ -1,12 +1,12 @@
 /* ═══════════════════════════════════════════════════════
-   Rumo (antes "Calendário MGC") — Service Worker v2.6.3
+   Rumo (antes "Calendário MGC") — Service Worker v2.7.0
    Responsável por:
    1. Cache offline (arquivos do app)
    2. Notificações de alertas em segundo plano
    3. Periodic Background Sync (Android Chrome)
 ═══════════════════════════════════════════════════════ */
 
-const CACHE_NAME = 'cal-mgc-v212';
+const CACHE_NAME = 'cal-mgc-v213';
 const DB_NAME = 'cal-mgc-sw';
 const DB_VERSION = 1;
 const STORE_ALERTS = 'pending_alerts';

@@ -5,6 +5,17 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 
 ---
 
+## [2.7.0] — Julho 2026
+
+O app tem um novo nome: **Rumo** 🧭 — mesma agenda, novo rumo.
+
+### 🎨 Identidade
+- **Novo nome "Rumo"** (antes "Calendário MGC") — aparece no título da aba/janela, no nome do app instalado (barra de tarefas / tela inicial) e nos textos internos. **Nada muda no uso**: o endereço, seus dados, a sincronização e as integrações continuam exatamente os mesmos.
+- **Novo ícone** — calendário com bússola, na mesma paleta azul do app.
+- 💡 **Para o atalho já instalado trocar de nome e ícone:** aplique esta atualização (banner "Atualizar"), depois desinstale e reinstale o app (menu do navegador → Instalar). Ao desinstalar, **não marque "limpar também os dados"** — isso apagaria os dados locais salvos no navegador.
+
+---
+
 ## [2.6.3] — Julho 2026
 
 ### 🐛 Corrigido — banner de atualização voltando a cada abertura do app (Safari/macOS)
