@@ -1,7 +1,7 @@
 {
-  "name": "Calendário MGC",
-  "short_name": "Cal MGC",
-  "description": "Calendário pessoal com agenda, rotinas, notas e sincronização em nuvem",
+  "name": "Rumo",
+  "short_name": "Rumo",
+  "description": "Rumo — calendário pessoal com agenda, rotinas, notas e sincronização em nuvem",
   "start_url": "./calendario-mgc.html",
   "scope": "./",
   "display": "standalone",
