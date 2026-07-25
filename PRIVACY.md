@@ -136,6 +136,15 @@ O Calendário MGC tem um modelo de distribuição **descentralizado** que afeta 
 | **Supabase** (infraestrutura) | Todos os dados das tabelas | Hospedar banco de dados | 🇺🇸 EUA |
 | **GitHub** (hospedagem) | Apenas código-fonte público | Hospedar o app web | 🇺🇸 EUA |
 
+### Compartilhamento que **você** decide fazer (Camada 3 — participantes de evento)
+
+Ao preencher o campo **Participantes (e-mail)** de um evento e sincronizar com o Google Agenda, **você** compartilha aquele evento (título, data, horário, local e descrição) com as pessoas que listou: o Google envia o convite para a agenda de cada uma.
+
+- É uma ação **explícita e por evento** — nada é compartilhado sem você digitar o e-mail.
+- O app pede ao Google que os convidados **não vejam o e-mail uns dos outros** (`guestsCanSeeOtherGuests:false`) e **não possam convidar terceiros**.
+- Quem controla esse tratamento é **você** (é a sua conta Google que emite o convite); o desenvolvedor **não** recebe cópia dos e-mails nem do evento.
+- Remover um participante e sincronizar de novo retira a pessoa do evento no Google; o convite já entregue no e-mail dela, porém, não pode ser "desenviado".
+
 ### Não compartilhamos com:
 
 - ❌ Anunciantes
@@ -176,6 +185,7 @@ Se você configurar sincronização via **Supabase próprio** ou **Google Calend
 - Você autoriza a integração (OAuth ou inserção de chaves)
 - **Você é o controlador desses dados**
 - **Você é responsável por:** termos de uso desses serviços, configuração de segurança, gerenciamento de credenciais
+- Se usar **Participantes (e-mail)** em eventos, você também é responsável por ter base legal para tratar o e-mail dessas pessoas e por avisá-las — ver a seção 5
 
 > ℹ️ Recomendamos que você leia:
 > - [Política de Privacidade do Supabase](https://supabase.com/privacy)

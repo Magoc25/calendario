@@ -448,6 +448,94 @@ function run() {
   check('gcalMeet extrai hangoutLink e entryPoint de vídeo',
     ev(`gcalMeet({hangoutLink:'https://meet.google.com/abc'})==='https://meet.google.com/abc' && gcalMeet({conferenceData:{entryPoints:[{entryPointType:'video',uri:'https://meet.google.com/xyz'}]}})==='https://meet.google.com/xyz'`) === true);
 
+  /* ── Participantes → attendees do Google (alerta em grupo, Fase 1) ── */
+  check('mgcToGcal: participantes viram attendees com privacidade fechada',
+    ev(`(function(){
+      const o=mgcToGcal({title:'x',date:'2026-08-01',participants:['a@x.com','b@y.org']});
+      return JSON.stringify(o.attendees)==='[{"email":"a@x.com"},{"email":"b@y.org"}]'
+        && o.guestsCanSeeOtherGuests===false && o.guestsCanInviteOthers===false;
+    })()`) === true);
+  check('mgcToGcal: sem participantes não emite attendees (não vaza campo)',
+    ev(`(function(){const o=mgcToGcal({title:'x',date:'2026-08-01'});
+      return !('attendees' in o)&&!('guestsCanSeeOtherGuests' in o);})()`) === true);
+  check('gcalToMgc: evento de convite → gcalIsGuest e participantes sem o próprio usuário',
+    ev(`(function(){
+      const e=gcalToMgc({id:'gp1',start:{date:'2026-08-01'},end:{date:'2026-08-02'},
+        organizer:{email:'dono@x.com',self:false},
+        attendees:[{email:'dono@x.com'},{email:'eu@y.com',self:true},{email:'outro@z.com'}]});
+      return e.gcalIsGuest===true && e.gcalOrganizerEmail==='dono@x.com'
+        && JSON.stringify(e.participants)==='["dono@x.com","outro@z.com"]';
+    })()`) === true);
+  check('gcalToMgc: evento próprio (organizer.self) → gcalIsGuest false',
+    ev(`gcalToMgc({id:'gp2',start:{date:'2026-08-01'},end:{date:'2026-08-02'},organizer:{email:'eu@y.com',self:true}}).gcalIsGuest`) === false);
+  check('gcalToMgc: sem organizer → gcalIsGuest false (evento solo não vira convite)',
+    ev(`gcalToMgc({id:'gp3',start:{date:'2026-08-01'},end:{date:'2026-08-02'}}).gcalIsGuest`) === false);
+  check('shouldPushUpdate: bloqueia evento de convidado e libera o do dono',
+    ev(`(function(){
+      const base={gcalId:'g',title:'t',date:'2026-08-01',localUpdatedAt:'2026-08-02T10:00:00Z',gcalUpdated:'2026-08-01T10:00:00Z'};
+      return shouldPushUpdate({...base,gcalIsGuest:true})===false
+        && shouldPushUpdate({...base})===true
+        && shouldPushUpdate({...base,localUpdatedAt:'2026-07-01T10:00:00Z'})===false
+        && shouldPushUpdate({...base,gcalId:undefined})===false;
+    })()`) === true);
+  check('gcalNotifyParam: só manda sendUpdates=all quando há participantes',
+    ev(`gcalNotifyParam({participants:['a@x.com']})==='?sendUpdates=all' && gcalNotifyParam({})==='' && gcalNotifyParam({participants:[]})===''`) === true);
+  check('gcalOwnershipFields backfilla evento local já existente (guard não fica cego)',
+    ev(`(function(){
+      const local={id:'L1',gcalId:'g9',title:'t',date:'2026-08-01'};
+      Object.assign(local,gcalOwnershipFields({organizer:{email:'dono@x.com',self:false},attendees:[{email:'c@x.com'}]}));
+      return local.gcalIsGuest===true && JSON.stringify(local.participants)==='["c@x.com"]';
+    })()`) === true);
+  check('isValidEmail rejeita texto solto/incompleto e aceita e-mail real',
+    ev(`isValidEmail('foo')===false && isValidEmail('a@b')===false && isValidEmail('a b@c.com')===false && isValidEmail('a@b.com')===true`) === true);
+
+  /* UI dos chips: Enter cria, e-mail inválido não cria, e o save persiste */
+  ev(`openNew('2026-08-01')`);
+  const typePart = (val) => {
+    $('partInput').value = val;
+    ev(`document.getElementById('partInput').dispatchEvent(new window.KeyboardEvent('keydown',{key:'Enter',bubbles:true,cancelable:true}))`);
+  };
+  typePart('convidado@exemplo.com');
+  check('chip de participante criado ao pressionar Enter',
+    ev(`JSON.stringify(currentParticipants)`) === '["convidado@exemplo.com"]' &&
+    ev(`document.querySelectorAll('#partInputWrap .tag-pill').length`) === 1);
+  typePart('nao-e-email');
+  check('e-mail inválido não vira chip (evita 400 na API do Google)',
+    ev(`currentParticipants.length`) === 1);
+  check('e-mail inválido permanece no campo para o usuário corrigir',
+    $('partInput').value === 'nao-e-email');
+  $('partInput').value = '';
+  typePart('turma1@x.com, turma2@x.com; lixo turma3@x.com');
+  check('lista colada entra de uma vez e só o pedaço inválido sobra no campo',
+    ev(`JSON.stringify(currentParticipants)`) === '["convidado@exemplo.com","turma1@x.com","turma2@x.com","turma3@x.com"]' &&
+    $('partInput').value === 'lixo', $('partInput').value);
+  $('partInput').value = '';
+  ev(`currentParticipants=['convidado@exemplo.com'];renderPartPills()`);
+  typePart('MAIUSCULA@Exemplo.COM');
+  check('e-mail é normalizado em minúsculas',
+    ev(`currentParticipants[1]`) === 'maiuscula@exemplo.com');
+  ev(`document.querySelectorAll('#partInputWrap .tag-pill-remove')[1].click()`);
+  check('✕ do chip remove só aquele participante',
+    ev(`JSON.stringify(currentParticipants)`) === '["convidado@exemplo.com"]');
+  $('evTitle').value = 'Smoke Convite';
+  $('saveBtn').click();
+  check('save persiste ev.participants no evento',
+    ev(`JSON.stringify((AppState.events.find(e=>e.title==='Smoke Convite')||{}).participants)`) === '["convidado@exemplo.com"]');
+  /* G1: editar evento de convite preserva a flag de propriedade (senão o push dá 403) */
+  const guestId = ev(`(function(){
+    const e=AppState.events.find(x=>x.title==='Smoke Convite');
+    e.gcalId='gguest';e.gcalIsGuest=true;e.gcalOrganizerEmail='dono@x.com';save();return e.id;
+  })()`);
+  ev(`openEdit('${guestId}')`);
+  check('aviso de convidado aparece ao editar evento de convite',
+    ev(`document.getElementById('guestNoticeField').style.display`) !== 'none');
+  $('evTitle').value = 'Smoke Convite editado';
+  $('saveBtn').click();
+  check('editar evento de convite preserva gcalIsGuest/organizador (guard segue valendo)',
+    ev(`(function(){const e=AppState.events.find(x=>x.title==='Smoke Convite editado');
+      return !!e&&e.gcalIsGuest===true&&e.gcalOrganizerEmail==='dono@x.com'&&shouldPushUpdate(e)===false;})()`) === true);
+  ev(`AppState.events=AppState.events.filter(e=>!/^Smoke Convite/.test(e.title));save()`);
+
   /* ── Quick add (parser NL) ── */
   if (ev(`typeof window.quickAddParse==='function' || typeof quickAddParse==='function'`)) {
     check('quickAddParse é executável', true);

@@ -64,6 +64,8 @@ O Calendário MGC pode se integrar com:
 
 O desenvolvedor não é responsável por falhas, mudanças de política, interrupções ou custos decorrentes do uso desses serviços. O usuário deve consultar os termos de serviço de cada plataforma separadamente.
 
+**Convites a participantes.** Ao adicionar e-mails no campo **Participantes** de um evento, o usuário instrui a **sua própria conta Google** a enviar convites — é ele quem compartilha o evento e responde pelo uso dos e-mails de terceiros. O envio, a entrega e o horário do lembrete de cada convidado são do Google, não do app: o convidado é alertado pela **configuração da agenda dele**, e um destinatário sem conta Google recebe apenas o e-mail. Listas grandes podem ser barradas pelas regras antispam do Google.
+
 ---
 
 ## 4. Licença de Uso

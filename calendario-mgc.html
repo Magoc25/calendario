@@ -2478,6 +2478,16 @@ body.large .sidebar-year{font-size:22px}
       <div class="field" style="margin-bottom:0;margin-top:8px"><label>Repetir até</label><input type="date" id="evUntil"></div>
     </div>
     <div class="field"><label>Local</label><input type="text" id="evLocation" placeholder="Ex: Sala 01 — IFMA"></div>
+    <div class="field">
+      <label>Participantes <span style="font-weight:400;text-transform:none;font-size:9px">(e-mail · Enter para adicionar)</span></label>
+      <div class="tags-input-wrap" id="partInputWrap">
+        <input type="text" class="tags-real-input" id="partInput" placeholder="email@exemplo.com" inputmode="email" autocomplete="off" spellcheck="false">
+      </div>
+      <div class="color-hint">Ao adicionar um e-mail, o evento (título, horário, local, descrição) é compartilhado com essa pessoa pelo Google Agenda, e ela é alertada pela agenda dela. Sem conta Google: recebe o e-mail, mas não entra no app dela.</div>
+    </div>
+    <div class="field" id="guestNoticeField" style="display:none">
+      <div class="color-hint" style="font-style:normal;color:var(--accent)">👤 Você é convidado neste evento — o organizador é o dono, então alterações feitas aqui ficam só nos seus aparelhos.</div>
+    </div>
     <div class="field" id="meetLinkField" style="display:none"><label>Google Meet</label><div style="display:flex;align-items:center;gap:8px"><a id="meetLinkAnchor" href="#" target="_blank" rel="noopener" class="meet-modal-link">🎥 Entrar na videochamada</a><button id="meetLinkCopy" class="meet-copy-btn" title="Copiar link">📋</button></div></div>
     <div class="field"><label>Descrição</label><textarea id="evDesc" placeholder="Notas, links, observações…"></textarea></div>
     <div class="modal-actions">
@@ -3053,7 +3063,7 @@ const AppState={
 };
 // ─────────────────────────────────────────────────────
 let editingId=null,editingDate=null,selectedColor='#3b5bdb',isDone=false;
-let selectedCustomDays=new Set(),currentTags=[],activeTagFilter='';
+let selectedCustomDays=new Set(),currentTags=[],currentParticipants=[],activeTagFilter='';
 let categoryColors={};
 let _openListId=null; // aba Listas: id da lista aberta (null = visão geral de listas)
 let _listDrag=null,_listLpTimer=null,_listLpX=0,_listLpY=0,_listDragJustEnded=false; // drag&drop das Listas
@@ -4370,6 +4380,7 @@ document.addEventListener('click',e=>{if(!e.target.closest('.search-wrap'))docum
         ${safeMeetUrl(ev.meetLink)?`<div class="srp-row" style="align-items:center;gap:6px">🎥 <a href="${safeMeetUrl(ev.meetLink)}" target="_blank" rel="noopener" class="srp-meet-link" onclick="event.stopPropagation()">Entrar no Google Meet</a><button class="meet-copy-btn" data-meet="${safeMeetUrl(ev.meetLink)}" title="Copiar link">📋</button></div>`:''}
         ${cal&&cal.id!=='default'?`<div class="srp-row">🗂 <span>${esc(cal.name)}</span></div>`:''}
         ${(ev.tags||[]).length?`<div class="srp-row">🏷 <span>${ev.tags.map(t=>esc(t)).join(' ')}</span></div>`:''}
+        ${(ev.participants||[]).length?`<div class="srp-row">👥 <span>${ev.participants.map(p=>esc(p)).join(', ')}</span></div>`:''}
         ${ev.desc?`<div class="srp-row" style="align-items:flex-start">📄 <span style="white-space:pre-wrap;overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical">${esc(ev.desc)}</span></div>`:''}
         ${hasNote?`<div class="srp-row srp-note-hint">📝 <span>Tem anotações</span></div>`:''}
       </div>`;
@@ -4558,6 +4569,55 @@ function renderTagPills(){
 }
 document.getElementById('tagsInputWrap').addEventListener('click',()=>document.getElementById('tagInput').focus());
 
+// ── Participantes (chips de e-mail) — espelha o padrão das Tags acima ──
+// Cada e-mail vira um convidado (attendees) no Google Agenda quando o evento
+// sincroniza: o convite chega na agenda da pessoa e ela é alertada por ela.
+const PARTICIPANTS_SOFT_LIMIT=20; // acima disso o Gmail comum pode tratar o convite como spam
+function isValidEmail(s){return /^[^\s@]+@[^\s@]+\.[a-zA-Z]{2,}$/.test(s);}
+// Adiciona um ou mais e-mails — aceita LISTA colada (vírgula/ponto-e-vírgula/espaço),
+// que é como se convida uma turma inteira. Devolve os pedaços inválidos: quem chama
+// avisa e devolve só eles ao campo (evita 400 na API do Google e não perde o resto).
+function addParticipants(raw){
+  const before=currentParticipants.length,invalid=[];
+  String(raw||'').split(/[,;\s]+/).forEach(part=>{
+    const email=part.trim().toLowerCase();
+    if(!email)return;
+    if(!isValidEmail(email)){invalid.push(email);return;}
+    if(!currentParticipants.includes(email))currentParticipants.push(email);
+  });
+  if(currentParticipants.length!==before){
+    renderPartPills();
+    if(currentParticipants.length>PARTICIPANTS_SOFT_LIMIT)toast(`⚠️ ${currentParticipants.length} convidados — o Google pode barrar o convite como spam.`);
+  }
+  return invalid;
+}
+function renderPartPills(){
+  const wrap=document.getElementById('partInputWrap');
+  const input=document.getElementById('partInput');
+  wrap.querySelectorAll('.tag-pill').forEach(p=>p.remove());
+  currentParticipants.forEach((email,i)=>{
+    const pill=document.createElement('span');pill.className='tag-pill';
+    pill.innerHTML=`${esc(email)}<button class="tag-pill-remove" data-i="${i}">✕</button>`;
+    wrap.insertBefore(pill,input);
+  });
+  wrap.querySelectorAll('.tag-pill-remove').forEach(btn=>{btn.addEventListener('click',()=>{currentParticipants.splice(parseInt(btn.dataset.i),1);renderPartPills();});});
+}
+document.getElementById('partInput').addEventListener('keydown',function(e){
+  if((e.key==='Enter'||e.key===','||e.key===';'||e.key===' ')&&this.value.trim()){
+    e.preventDefault();
+    const bad=addParticipants(this.value);
+    this.value=bad.join(', '); // o que não era e-mail fica no campo p/ corrigir
+    if(bad.length)toast('⚠️ E-mail inválido: '+bad.join(', '));
+  } else if(e.key==='Backspace'&&!this.value&&currentParticipants.length){currentParticipants.pop();renderPartPills();}
+});
+// Sai do campo com e-mail digitado e sem Enter: comita em vez de perder o convite
+// (o blur do clique em Salvar roda ANTES do click, então o chip entra a tempo).
+// Silencioso: o que não entrou continua no campo, sem toast atrapalhando a saída.
+document.getElementById('partInput').addEventListener('blur',function(){
+  if(this.value.trim())this.value=addParticipants(this.value).join(', ');
+});
+document.getElementById('partInputWrap').addEventListener('click',()=>document.getElementById('partInput').focus());
+
 // Live conflict check
 function checkConflictLive(){
   const title=document.getElementById('evTitle').value.trim();
@@ -4639,7 +4699,7 @@ function openNew(date){
   editingId=null;editingDate=null;
   document.getElementById('modalTitle').textContent='Novo evento';
   document.getElementById('deleteBtn').style.display='none';
-  ['evTitle','evCategory','evLocation','evDesc','evUntil'].forEach(id=>document.getElementById(id).value='');
+  ['evTitle','evCategory','evLocation','evDesc','evUntil','partInput'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('evDate').value=date||ds(AppState.cur.getFullYear(),AppState.cur.getMonth(),1);
   document.getElementById('evDateEnd').value=date||ds(AppState.cur.getFullYear(),AppState.cur.getMonth(),1);
   document.getElementById('evStart').value='08:00';document.getElementById('evEnd').value='09:00';
@@ -4651,6 +4711,8 @@ function openNew(date){
   document.getElementById('freeSlotHint').style.display='none';
   document.getElementById('catColorHint').style.display='none';
   currentTags=[];renderTagPills();
+  currentParticipants=[];renderPartPills();
+  document.getElementById('guestNoticeField').style.display='none';
   const ccw=document.getElementById('colorCustom').closest('.color-custom-wrap');ccw.querySelector('.color-custom-btn').style.cssText='';ccw.querySelector('.color-custom-btn').textContent='+';
   setColor('#3b5bdb');setDoneUI(false);
   document.getElementById('meetLinkField').style.display='none';
@@ -4685,6 +4747,11 @@ function openEdit(id,dateCtx){
   if(ev.meetLink&&/^https:\/\//i.test(ev.meetLink)){_mla.href=ev.meetLink;_mlf.style.display='';if(_mlc)_mlc.onclick=e=>{e.preventDefault();_copyMeet(_mlc,ev.meetLink);};}else _mlf.style.display='none';
   setDoneUI(ev.rrule?isDoneOn(ev,editingDate):!!ev.done);
   currentTags=[...(ev.tags||[])];renderTagPills();
+  currentParticipants=[...(ev.participants||[])];renderPartPills();
+  document.getElementById('partInput').value='';
+  // Evento de convite (o dono é outra pessoa): o push ao Google é bloqueado pelo
+  // shouldPushUpdate — avisar, senão a edição parece "não sincronizar" sem motivo
+  document.getElementById('guestNoticeField').style.display=ev.gcalIsGuest?'':'none';
   DOM.overlay.classList.add('open');
   if(window._vvAttach)window._vvAttach();
   setTimeout(()=>{document.getElementById('evTitle').focus();if(window.ctsSync){ctsSync('evStart');ctsSync('evEnd');}},60);
@@ -4707,6 +4774,7 @@ document.getElementById('saveBtn').addEventListener('click',()=>{
   const evDateEnd=document.getElementById('evDateEnd').value;
   if(cat&&selectedColor){categoryColors[cat]=selectedColor;saveCatColors();}
   const ev={id:editingId||uid(),title,category:cat,color:selectedColor,tags:[...currentTags],
+    participants:[...currentParticipants], // e-mails → attendees do Google (sempre presente, como tags: o merge do pull é spread)
     calendarId:document.getElementById('evCalendar').value||'default',
     alert:alertVal!==''?parseInt(alertVal):null,
     date:document.getElementById('evDate').value,
@@ -4727,7 +4795,9 @@ document.getElementById('saveBtn').addEventListener('click',()=>{
   const wasEditing=!!editingId; // closeModal() zera editingId antes do toast — capturado aqui
   if(editingId){
     const old=AppState.events.find(e=>e.id===editingId);
-    if(old){ev.gcalId=old.gcalId;ev.gcalUpdated=old.gcalUpdated;ev.meetLink=old.meetLink;} // preserve gcal link
+    // Preserva o vínculo com o Google E a propriedade lida no pull: sem gcalIsGuest
+    // aqui, editar um evento de convite apagava a flag e o push tentava PUT → 403
+    if(old){ev.gcalId=old.gcalId;ev.gcalUpdated=old.gcalUpdated;ev.meetLink=old.meetLink;ev.gcalIsGuest=old.gcalIsGuest;ev.gcalOrganizerEmail=old.gcalOrganizerEmail;}
     const i=AppState.events.findIndex(e=>e.id===editingId);if(i>-1)AppState.events[i]=ev;
     // Limpa estado "fired" do evento editado para o alerta poder disparar novamente
     [...firedAlerts].filter(k=>k.startsWith(editingId+'|')).forEach(k=>firedAlerts.delete(k));
@@ -4802,7 +4872,10 @@ async function gcalProcessDeleteQueue(){
     const remaining=[];
     for(const gcalId of q){
       try{
-        const res=await fetch(`${GCAL_API}/calendars/${encodeURIComponent(calId)}/events/${encodeURIComponent(gcalId)}`,{
+        // sendUpdates=all sem condicional: a fila guarda só o gcalId (o evento já saiu
+        // do AppState), e evento sem convidados não tem ninguém a notificar — no-op.
+        // Com convidados, avisa que o dono cancelou (ou que este convidado saiu).
+        const res=await fetch(`${GCAL_API}/calendars/${encodeURIComponent(calId)}/events/${encodeURIComponent(gcalId)}?sendUpdates=all`,{
           method:'DELETE',
           headers:{Authorization:`Bearer ${gcalToken}`}
         });
@@ -8977,10 +9050,43 @@ function mgcToGcal(ev){
     if(ev.until)rule+=`;UNTIL=${ev.until.replace(/-/g,'')}T235959Z`;
     obj.recurrence=[rule];
   }
+  // Participantes → convidados do Google: o convite cai na agenda de cada um e o
+  // lembrete dispara por ela (o horário do lembrete é preferência DE CADA convidado).
+  // guestsCanSeeOtherGuests:false — ninguém vê o e-mail dos outros convidados (LGPD);
+  // guestsCanInviteOthers:false — convidado não amplia a lista sem o dono saber.
+  if(ev.participants&&ev.participants.length){
+    obj.attendees=ev.participants.map(email=>({email}));
+    obj.guestsCanSeeOtherGuests=false;
+    obj.guestsCanInviteOthers=false;
+  }
   // Store MGC metadata so we can read back on import
   obj.extendedProperties={private:{mgcCalendarId:ev.calendarId||'default',mgcId:ev.id}};
   return obj;
 }
+
+// Campos de propriedade/convidados LIDOS do Google. Ficam num helper só porque o
+// pull precisa deles em 3 caminhos (evento novo, evento já existente e vínculo por
+// título+data) — o guard shouldPushUpdate depende de gcalIsGuest estar preenchido
+// em TODOS eles, senão ele fica cego justamente em quem já tinha o evento local.
+function gcalOwnershipFields(gcEv){
+  return {
+    participants:(gcEv.attendees||[]).filter(a=>!a.self).map(a=>a.email), // sem o próprio usuário
+    gcalOrganizerEmail:gcEv.organizer?.email||'',
+    gcalIsGuest:gcEv.organizer?gcEv.organizer.self!==true:false // sem organizer = evento só do usuário
+  };
+}
+
+// Só o DONO empurra edição ao Google: o PUT de um convidado em evento alheio dá 403.
+// Predicado nomeado (não inline no filter) para o smoke §35 poder exercitá-lo.
+function shouldPushUpdate(ev){
+  return !!(ev.gcalId&&ev.localUpdatedAt&&ev.title&&ev.date&&!ev.gcalIsGuest&&
+    new Date(ev.localUpdatedAt).getTime()>new Date(ev.gcalUpdated||0).getTime());
+}
+
+// O default da API é NÃO notificar: sem sendUpdates=all o evento é criado e ninguém
+// recebe o convite (falha silenciosa). Condicional para que o sync de eventos sem
+// participantes não dispare e-mail à toa.
+function gcalNotifyParam(ev){return (ev&&ev.participants&&ev.participants.length)?'?sendUpdates=all':'';}
 
 // Link do Meet de um evento Google (hangoutLink ou entryPoint de vídeo)
 function gcalMeet(gcEv){return gcEv.hangoutLink||gcEv.conferenceData?.entryPoints?.find(e=>e.entryPointType==='video')?.uri||'';}
@@ -9023,7 +9129,8 @@ function gcalToMgc(gcEv){
     end:e.time,
     color:'#4285f4',
     calendarId:gcEv.extendedProperties?.private?.mgcCalendarId||GCAL_CALENDAR_ID,
-    category:''
+    category:'',
+    ...gcalOwnershipFields(gcEv)
   };
   return ev;
 }
@@ -9059,7 +9166,7 @@ async function gcalSync(pullOnly=false){
         maxResults:'500',
         orderBy:'startTime',
         showDeleted:'true',
-        fields:'nextPageToken,items(id,summary,description,location,start,end,updated,status,recurringEventId,extendedProperties,hangoutLink,conferenceData(entryPoints(uri,entryPointType)))'
+        fields:'nextPageToken,items(id,summary,description,location,start,end,updated,status,recurringEventId,extendedProperties,hangoutLink,conferenceData(entryPoints(uri,entryPointType)),organizer(email,self),attendees(email,responseStatus,self))'
       });
       if(pageToken)params.set('pageToken',pageToken);
       const resp=await fetch(`${GCAL_API}/calendars/${encodeURIComponent(calId)}/events?${params}`,{
@@ -9147,6 +9254,7 @@ async function gcalSync(pullOnly=false){
           titleDateMatch.gcalId=gcEv.id;
           titleDateMatch.gcalUpdated=gcEv.updated||new Date().toISOString();
           titleDateMatch.meetLink=gcalMeet(gcEv)||undefined;
+          Object.assign(titleDateMatch,gcalOwnershipFields(gcEv)); // vinculou a um convite? o guard precisa saber
           localByGcalId[gcEv.id]=titleDateMatch;
         } else {
         // New event from Google → add locally
@@ -9181,6 +9289,10 @@ async function gcalSync(pullOnly=false){
           // Not newer, but always sync meetLink — read-only field added after initial sync
           const freshMeet=gcalMeet(gcEv);
           if(freshMeet!==local.meetLink){local.meetLink=freshMeet||undefined;}
+          // Mesmo motivo do meetLink, agora p/ convidados+propriedade: o evento já
+          // existia local antes da feature, então o Google nunca fica "mais novo" e
+          // sem este backfill gcalIsGuest jamais chegaria (guard cego, lista vazia)
+          Object.assign(local,gcalOwnershipFields(gcEv));
         }
       }
     }
@@ -9191,7 +9303,7 @@ async function gcalSync(pullOnly=false){
       for(const ev of toPush){
         try{
           const body=mgcToGcal(ev);
-          const res=await fetch(`${GCAL_API}/calendars/${encodeURIComponent(calId)}/events`,{
+          const res=await fetch(`${GCAL_API}/calendars/${encodeURIComponent(calId)}/events${gcalNotifyParam(ev)}`,{
             method:'POST',
             headers:{Authorization:`Bearer ${gcalToken}`,'Content-Type':'application/json'},
             body:JSON.stringify(body)
@@ -9206,16 +9318,11 @@ async function gcalSync(pullOnly=false){
       }
 
       // ── UPDATE: sync local edits back to Google for existing AppState.events ──
-      const toUpdate=AppState.events.filter(ev=>
-        ev.gcalId &&
-        ev.localUpdatedAt &&
-        ev.title && ev.date &&
-        new Date(ev.localUpdatedAt).getTime() > new Date(ev.gcalUpdated||0).getTime()
-      );
+      const toUpdate=AppState.events.filter(shouldPushUpdate);
       for(const ev of toUpdate){
         try{
           const body=mgcToGcal(ev);
-          const res=await fetch(`${GCAL_API}/calendars/${encodeURIComponent(calId)}/events/${encodeURIComponent(ev.gcalId)}`,{
+          const res=await fetch(`${GCAL_API}/calendars/${encodeURIComponent(calId)}/events/${encodeURIComponent(ev.gcalId)}${gcalNotifyParam(ev)}`,{
             method:'PUT',
             headers:{Authorization:`Bearer ${gcalToken}`,'Content-Type':'application/json'},
             body:JSON.stringify(body)
