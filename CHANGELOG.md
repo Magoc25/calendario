@@ -5,6 +5,26 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 
 ---
 
+## [2.8.0] — Julho 2026
+
+Agora um evento pode ter **participantes**: você digita os e-mails e cada pessoa recebe o convite na agenda do Google dela — e é alertada por ela. 👥
+
+### 👥 Participantes no evento (alerta em grupo via Google Agenda)
+- Novo campo **Participantes (e-mail)** no formulário de evento: chips com Enter, validação de e-mail, ✕ para remover e aviso acima de 20 convidados. Aceita **lista colada** de uma vez (vírgula, ponto-e-vírgula ou espaço) e devolve ao campo só o pedaço que não era e-mail.
+- Ao sincronizar, cada participante entra como **convidado no Google Agenda** e recebe o convite; o alerta dispara pelo **lembrete da agenda dele**. Sem servidor novo, sem migração no Supabase e **sem precisar reautorizar o Google**.
+- Mudou o horário? O convidado recebe a **atualização**. Cancelou? Recebe o **cancelamento**.
+- O **painel do dia** mostra a linha **👥 participantes** (os 3 primeiros + contagem) e, em evento de convite, **👤 convite de _fulano_**.
+
+### 🔒 Privacidade
+- Convidados **não veem o e-mail uns dos outros** e **não podem convidar terceiros**.
+- De um evento organizado por **outra pessoa**, o app guarda **só quem organizou** — nunca a lista de convidados. Um convite institucional real trazia **160 e-mails de terceiros** para dentro do app e, com a nuvem ligada, para o backup e a sincronização. Quem já tiver essa lista gravada é limpo automaticamente na próxima sincronização.
+
+### 🐛 Correções
+- **Evento em que você é convidado não é mais reenviado ao Google** (o Google recusava com erro): o envio passou a respeitar quem é o dono do evento, e a marca de "sou convidado" agora sobrevive a uma edição local.
+- A sincronização passou a preencher convidados e organizador **também em eventos que já existiam** no app — antes, campo novo só chegava quando a versão do Google era mais recente (mesma falha que o link do Meet já teve).
+
+---
+
 ## [2.7.0] — Julho 2026
 
 O app tem um novo nome: **Rumo** 🧭 — mesma agenda, novo rumo.
