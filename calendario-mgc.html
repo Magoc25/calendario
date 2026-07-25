@@ -3621,6 +3621,8 @@ function renderDayPanel(dateStr){
         </div>
         ${ev.category?`<div class="dp-ev-cat">${esc(ev.category)}${ev.rrule?' · recorrente':''}</div>`:''}
         ${ev.location?`<div class="dp-ev-loc">📍 ${esc(ev.location)}</div>`:''}
+        ${participantsSummary(ev)?`<div class="dp-ev-loc">👥 ${participantsSummary(ev)}</div>`:''}
+        ${ev.gcalIsGuest&&ev.gcalOrganizerEmail?`<div class="dp-ev-loc">👤 convite de ${esc(ev.gcalOrganizerEmail)}</div>`:''}
         ${safeMeetUrl(ev.meetLink)?`<div class="dp-ev-loc" style="display:flex;align-items:center;gap:5px"><a class="dp-meet-link" href="${safeMeetUrl(ev.meetLink)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">🎥 Entrar no Google Meet</a><button class="meet-copy-btn" data-meet="${safeMeetUrl(ev.meetLink)}" title="Copiar link">📋</button></div>`:''}
         ${tagsHtml}
       </div>`;
@@ -4380,7 +4382,8 @@ document.addEventListener('click',e=>{if(!e.target.closest('.search-wrap'))docum
         ${safeMeetUrl(ev.meetLink)?`<div class="srp-row" style="align-items:center;gap:6px">🎥 <a href="${safeMeetUrl(ev.meetLink)}" target="_blank" rel="noopener" class="srp-meet-link" onclick="event.stopPropagation()">Entrar no Google Meet</a><button class="meet-copy-btn" data-meet="${safeMeetUrl(ev.meetLink)}" title="Copiar link">📋</button></div>`:''}
         ${cal&&cal.id!=='default'?`<div class="srp-row">🗂 <span>${esc(cal.name)}</span></div>`:''}
         ${(ev.tags||[]).length?`<div class="srp-row">🏷 <span>${ev.tags.map(t=>esc(t)).join(' ')}</span></div>`:''}
-        ${(ev.participants||[]).length?`<div class="srp-row">👥 <span>${ev.participants.map(p=>esc(p)).join(', ')}</span></div>`:''}
+        ${participantsSummary(ev,5)?`<div class="srp-row">👥 <span>${participantsSummary(ev,5)}</span></div>`:''}
+        ${ev.gcalIsGuest&&ev.gcalOrganizerEmail?`<div class="srp-row">👤 <span>convite de ${esc(ev.gcalOrganizerEmail)}</span></div>`:''}
         ${ev.desc?`<div class="srp-row" style="align-items:flex-start">📄 <span style="white-space:pre-wrap;overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical">${esc(ev.desc)}</span></div>`:''}
         ${hasNote?`<div class="srp-row srp-note-hint">📝 <span>Tem anotações</span></div>`:''}
       </div>`;
@@ -9069,11 +9072,27 @@ function mgcToGcal(ev){
 // título+data) — o guard shouldPushUpdate depende de gcalIsGuest estar preenchido
 // em TODOS eles, senão ele fica cego justamente em quem já tinha o evento local.
 function gcalOwnershipFields(gcEv){
+  const isGuest=gcEv.organizer?gcEv.organizer.self!==true:false; // sem organizer = evento só do usuário
   return {
-    participants:(gcEv.attendees||[]).filter(a=>!a.self).map(a=>a.email), // sem o próprio usuário
+    // Só a lista de convidados DO USUÁRIO é guardada. Em evento alheio a lista é do
+    // organizador: o app não pode empurrá-la (o guard barra, o Google recusaria) e
+    // copiá-la encheria o localStorage/blob de sync — e o backup JSON — com e-mails
+    // de terceiros que o usuário nunca coletou (um convite institucional real trouxe
+    // 160). O que interessa nesse caso é quem convidou: gcalOrganizerEmail.
+    participants:isGuest?[]:(gcEv.attendees||[]).filter(a=>!a.self).map(a=>a.email),
     gcalOrganizerEmail:gcEv.organizer?.email||'',
-    gcalIsGuest:gcEv.organizer?gcEv.organizer.self!==true:false // sem organizer = evento só do usuário
+    gcalIsGuest:isGuest
   };
+}
+
+// Resumo de participantes para as telas de detalhe: um convite pode ter dezenas de
+// e-mails, e despejar todos empurra o resto do card para fora da tela
+function participantsSummary(ev,max){
+  const list=ev.participants||[];
+  if(!list.length)return '';
+  const lim=max||3;
+  const shown=list.slice(0,lim).map(p=>esc(p)).join(', ');
+  return list.length>lim?`${shown} +${list.length-lim}`:shown;
 }
 
 // Só o DONO empurra edição ao Google: o PUT de um convidado em evento alheio dá 403.

@@ -458,13 +458,49 @@ function run() {
   check('mgcToGcal: sem participantes não emite attendees (não vaza campo)',
     ev(`(function(){const o=mgcToGcal({title:'x',date:'2026-08-01'});
       return !('attendees' in o)&&!('guestsCanSeeOtherGuests' in o);})()`) === true);
-  check('gcalToMgc: evento de convite → gcalIsGuest e participantes sem o próprio usuário',
+  check('gcalToMgc: evento de convite → gcalIsGuest + organizador, SEM copiar a lista alheia',
     ev(`(function(){
       const e=gcalToMgc({id:'gp1',start:{date:'2026-08-01'},end:{date:'2026-08-02'},
         organizer:{email:'dono@x.com',self:false},
         attendees:[{email:'dono@x.com'},{email:'eu@y.com',self:true},{email:'outro@z.com'}]});
       return e.gcalIsGuest===true && e.gcalOrganizerEmail==='dono@x.com'
-        && JSON.stringify(e.participants)==='["dono@x.com","outro@z.com"]';
+        && JSON.stringify(e.participants)==='[]';
+    })()`) === true);
+  check('gcalToMgc: evento PRÓPRIO com convidados guarda a lista (sem o self) p/ o PUT não apagar',
+    ev(`(function(){
+      const e=gcalToMgc({id:'gp1b',start:{date:'2026-08-01'},end:{date:'2026-08-02'},
+        organizer:{email:'eu@y.com',self:true},
+        attendees:[{email:'eu@y.com',self:true},{email:'conv@z.com'}]});
+      return e.gcalIsGuest===false && JSON.stringify(e.participants)==='["conv@z.com"]';
+    })()`) === true);
+  check('convite institucional de 160 pessoas não polui o estado local (nem o blob de sync)',
+    ev(`(function(){
+      const many=Array.from({length:160},(_,i)=>({email:'p'+i+'@inst.edu'}));
+      const e=gcalToMgc({id:'gp1c',start:{date:'2026-08-01'},end:{date:'2026-08-02'},
+        organizer:{email:'reitoria@inst.edu',self:false},attendees:many});
+      return e.participants.length===0 && e.gcalOrganizerEmail==='reitoria@inst.edu';
+    })()`) === true);
+  check('participantsSummary corta a lista longa e sinaliza o resto',
+    ev(`participantsSummary({participants:['a@x.com','b@x.com','c@x.com','d@x.com','e@x.com']})`) === 'a@x.com, b@x.com, c@x.com +2' &&
+    ev(`participantsSummary({participants:['a@x.com']})`) === 'a@x.com' &&
+    ev(`participantsSummary({})`) === '');
+  check('painel do dia mostra a linha 👥 (é onde o usuário clica, não só a busca)',
+    ev(`(function(){
+      const d='2026-08-14';
+      AppState.events.push({id:'dpp1',title:'Evento com convidado',date:d,dateEnd:d,start:'09:00',end:'10:00',participants:['conv@x.com'],calendarId:'default'});
+      renderDayPanel(d);
+      const ok=/👥[^<]*conv@x\\.com/.test(document.getElementById('dpBody').innerHTML);
+      AppState.events=AppState.events.filter(e=>e.id!=='dpp1');
+      return ok;
+    })()`) === true);
+  check('painel do dia identifica quem convidou em evento de convite',
+    ev(`(function(){
+      const d='2026-08-15';
+      AppState.events.push({id:'dpp2',title:'Convite alheio',date:d,dateEnd:d,start:'09:00',end:'10:00',participants:[],gcalIsGuest:true,gcalOrganizerEmail:'dono@x.com',calendarId:'default'});
+      renderDayPanel(d);
+      const ok=/👤 convite de dono@x\\.com/.test(document.getElementById('dpBody').innerHTML);
+      AppState.events=AppState.events.filter(e=>e.id!=='dpp2');
+      return ok;
     })()`) === true);
   check('gcalToMgc: evento próprio (organizer.self) → gcalIsGuest false',
     ev(`gcalToMgc({id:'gp2',start:{date:'2026-08-01'},end:{date:'2026-08-02'},organizer:{email:'eu@y.com',self:true}}).gcalIsGuest`) === false);
@@ -482,9 +518,12 @@ function run() {
     ev(`gcalNotifyParam({participants:['a@x.com']})==='?sendUpdates=all' && gcalNotifyParam({})==='' && gcalNotifyParam({participants:[]})===''`) === true);
   check('gcalOwnershipFields backfilla evento local já existente (guard não fica cego)',
     ev(`(function(){
-      const local={id:'L1',gcalId:'g9',title:'t',date:'2026-08-01'};
-      Object.assign(local,gcalOwnershipFields({organizer:{email:'dono@x.com',self:false},attendees:[{email:'c@x.com'}]}));
-      return local.gcalIsGuest===true && JSON.stringify(local.participants)==='["c@x.com"]';
+      const conv={id:'L1',gcalId:'g9',title:'t',date:'2026-08-01'};
+      Object.assign(conv,gcalOwnershipFields({organizer:{email:'dono@x.com',self:false},attendees:[{email:'c@x.com'}]}));
+      const meu={id:'L2',gcalId:'g10',title:'t',date:'2026-08-01'};
+      Object.assign(meu,gcalOwnershipFields({organizer:{email:'eu@y.com',self:true},attendees:[{email:'c@x.com'}]}));
+      return conv.gcalIsGuest===true && conv.gcalOrganizerEmail==='dono@x.com' && conv.participants.length===0
+        && meu.gcalIsGuest===false && JSON.stringify(meu.participants)==='["c@x.com"]';
     })()`) === true);
   check('isValidEmail rejeita texto solto/incompleto e aceita e-mail real',
     ev(`isValidEmail('foo')===false && isValidEmail('a@b')===false && isValidEmail('a b@c.com')===false && isValidEmail('a@b.com')===true`) === true);
