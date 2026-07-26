@@ -5,6 +5,20 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 
 ---
 
+## [2.8.2] — Julho 2026
+
+### 🐛 Correção — evento duplicado quando você usa **dois aparelhos**
+
+Lançar o evento num aparelho e sincronizar com o Google **no outro** duplicava o evento. Era o caso real: eventos criados no PC, sincronização feita pelo celular.
+
+**A causa:** o identificador do evento no Google é um **vínculo**, não um conteúdo editável — mas ele era tratado como conteúdo qualquer na hora de mesclar os dados entre aparelhos. Como *ganhar* esse vínculo não conta como "alteração" (quem o cria é a sincronização, que não carimba data de edição), a cópia do aparelho que ainda **não** tinha sincronizado podia vencer a mesclagem e **apagar** o vínculo do aparelho que já tinha. Sem vínculo, a sincronização seguinte enviava o evento como se fosse novo — e o Google criava um segundo.
+
+Agora o vínculo (e também o link do Meet e a informação de quem organizou) é **absorvido de quem o tiver**, independentemente de qual cópia vence no conteúdo. O conteúdo continua seguindo a edição mais recente, como antes.
+
+> Se você já tem duplicatas no Google Agenda, elas não somem sozinhas — apague as cópias por lá.
+
+---
+
 ## [2.8.1] — Julho 2026
 
 ### 🐛 Correção crítica — evento duplicado ao editar (sincronização com o Google)

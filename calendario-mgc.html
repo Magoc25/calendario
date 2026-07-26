@@ -2358,7 +2358,7 @@ body.large .sidebar-year{font-size:22px}
             </a>
             <button class="footer-link-btn pix-btn" id="pixBtn" title="Apoiar o projeto">☕ Apoiar</button>
             <button class="footer-link-btn" id="reviewsBtn" title="Ver avaliações">⭐ Avaliações</button>
-            <span id="appVersion" style="font-size:11px;color:var(--text);user-select:none">© MGC · v2.8.1</span>
+            <span id="appVersion" style="font-size:11px;color:var(--text);user-select:none">© MGC · v2.8.2</span>
           </span>
         </div>
       </div>
@@ -6990,6 +6990,20 @@ function applyRemoteListsMerge(row){
    mais recente; exclusão propaga por tombstone (cal_events_del) e só remove
    se for >= à última edição do evento. */
 function _evUt(e){return e&&e.localUpdatedAt?new Date(e.localUpdatedAt).getTime():0;}
+/* Une os campos de VÍNCULO (identidade externa do evento) das duas cópias do merge.
+   `vencedor` manda no CONTEÚDO; o vínculo é absorvido de quem o tiver, porque ele
+   não é um valor editável: é a identidade do evento no Google. Sem isto, a cópia
+   que ainda não sincronizou (celular que só puxou do Supabase) apaga o gcalId da
+   que já sincronizou (PC) — e o próximo sync reenvia o evento, duplicando-o. */
+function mergeEventLink(vencedor,perdedor){
+  if(!perdedor)return vencedor;
+  const o={...vencedor};
+  if(!o.gcalId&&perdedor.gcalId){o.gcalId=perdedor.gcalId;o.gcalUpdated=o.gcalUpdated||perdedor.gcalUpdated;}
+  if(!o.meetLink&&perdedor.meetLink)o.meetLink=perdedor.meetLink;
+  if(o.gcalIsGuest===undefined&&perdedor.gcalIsGuest!==undefined)o.gcalIsGuest=perdedor.gcalIsGuest;
+  if(!o.gcalOrganizerEmail&&perdedor.gcalOrganizerEmail)o.gcalOrganizerEmail=perdedor.gcalOrganizerEmail;
+  return o;
+}
 function mergeEventCollections(localEvs,localDel,remoteEvs,remoteDel){
   localEvs=Array.isArray(localEvs)?localEvs:[];
   remoteEvs=Array.isArray(remoteEvs)?remoteEvs:[];
@@ -7001,7 +7015,13 @@ function mergeEventCollections(localEvs,localDel,remoteEvs,remoteDel){
   const novos=[];
   remoteEvs.forEach(r=>{const cur=byId.get(r.id);
     if(!cur){byId.set(r.id,r);novos.push(r.id);}
-    else if(_evUt(r)>_evUt(cur))byId.set(r.id,r);});
+    // Conteúdo é last-write-wins por localUpdatedAt, mas o VÍNCULO com o Google
+    // nunca: quem ganha o vínculo é a sincronização, que NÃO carimba localUpdatedAt
+    // → para o merge, "ganhar gcalId" não é alteração, e o lado sem vínculo podia
+    // vencer e apagá-lo ao substituir o objeto inteiro. Com o vínculo perdido, o
+    // device seguinte reenviava o evento como novo: UM VIRAVA DOIS no Google.
+    else if(_evUt(r)>_evUt(cur))byId.set(r.id,mergeEventLink(r,cur));
+    else byId.set(r.id,mergeEventLink(cur,r));});
   const ordem=[...localEvs.map(e=>e.id),...novos],vis=new Set(),merged=[];
   ordem.forEach(id=>{if(!vis.has(id)){vis.add(id);merged.push(byId.get(id));}});
   const kept=merged.filter(e=>!(del[e.id]&&del[e.id]>=_evUt(e)));
@@ -10055,7 +10075,7 @@ try{localStorage.removeItem('mgc_app_version');}catch(e){} // remove o cache de 
 /* ── Verificação de nova versão via Supabase ── */
 (async()=>{
   if(!revClient)return;
-  const LOCAL_VERSION='2.8.1';
+  const LOCAL_VERSION='2.8.2';
   const CACHE_KEY='mgc_update_check';
   const CACHE_TTL=24*60*60*1000; // 24 horas
   let cached=null;try{cached=JSON.parse(localStorage.getItem(CACHE_KEY)||'null');}catch(e){} // valor corrompido não pode matar o banner de update
@@ -10094,7 +10114,7 @@ try{localStorage.removeItem('mgc_app_version');}catch(e){} // remove o cache de 
   if(!deviceId){deviceId=crypto.randomUUID();localStorage.setItem('calendario_device_id',deviceId);}
   try{
     await revClient.from('app_pings').upsert(
-      {app_name:'Calendario MGC',version:'2.8.1',device_id:deviceId,ping_date:today},
+      {app_name:'Calendario MGC',version:'2.8.2',device_id:deviceId,ping_date:today},
       {onConflict:'app_name,device_id,ping_date',ignoreDuplicates:true}
     );
     localStorage.setItem(PING_KEY,today);

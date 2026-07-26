@@ -553,6 +553,53 @@ function run() {
     !/\bev\.gcalUpdated\s*=\s*updated_res\.updated/.test(_srcCode) &&
     (_srcCode.match(/gcalApplyPushResult\(ev\.id,/g)||[]).length === 2);
 
+  /* ── Duplicação com DOIS aparelhos: o vínculo com o Google não pode morrer no LWW ──
+     Cenário real (PC cria e sincroniza; celular só puxou do Supabase e sincroniza depois):
+     a cópia do celular não tem gcalId e tem localUpdatedAt igual ou mais novo → vencia o
+     merge e apagava o vínculo → o sync seguinte reenviava o evento → duplicata no Google. */
+  check('merge: cópia SEM vínculo não apaga o gcalId de quem já sincronizou (remoto vence)',
+    ev(`(function(){
+      const pc  ={id:'d1',title:'Reunião',date:'2026-09-10',start:'08:00',gcalId:'G1',gcalUpdated:'2026-09-09T10:00:00Z',localUpdatedAt:'2026-09-09T09:00:00Z'};
+      const cel ={id:'d1',title:'Reunião',date:'2026-09-10',start:'14:00',localUpdatedAt:'2026-09-09T11:00:00Z'}; // editou depois, sem vínculo
+      const m=mergeEventCollections([pc],{},[cel],{});
+      const e=m.events[0];
+      return e.start==='14:00' && e.gcalId==='G1' && e.gcalUpdated==='2026-09-09T10:00:00Z';
+    })()`) === true, 'conteúdo do mais recente + vínculo preservado');
+  check('merge: vínculo do remoto é absorvido quando o LOCAL vence o conteúdo',
+    ev(`(function(){
+      const local ={id:'d2',title:'X',date:'2026-09-10',start:'14:00',localUpdatedAt:'2026-09-09T11:00:00Z'};
+      const remoto={id:'d2',title:'X',date:'2026-09-10',start:'08:00',gcalId:'G2',localUpdatedAt:'2026-09-09T09:00:00Z'};
+      const e=mergeEventCollections([local],{},[remoto],{}).events[0];
+      return e.start==='14:00' && e.gcalId==='G2';
+    })()`) === true);
+  check('merge: empate de carimbo não perde o vínculo (o sync não carimba localUpdatedAt)',
+    ev(`(function(){
+      const t='2026-09-09T09:00:00Z';
+      const local ={id:'d3',title:'X',date:'2026-09-10',start:'08:00',gcalId:'G3',localUpdatedAt:t};
+      const remoto={id:'d3',title:'X',date:'2026-09-10',start:'08:00',localUpdatedAt:t};
+      return mergeEventCollections([local],{},[remoto],{}).events[0].gcalId==='G3';
+    })()`) === true);
+  check('merge: meetLink e propriedade também sobrevivem ao merge',
+    ev(`(function(){
+      const local ={id:'d4',title:'X',date:'2026-09-10',gcalId:'G4',meetLink:'https://meet.google.com/x',gcalIsGuest:true,gcalOrganizerEmail:'dono@x.com',localUpdatedAt:'2026-09-09T09:00:00Z'};
+      const remoto={id:'d4',title:'X2',date:'2026-09-10',localUpdatedAt:'2026-09-09T11:00:00Z'};
+      const e=mergeEventCollections([local],{},[remoto],{}).events[0];
+      return e.title==='X2'&&e.meetLink==='https://meet.google.com/x'&&e.gcalIsGuest===true&&e.gcalOrganizerEmail==='dono@x.com';
+    })()`) === true);
+  check('BASELINE: sem a união do vínculo, o evento voltaria à fila de envio (duplicaria)',
+    ev(`(function(){
+      const cel={id:'d5',title:'X',date:'2026-09-10',start:'14:00',localUpdatedAt:'2026-09-09T11:00:00Z'};
+      const semUniao=!cel.gcalId;                 // como o merge devolvia antes
+      const comUniao=mergeEventCollections([{...cel,gcalId:'G5'}],{},[cel],{}).events[0];
+      // sem vínculo o push trata como evento NOVO (POST) — com vínculo, vira PUT
+      return semUniao===true && !!comUniao.gcalId;
+    })()`) === true);
+  check('merge: exclusão por tombstone continua valendo (a união não ressuscita evento)',
+    ev(`(function(){
+      const local={id:'d6',title:'X',date:'2026-09-10',gcalId:'G6',localUpdatedAt:'2026-09-09T09:00:00Z'};
+      return mergeEventCollections([local],{},[],{d6:Date.parse('2026-09-09T12:00:00Z')}).events.length===0;
+    })()`) === true);
+
   check('gcalNotifyParam: só manda sendUpdates=all quando há participantes',
     ev(`gcalNotifyParam({participants:['a@x.com']})==='?sendUpdates=all' && gcalNotifyParam({})==='' && gcalNotifyParam({participants:[]})===''`) === true);
   check('gcalOwnershipFields backfilla evento local já existente (guard não fica cego)',
