@@ -5,6 +5,20 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 
 ---
 
+## [2.8.1] — Julho 2026
+
+### 🐛 Correção crítica — evento duplicado ao editar (sincronização com o Google)
+
+Editar um evento (horário, dia, ou arrastando no calendário) podia **criar um segundo evento no Google Agenda em vez de atualizar o existente**, deixando o antigo para trás. Com participantes, cada duplicata ainda disparava convite por e-mail.
+
+**A causa:** ao enviar um evento, o app guardava o identificador devolvido pelo Google numa referência que a sincronização com a nuvem podia substituir no meio do caminho — a gravação se perdia. O evento passava a existir no Google **sem o app saber**: na sincronização seguinte ele era importado como evento novo *e* reenviado como se nunca tivesse ido. Um virava dois. O mesmo defeito deixava eventos presos em "pendente", reenviados a cada sincronização.
+
+**Não era novidade da v2.8.0** — o defeito é antigo; a v2.8.0 apenas o tornou audível, porque passou a notificar convidados. Só aparecia com a sincronização em nuvem ligada.
+
+> ⚠️ **Duplicatas já criadas não somem sozinhas.** Vale revisar o Google Agenda em busca de eventos repetidos e apagar as cópias indesejadas por lá.
+
+---
+
 ## [2.8.0] — Julho 2026
 
 Agora um evento pode ter **participantes**: você digita os e-mails e cada pessoa recebe o convite na agenda do Google dela — e é alertada por ela. 👥

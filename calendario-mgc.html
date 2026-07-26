@@ -2358,7 +2358,7 @@ body.large .sidebar-year{font-size:22px}
             </a>
             <button class="footer-link-btn pix-btn" id="pixBtn" title="Apoiar o projeto">☕ Apoiar</button>
             <button class="footer-link-btn" id="reviewsBtn" title="Ver avaliações">⭐ Avaliações</button>
-            <span id="appVersion" style="font-size:11px;color:var(--text);user-select:none">© MGC · v2.8.0</span>
+            <span id="appVersion" style="font-size:11px;color:var(--text);user-select:none">© MGC · v2.8.1</span>
           </span>
         </div>
       </div>
@@ -9107,6 +9107,25 @@ function shouldPushUpdate(ev){
 // participantes não dispare e-mail à toa.
 function gcalNotifyParam(ev){return (ev&&ev.participants&&ev.participants.length)?'?sendUpdates=all':'';}
 
+// Grava o resultado do push RELOCALIZANDO o evento por id — nunca na referência
+// capturada antes do `await` do fetch.
+//
+// Por quê: `applyRemoteEventsMerge` faz `AppState.events = mg.events`, trocando o
+// ARRAY INTEIRO por objetos novos. Um pull do Supabase (push com debounce, retorno
+// ao app, realtime) que caia durante a requisição ao Google deixa a referência
+// capturada ÓRFÃ: `ev.gcalId = created.id` grava num objeto que ninguém mais lê e o
+// save() não persiste. O evento passa a existir no Google sem o app saber → o pull
+// seguinte o importa como novo E o push o reenvia → UM VIRA DOIS a cada sync.
+// (Mesmo estrago no ramo do PUT: o gcalUpdated perdido deixa o evento eternamente
+// "pendente", reenviado em toda sincronização.)
+// Devolve false quando o evento sumiu de vez (excluído durante o sync).
+function gcalApplyPushResult(evId,fields){
+  const cur=AppState.events.find(e=>e.id===evId);
+  if(!cur)return false;
+  Object.assign(cur,fields);
+  return true;
+}
+
 // Link do Meet de um evento Google (hangoutLink ou entryPoint de vídeo)
 function gcalMeet(gcEv){return gcEv.hangoutLink||gcEv.conferenceData?.entryPoints?.find(e=>e.entryPointType==='video')?.uri||'';}
 
@@ -9329,8 +9348,9 @@ async function gcalSync(pullOnly=false){
           });
           const created=await res.json();
           if(created.id){
-            ev.gcalId=created.id;
-            ev.gcalUpdated=created.updated||new Date().toISOString();
+            // Relocaliza por id: a referência `ev` pode ter sido órfã pelo merge do
+            // Supabase durante o await (ver gcalApplyPushResult)
+            gcalApplyPushResult(ev.id,{gcalId:created.id,gcalUpdated:created.updated||new Date().toISOString()});
             pushed++;
           } else {errors++;}
         }catch(e){errors++;console.warn('push error:',e);}
@@ -9348,7 +9368,9 @@ async function gcalSync(pullOnly=false){
           });
           const updated_res=await res.json();
           if(updated_res.id){
-            ev.gcalUpdated=updated_res.updated||new Date().toISOString();
+            // Mesma relocalização do POST: sem ela o gcalUpdated se perde e o evento
+            // fica eternamente pendente, reenviado em toda sincronização
+            gcalApplyPushResult(ev.id,{gcalUpdated:updated_res.updated||new Date().toISOString()});
             pushed++;
           } else {errors++;}
         }catch(e){errors++;console.warn('update error:',e);}
@@ -10033,7 +10055,7 @@ try{localStorage.removeItem('mgc_app_version');}catch(e){} // remove o cache de 
 /* ── Verificação de nova versão via Supabase ── */
 (async()=>{
   if(!revClient)return;
-  const LOCAL_VERSION='2.8.0';
+  const LOCAL_VERSION='2.8.1';
   const CACHE_KEY='mgc_update_check';
   const CACHE_TTL=24*60*60*1000; // 24 horas
   let cached=null;try{cached=JSON.parse(localStorage.getItem(CACHE_KEY)||'null');}catch(e){} // valor corrompido não pode matar o banner de update
@@ -10072,7 +10094,7 @@ try{localStorage.removeItem('mgc_app_version');}catch(e){} // remove o cache de 
   if(!deviceId){deviceId=crypto.randomUUID();localStorage.setItem('calendario_device_id',deviceId);}
   try{
     await revClient.from('app_pings').upsert(
-      {app_name:'Calendario MGC',version:'2.8.0',device_id:deviceId,ping_date:today},
+      {app_name:'Calendario MGC',version:'2.8.1',device_id:deviceId,ping_date:today},
       {onConflict:'app_name,device_id,ping_date',ignoreDuplicates:true}
     );
     localStorage.setItem(PING_KEY,today);

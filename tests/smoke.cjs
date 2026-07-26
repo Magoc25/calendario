@@ -514,6 +514,45 @@ function run() {
         && shouldPushUpdate({...base,localUpdatedAt:'2026-07-01T10:00:00Z'})===false
         && shouldPushUpdate({...base,gcalId:undefined})===false;
     })()`) === true);
+  /* ── Escrita perdida do push: merge do Supabase caindo durante o await ──
+     Reproduz o bug real de duplicação (v2.8.0 e anteriores): applyRemoteEventsMerge
+     faz `AppState.events = mg.events` e a referência capturada antes do fetch vira
+     órfã → o gcalId devolvido pelo Google era gravado no vazio. ── */
+  const _mergeMidFlight = `(function(){
+    // simula o efeito do merge remoto: MESMOS dados, objetos NOVOS
+    AppState.events=AppState.events.map(e=>({...e}));
+  })()`;
+  check('BASELINE: gravar na referência capturada PERDE o gcalId após o merge (o bug)',
+    ev(`(function(){
+      AppState.events.push({id:'lw1',title:'Perdido',date:'2026-09-01',start:'08:00',localUpdatedAt:'2026-09-01T10:00:00Z'});
+      const ref=AppState.events.find(e=>e.id==='lw1');   // referência capturada antes do await
+      ${_mergeMidFlight};                                 // merge do Supabase no meio do voo
+      ref.gcalId='G-PERDIDO';                             // como o código antigo fazia
+      const naoPersistiu=!AppState.events.find(e=>e.id==='lw1').gcalId;
+      AppState.events=AppState.events.filter(e=>e.id!=='lw1');
+      return naoPersistiu;
+    })()`) === true);
+  check('gcalApplyPushResult relocaliza por id e o gcalId SOBREVIVE ao merge',
+    ev(`(function(){
+      AppState.events.push({id:'lw2',title:'Salvo',date:'2026-09-01',start:'08:00',localUpdatedAt:'2026-09-01T10:00:00Z'});
+      const ref=AppState.events.find(e=>e.id==='lw2');
+      ${_mergeMidFlight};
+      gcalApplyPushResult(ref.id,{gcalId:'G-OK',gcalUpdated:'2026-09-01T11:00:00Z'});
+      const vivo=AppState.events.find(e=>e.id==='lw2');
+      const ok=vivo.gcalId==='G-OK'&&vivo.gcalUpdated==='2026-09-01T11:00:00Z'
+        && shouldPushUpdate(vivo)===false;   // e sai da fila de pendentes
+      AppState.events=AppState.events.filter(e=>e.id!=='lw2');
+      return ok;
+    })()`) === true);
+  check('gcalApplyPushResult devolve false se o evento sumiu durante o sync (não recria)',
+    ev(`gcalApplyPushResult('nao-existe-mais',{gcalId:'X'})`) === false);
+  // código sem as linhas de comentário — o docblock do fix cita o padrão antigo de propósito
+  const _srcCode = fs.readFileSync(HTML_PATH,'utf8').split('\n').filter(l=>!/^\s*\/\//.test(l)).join('\n');
+  check('o push do gcalSync usa a relocalização (não grava na referência capturada)',
+    !/\bev\.gcalId\s*=\s*created\.id/.test(_srcCode) &&
+    !/\bev\.gcalUpdated\s*=\s*updated_res\.updated/.test(_srcCode) &&
+    (_srcCode.match(/gcalApplyPushResult\(ev\.id,/g)||[]).length === 2);
+
   check('gcalNotifyParam: só manda sendUpdates=all quando há participantes',
     ev(`gcalNotifyParam({participants:['a@x.com']})==='?sendUpdates=all' && gcalNotifyParam({})==='' && gcalNotifyParam({participants:[]})===''`) === true);
   check('gcalOwnershipFields backfilla evento local já existente (guard não fica cego)',
