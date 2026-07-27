@@ -5,6 +5,22 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 
 ---
 
+## [2.11.0] — Julho 2026
+
+### ⏰ O alerta que você escolhe no app agora vale no Google Agenda
+
+Antes, o **Alerta antecipado** do evento só valia dentro do app: no Google Agenda o aviso saía sempre no horário padrão do seu calendário. Escolher "20 minutos antes" e ser avisado aos 10 era o resultado.
+
+Agora o app define o lembrete **do próprio evento** no Google — 20 minutos no app, 20 minutos no Google. E **"Sem alerta" passa a significar sem lembrete também no Google**, em vez de herdar o padrão do calendário.
+
+O caminho de volta também funciona: evento criado no Google **com lembrete próprio** chega ao app já com esse tempo. Evento que usa o padrão do calendário não mexe no alerta que você tinha definido aqui.
+
+> ℹ️ **Vale para você, não para os convidados.** No Google, lembrete é por pessoa: cada convidado é avisado conforme o padrão da agenda **dele**. Isso é do Google e não tem como o app contornar.
+>
+> Os eventos **já sincronizados** só passam a usar o lembrete novo quando forem editados — o app só reenvia ao Google o que mudou.
+
+---
+
 ## [2.10.3] — Julho 2026
 
 ### 🛡️ Modelos de lista protegidos contra sumiço

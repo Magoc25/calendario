@@ -787,6 +787,34 @@ function run() {
       return AppState.participantGroups.some(g=>g.name==='Remoto');})()`) === true);
   ev(`AppState.participantGroups=[];saveParticipantGroups();renderPartGroups();currentParticipants=[];renderPartPills();closeModal()`);
 
+  /* ── Lembrete por evento no Google (v2.11.0) ── */
+  check('mgcToGcal: o alerta do app vira lembrete do evento no Google',
+    ev(`(function(){const r=mgcToGcal({id:'a1',title:'x',date:'2026-11-01',alert:20}).reminders;
+      return r.useDefault===false&&r.overrides.length===1&&r.overrides[0].minutes===20&&r.overrides[0].method==='popup';})()`) === true);
+  check('mgcToGcal: "Na hora" (0 min) não é confundido com "sem alerta"',
+    ev(`(function(){const r=mgcToGcal({id:'a2',title:'x',date:'2026-11-01',alert:0}).reminders;
+      return r.overrides.length===1&&r.overrides[0].minutes===0;})()`) === true);
+  check('mgcToGcal: "Sem alerta" no app = sem lembrete no Google (não o padrão do calendário)',
+    ev(`(function(){const r=mgcToGcal({id:'a3',title:'x',date:'2026-11-01',alert:null}).reminders;
+      return r.useDefault===false&&r.overrides.length===0;})()`) === true);
+  check('gcalToMgc: importa o lembrete quando o evento do Google tem override',
+    ev(`gcalToMgc({id:'a4',start:{date:'2026-11-01'},end:{date:'2026-11-02'},
+      reminders:{useDefault:false,overrides:[{method:'popup',minutes:45}]}}).alert`) === 45);
+  check('gcalToMgc: override vazio no Google = sem alerta no app',
+    ev(`gcalToMgc({id:'a5',start:{date:'2026-11-01'},end:{date:'2026-11-02'},
+      reminders:{useDefault:false,overrides:[]}}).alert`) === null);
+  check('gcalToMgc: com useDefault=true NÃO mexe no alerta local (chave ausente)',
+    ev(`(function(){const e=gcalToMgc({id:'a6',start:{date:'2026-11-01'},end:{date:'2026-11-02'},
+      reminders:{useDefault:true}});return !('alert' in e);})()`) === true);
+  check('gcalToMgc: evento sem campo reminders não zera o alerta local',
+    ev(`(function(){const e=gcalToMgc({id:'a7',start:{date:'2026-11-01'},end:{date:'2026-11-02'}});
+      return !('alert' in e);})()`) === true);
+  check('gcalToMgc: prefere o override popup quando há e-mail junto',
+    ev(`gcalToMgc({id:'a8',start:{date:'2026-11-01'},end:{date:'2026-11-02'},
+      reminders:{useDefault:false,overrides:[{method:'email',minutes:1440},{method:'popup',minutes:15}]}}).alert`) === 15);
+  check('o pull pede reminders ao Google (senão a volta nunca chega)',
+    /fields:'[^']*reminders[^']*'/.test(fs.readFileSync(HTML_PATH,'utf8')));
+
   /* ── Reunião do Meet + controle de notificação (v2.9.0) ── */
   check('mgcToGcal: addMeet pede sala com requestId ESTÁVEL (reenvio não cria 2ª sala)',
     ev(`(function(){

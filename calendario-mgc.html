@@ -2358,7 +2358,7 @@ body.large .sidebar-year{font-size:22px}
             </a>
             <button class="footer-link-btn pix-btn" id="pixBtn" title="Apoiar o projeto">☕ Apoiar</button>
             <button class="footer-link-btn" id="reviewsBtn" title="Ver avaliações">⭐ Avaliações</button>
-            <span id="appVersion" style="font-size:11px;color:var(--text);user-select:none">© MGC · v2.10.3</span>
+            <span id="appVersion" style="font-size:11px;color:var(--text);user-select:none">© MGC · v2.11.0</span>
           </span>
         </div>
       </div>
@@ -9295,6 +9295,14 @@ function mgcToGcal(ev){
     obj.guestsCanSeeOtherGuests=false;
     obj.guestsCanInviteOthers=false;
   }
+  // Lembrete POR EVENTO: sem isto o Google aplica o padrão do calendário e ignora o
+  // "Alerta antecipado" escolhido aqui (usuário escolhia 20 min e era avisado aos 10).
+  // "Sem alerta" no app = sem lembrete no Google (overrides vazio), não o padrão dele.
+  // ⚠️ Lembrete no Google é POR PESSOA: isto vale para a cópia do DONO. Cada convidado
+  // continua sendo avisado pelo padrão da agenda dele — limitação do Google, não do app.
+  obj.reminders=(ev.alert!=null)
+    ? {useDefault:false,overrides:[{method:'popup',minutes:ev.alert}]}
+    : {useDefault:false,overrides:[]};
   // Sala do Meet: só PEDIR quando o usuário marcou E o evento ainda não tem sala.
   // requestId derivado do id do evento = idempotente: um reenvio (retry, sync
   // repetido) devolve A MESMA sala. Com id aleatório, geraria uma segunda sala e o
@@ -9445,6 +9453,14 @@ function gcalToMgc(gcEv){
     category:'',
     ...gcalOwnershipFields(gcEv)
   };
+  // Lembrete: só importa com override EXPLÍCITO. Com useDefault:true não dá para
+  // saber o padrão do calendário sem outro endpoint — e chutar seria pior que
+  // deixar o alerta local como está (chave ausente não sobrescreve no merge).
+  const _rem=gcEv.reminders;
+  if(_rem&&_rem.useDefault===false&&Array.isArray(_rem.overrides)){
+    const _pop=_rem.overrides.find(o=>o&&o.method==='popup')||_rem.overrides[0];
+    ev.alert=_pop&&typeof _pop.minutes==='number'?_pop.minutes:null;
+  }
   return ev;
 }
 
@@ -9479,7 +9495,7 @@ async function gcalSync(pullOnly=false){
         maxResults:'500',
         orderBy:'startTime',
         showDeleted:'true',
-        fields:'nextPageToken,items(id,summary,description,location,start,end,updated,status,recurringEventId,extendedProperties,hangoutLink,conferenceData(entryPoints(uri,entryPointType)),organizer(email,self),attendees(email,responseStatus,self))'
+        fields:'nextPageToken,items(id,summary,description,location,start,end,updated,status,recurringEventId,extendedProperties,hangoutLink,conferenceData(entryPoints(uri,entryPointType)),organizer(email,self),attendees(email,responseStatus,self),reminders)'
       });
       if(pageToken)params.set('pageToken',pageToken);
       const resp=await fetch(`${GCAL_API}/calendars/${encodeURIComponent(calId)}/events?${params}`,{
@@ -10328,7 +10344,7 @@ try{localStorage.removeItem('mgc_app_version');}catch(e){} // remove o cache de 
 /* ── Verificação de nova versão via Supabase ── */
 (async()=>{
   if(!revClient)return;
-  const LOCAL_VERSION='2.10.3';
+  const LOCAL_VERSION='2.11.0';
   const CACHE_KEY='mgc_update_check';
   const CACHE_TTL=24*60*60*1000; // 24 horas
   let cached=null;try{cached=JSON.parse(localStorage.getItem(CACHE_KEY)||'null');}catch(e){} // valor corrompido não pode matar o banner de update
@@ -10367,7 +10383,7 @@ try{localStorage.removeItem('mgc_app_version');}catch(e){} // remove o cache de 
   if(!deviceId){deviceId=crypto.randomUUID();localStorage.setItem('calendario_device_id',deviceId);}
   try{
     await revClient.from('app_pings').upsert(
-      {app_name:'Calendario MGC',version:'2.10.3',device_id:deviceId,ping_date:today},
+      {app_name:'Calendario MGC',version:'2.11.0',device_id:deviceId,ping_date:today},
       {onConflict:'app_name,device_id,ping_date',ignoreDuplicates:true}
     );
     localStorage.setItem(PING_KEY,today);
