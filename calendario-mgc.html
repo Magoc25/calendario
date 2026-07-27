@@ -2358,7 +2358,7 @@ body.large .sidebar-year{font-size:22px}
             </a>
             <button class="footer-link-btn pix-btn" id="pixBtn" title="Apoiar o projeto">☕ Apoiar</button>
             <button class="footer-link-btn" id="reviewsBtn" title="Ver avaliações">⭐ Avaliações</button>
-            <span id="appVersion" style="font-size:11px;color:var(--text);user-select:none">© MGC · v2.9.1</span>
+            <span id="appVersion" style="font-size:11px;color:var(--text);user-select:none">© MGC · v2.10.0</span>
           </span>
         </div>
       </div>
@@ -2458,7 +2458,7 @@ body.large .sidebar-year{font-size:22px}
     </div>
     <div class="field">
       <label>Alerta antecipado</label>
-      <select id="evAlert"><option value="">Sem alerta</option><option value="0">Na hora</option><option value="5">5 min antes</option><option value="10">10 min antes</option><option value="15" selected>15 min antes</option><option value="30">30 min antes</option><option value="60">1 hora antes</option><option value="1440">1 dia antes</option></select>
+      <select id="evAlert"><option value="">Sem alerta</option><option value="0">Na hora</option><option value="5">5 min antes</option><option value="10" selected>10 min antes</option><option value="15">15 min antes</option><option value="30">30 min antes</option><option value="60">1 hora antes</option><option value="1440">1 dia antes</option></select>
     </div>
     <div class="field">
       <label>Repetição</label>
@@ -2484,6 +2484,23 @@ body.large .sidebar-year{font-size:22px}
         <input type="text" class="tags-real-input" id="partInput" placeholder="email@exemplo.com" inputmode="email" autocomplete="off" spellcheck="false">
       </div>
       <div class="color-hint">Ao adicionar um e-mail, o evento (título, horário, local, descrição) é compartilhado com essa pessoa pelo Google Agenda, e ela é alertada pela agenda dela. Sem conta Google: recebe o e-mail, mas não entra no app dela.</div>
+      <div style="display:flex;align-items:center;gap:7px;margin-top:6px">
+        <span style="font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em">Grupos</span>
+        <button id="pgMgBtn" class="cat-mg-btn" type="button">⚙️ Gerenciar</button>
+      </div>
+      <div id="pgChips" class="cat-tags"></div>
+      <div id="pgPanel" class="cat-mg-panel" style="display:none">
+        <div class="cat-mg-section-title">Grupos salvos</div>
+        <div id="pgList"></div>
+        <div style="border-top:1px solid var(--border);padding-top:8px;margin-top:4px">
+          <div class="cat-mg-section-title">Salvar os participantes atuais como grupo</div>
+          <div class="cat-mg-add-row">
+            <input id="pgName" class="cat-mg-name-input" type="text" placeholder="Nome do grupo (ex.: Turma A)">
+            <button id="pgAddBtn" class="cat-mg-add-btn" type="button">+ Salvar</button>
+          </div>
+          <div class="color-hint">O grupo é um <b>atalho</b>: clicar nele adiciona os e-mails ao evento. Editar o grupo depois <b>não</b> altera eventos já criados. Você é responsável pelos e-mails de terceiros que guardar — veja o Aviso de Privacidade.</div>
+        </div>
+      </div>
     </div>
     <div class="field" id="guestNoticeField" style="display:none">
       <div class="color-hint" style="font-style:normal;color:var(--accent)">👤 Você é convidado neste evento — o organizador é o dono, então alterações feitas aqui ficam só nos seus aparelhos.</div>
@@ -4650,6 +4667,72 @@ document.getElementById('partInput').addEventListener('blur',function(){
 });
 document.getElementById('partInputWrap').addEventListener('click',()=>document.getElementById('partInput').focus());
 
+/* ── Grupos de participantes (v2.10.0) — agenda de e-mails do usuário ──────
+   ATALHO, não vínculo: clicar no grupo expande os e-mails em chips. Editar o
+   grupo depois NÃO mexe em evento já criado — a lista de convidados congela no
+   Google quando o convite sai, e um vínculo vivo criaria divergência silenciosa
+   entre o app e a agenda. ── */
+try{AppState.participantGroups=JSON.parse(localStorage.getItem('cal_participant_groups')||'[]');}catch(e){AppState.participantGroups=[];}
+if(!Array.isArray(AppState.participantGroups))AppState.participantGroups=[];
+function saveParticipantGroups(){
+  localStorage.setItem('cal_participant_groups',JSON.stringify(AppState.participantGroups));
+  localStorage.setItem('cal_local_ts',new Date().toISOString());
+  scheduleCloudPush();
+}
+function renderPartGroups(){
+  const chips=document.getElementById('pgChips');
+  if(!chips)return;
+  chips.innerHTML=AppState.participantGroups.map(g=>
+    `<span class="cat-tag" data-pg="${esc(g.id)}" title="Adicionar ${g.emails.length} e-mail(s)">👥 ${esc(g.name)} · ${g.emails.length}</span>`).join('')
+    ||'<span style="font-size:10px;color:var(--muted);font-style:italic">Nenhum grupo salvo</span>';
+  chips.querySelectorAll('[data-pg]').forEach(c=>c.addEventListener('click',()=>{
+    const g=AppState.participantGroups.find(x=>x.id===c.dataset.pg);
+    if(!g)return;
+    const antes=currentParticipants.length;
+    addParticipants(g.emails.join(','));
+    toast(`👥 ${g.name}: +${currentParticipants.length-antes} participante(s)`);
+  }));
+  const list=document.getElementById('pgList');
+  if(!list)return;
+  list.innerHTML=AppState.participantGroups.map(g=>
+    `<div class="cat-mg-row"><span style="flex:1;font-size:11px">👥 ${esc(g.name)} <span style="color:var(--muted)">· ${g.emails.length}</span></span>
+       <button class="cat-mg-btn" data-pg-ren="${esc(g.id)}" type="button">✎</button>
+       <button class="cat-mg-btn" data-pg-del="${esc(g.id)}" type="button" style="color:#e03131">🗑</button></div>`).join('')
+    ||'<div style="color:var(--muted);font-style:italic;font-size:11px;padding:2px 0 6px">Nenhum grupo</div>';
+  list.querySelectorAll('[data-pg-ren]').forEach(b=>b.addEventListener('click',()=>{
+    const g=AppState.participantGroups.find(x=>x.id===b.dataset.pgRen);if(!g)return;
+    const n=prompt('Novo nome do grupo:',g.name);
+    if(n&&n.trim()){g.name=n.trim();saveParticipantGroups();renderPartGroups();}
+  }));
+  list.querySelectorAll('[data-pg-del]').forEach(b=>b.addEventListener('click',()=>{
+    const g=AppState.participantGroups.find(x=>x.id===b.dataset.pgDel);if(!g)return;
+    if(!confirm(`Excluir o grupo "${g.name}"? Os eventos já criados não mudam.`))return;
+    AppState.participantGroups=AppState.participantGroups.filter(x=>x.id!==g.id);
+    saveParticipantGroups();renderPartGroups();
+  }));
+}
+// Salva os chips atuais como grupo (mesmo nome = substitui a lista)
+function savePartGroupFromCurrent(nome){
+  const name=String(nome||'').trim();
+  if(!name||!currentParticipants.length)return false;
+  const ex=AppState.participantGroups.find(g=>g.name.toLowerCase()===name.toLowerCase());
+  if(ex)ex.emails=[...currentParticipants];
+  else AppState.participantGroups.unshift({id:uid(),name,emails:[...currentParticipants]});
+  saveParticipantGroups();renderPartGroups();
+  return true;
+}
+document.getElementById('pgMgBtn').addEventListener('click',()=>{
+  const p=document.getElementById('pgPanel');
+  p.style.display=p.style.display==='none'?'':'none';
+});
+document.getElementById('pgAddBtn').addEventListener('click',()=>{
+  const inp=document.getElementById('pgName');
+  if(!currentParticipants.length){toast('⚠️ Adicione participantes antes de salvar o grupo.');return;}
+  if(!savePartGroupFromCurrent(inp.value)){toast('⚠️ Dê um nome ao grupo.');return;}
+  toast(`👥 Grupo "${inp.value.trim()}" salvo`);inp.value='';
+});
+renderPartGroups();
+
 // Live conflict check
 function checkConflictLive(){
   const title=document.getElementById('evTitle').value.trim();
@@ -4735,7 +4818,7 @@ function openNew(date){
   document.getElementById('evDate').value=date||ds(AppState.cur.getFullYear(),AppState.cur.getMonth(),1);
   document.getElementById('evDateEnd').value=date||ds(AppState.cur.getFullYear(),AppState.cur.getMonth(),1);
   document.getElementById('evStart').value='08:00';document.getElementById('evEnd').value='09:00';
-  document.getElementById('evAlert').value='15';document.getElementById('evRrule').value='';
+  document.getElementById('evAlert').value='10';document.getElementById('evRrule').value='';
   document.getElementById('recurBox').classList.remove('show');document.getElementById('customDaysWrap').classList.remove('show');
   document.querySelectorAll('.cat-tag,.day-chip').forEach(t=>t.classList.remove('selected','sel'));
   selectedCustomDays.clear();document.getElementById('customInterval').value='1';
@@ -4746,6 +4829,7 @@ function openNew(date){
   currentParticipants=[];renderPartPills();
   document.getElementById('guestNoticeField').style.display='none';
   setMeetUI(false,false);setNotifyUI(true);
+  document.getElementById('pgPanel').style.display='none';renderPartGroups();
   const ccw=document.getElementById('colorCustom').closest('.color-custom-wrap');ccw.querySelector('.color-custom-btn').style.cssText='';ccw.querySelector('.color-custom-btn').textContent='+';
   setColor('#3b5bdb');setDoneUI(false);
   document.getElementById('meetLinkField').style.display='none';
@@ -4785,6 +4869,7 @@ function openEdit(id,dateCtx){
   // sala já criada → checkbox marcado e travado; notifyGuests ausente (evento
   // anterior à v2.9.0) = avisar, para o silêncio nunca ser acidental
   const _temSala=!!ev.meetLink;
+  document.getElementById('pgPanel').style.display='none';renderPartGroups();
   setMeetUI(_temSala||!!ev.addMeet,_temSala);
   setNotifyUI(ev.notifyGuests!==false);
   // Evento de convite (o dono é outra pessoa): o push ao Google é bloqueado pelo
@@ -5128,6 +5213,7 @@ document.getElementById('exportJsonBtn').addEventListener('click',()=>{
     routines:AppState.routines,quickTasks:AppState.quickTasks,reviews:AppState.reviews,top3:AppState.top3Data,
     lists:AppState.lists,
     listTemplates:AppState.listTemplates,
+    participantGroups:AppState.participantGroups,
     standaloneNotes:AppState.standaloneNotes,
     calendars,
     categories:AppState.categories,
@@ -5165,6 +5251,7 @@ document.getElementById('importFile').addEventListener('change',function(){
           AppState.listsDel={};saveLists();
         }
         if(Array.isArray(data.listTemplates)){AppState.listTemplates=data.listTemplates;saveListTemplates();}
+        if(Array.isArray(data.participantGroups)){AppState.participantGroups=data.participantGroups;saveParticipantGroups();renderPartGroups();}
         // v7: restaura o restante do backup (o import antigo ignorava o que o export incluía)
         if(Array.isArray(data.routines)){AppState.routines=data.routines;saveRoutines();}
         if(Array.isArray(data.quickTasks)){AppState.quickTasks=data.quickTasks;saveQuickTasks();}
@@ -8736,6 +8823,7 @@ function getLocalPayload(){
     standalone_notes: JSON.stringify({v:2,notes:AppState.standaloneNotes,del:AppState.standaloneNotesDel||{}}), // v2: tombstones p/ merge por id
     lists: JSON.stringify({v:2,lists:AppState.lists,del:AppState.listsDel||{}}), // v2: inclui tombstones p/ merge no sync
     list_templates: JSON.stringify(AppState.listTemplates||[]), // modelos de lista (coluna nova; fallback r9 cobre tabela antiga)
+    participant_groups: JSON.stringify(AppState.participantGroups||[]), // grupos de e-mail (coluna nova; fallback r9 cobre tabela antiga)
     routine_checks: JSON.stringify(rchecks),
     updated_at: new Date().toISOString()
   };
@@ -8762,6 +8850,7 @@ function applyRemotePayload(row){
     if(row.top3)try{const t3=JSON.parse(row.top3);if(t3&&typeof t3==='object')AppState.top3Data=t3;}catch(e){}
     applyRemoteStandaloneNotesMerge(row); // aba Notas: merge por id + tombstones (persiste internamente)
     if(row.list_templates)try{const lt=JSON.parse(row.list_templates);if(Array.isArray(lt)){AppState.listTemplates=lt;localStorage.setItem('cal_list_templates',row.list_templates);}}catch(e){}
+    if(row.participant_groups)try{const pg=JSON.parse(row.participant_groups);if(Array.isArray(pg)){AppState.participantGroups=pg;localStorage.setItem('cal_participant_groups',row.participant_groups);if(typeof renderPartGroups==='function')renderPartGroups();}}catch(e){}
     applyRemoteListsMerge(row); // mescla por id + tombstones (persiste cal_lists/cal_lists_del internamente)
     // Persist locally (eventos/notas/listas já persistidos pelos merges acima)
     localStorage.setItem('cal_catcolors',row.category_colors||'{}');
@@ -10151,7 +10240,7 @@ try{localStorage.removeItem('mgc_app_version');}catch(e){} // remove o cache de 
 /* ── Verificação de nova versão via Supabase ── */
 (async()=>{
   if(!revClient)return;
-  const LOCAL_VERSION='2.9.1';
+  const LOCAL_VERSION='2.10.0';
   const CACHE_KEY='mgc_update_check';
   const CACHE_TTL=24*60*60*1000; // 24 horas
   let cached=null;try{cached=JSON.parse(localStorage.getItem(CACHE_KEY)||'null');}catch(e){} // valor corrompido não pode matar o banner de update
@@ -10190,7 +10279,7 @@ try{localStorage.removeItem('mgc_app_version');}catch(e){} // remove o cache de 
   if(!deviceId){deviceId=crypto.randomUUID();localStorage.setItem('calendario_device_id',deviceId);}
   try{
     await revClient.from('app_pings').upsert(
-      {app_name:'Calendario MGC',version:'2.9.1',device_id:deviceId,ping_date:today},
+      {app_name:'Calendario MGC',version:'2.10.0',device_id:deviceId,ping_date:today},
       {onConflict:'app_name,device_id,ping_date',ignoreDuplicates:true}
     );
     localStorage.setItem(PING_KEY,today);

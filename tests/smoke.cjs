@@ -624,6 +624,44 @@ function run() {
     /if\(gcalRemoteWins\(local,gcEv\)\)/.test(fs.readFileSync(HTML_PATH,'utf8')) &&
     !/gcUpdated>localUpdated/.test(fs.readFileSync(HTML_PATH,'utf8').split('\n').filter(l=>!/^\s*\/\//.test(l)).join('\n')));
 
+  /* ── Grupos de participantes (v2.10.0): ATALHO, não vínculo ── */
+  ev(`openNew('2026-10-01')`);
+  check('alerta padrão de evento novo é 10 min', $('evAlert').value === '10');
+  ev(`addParticipants('a@x.com, b@x.com')`);
+  check('salva os participantes atuais como grupo nomeado',
+    ev(`savePartGroupFromCurrent('Turma A')`) === true &&
+    ev(`(function(){const g=AppState.participantGroups.find(x=>x.name==='Turma A');
+      return !!g&&JSON.stringify(g.emails)==='["a@x.com","b@x.com"]';})()`) === true);
+  check('grupo sem nome ou sem participantes não é salvo',
+    ev(`savePartGroupFromCurrent('')`) === false &&
+    ev(`(function(){const bk=currentParticipants;currentParticipants=[];
+      const r=savePartGroupFromCurrent('Vazio');currentParticipants=bk;return r;})()`) === false);
+  check('chip do grupo aparece com nome e contagem',
+    ev(`!!document.querySelector('#pgChips [data-pg]')`) &&
+    /Turma A · 2/.test(ev(`document.getElementById('pgChips').innerHTML`)));
+  ev(`currentParticipants=[];renderPartPills()`);
+  ev(`document.querySelector('#pgChips [data-pg]').click()`);
+  check('clicar no grupo expande os e-mails em chips no evento',
+    ev(`JSON.stringify(currentParticipants)`) === '["a@x.com","b@x.com"]');
+  ev(`addParticipants('c@x.com')`);
+  check('🔗 grupo é ATALHO: mudar os participantes do evento não altera o grupo',
+    ev(`JSON.stringify(AppState.participantGroups.find(x=>x.name==='Turma A').emails)`) === '["a@x.com","b@x.com"]');
+  check('salvar com o MESMO nome substitui a lista do grupo (não duplica)',
+    ev(`(function(){savePartGroupFromCurrent('Turma A');
+      const gs=AppState.participantGroups.filter(x=>x.name==='Turma A');
+      return gs.length===1&&gs[0].emails.length===3;})()`) === true);
+  check('grupo não vaza para o evento salvo (o evento leva só os e-mails)',
+    ev(`(function(){const o=mgcToGcal({id:'g1',title:'x',date:'2026-10-01',participants:['a@x.com']});
+      return !('participantGroups' in o)&&o.attendees.length===1;})()`) === true);
+  check('grupos entram no payload do Supabase (coluna nova, fallback r9 cobre tabela antiga)',
+    ev(`(function(){const p=getLocalPayload();
+      return typeof p.participant_groups==='string'&&JSON.parse(p.participant_groups).some(g=>g.name==='Turma A');})()`) === true);
+  check('applyRemotePayload traz grupos de outro aparelho',
+    ev(`(function(){
+      applyRemotePayload({participant_groups:JSON.stringify([{id:'r1',name:'Remoto',emails:['z@x.com']}])});
+      return AppState.participantGroups.some(g=>g.name==='Remoto');})()`) === true);
+  ev(`AppState.participantGroups=[];saveParticipantGroups();renderPartGroups();currentParticipants=[];renderPartPills();closeModal()`);
+
   /* ── Reunião do Meet + controle de notificação (v2.9.0) ── */
   check('mgcToGcal: addMeet pede sala com requestId ESTÁVEL (reenvio não cria 2ª sala)',
     ev(`(function(){

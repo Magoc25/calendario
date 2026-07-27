@@ -5,6 +5,24 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 
 ---
 
+## [2.10.0] — Julho 2026
+
+### 👥 Grupos de participantes
+- Salve os participantes de um evento como **grupo nomeado** ("Turma A", "Reunião CPA") e reutilize com **um clique** — os e-mails entram de uma vez no próximo evento.
+- Gerenciador no próprio formulário (⚙️ Gerenciar, ao lado de Grupos): renomear, excluir e regravar. Salvar com um nome já existente **atualiza** o grupo, não duplica.
+- O grupo é um **atalho, não um vínculo**: editar o grupo depois **não** altera eventos já criados — a lista de convidados de um convite já enviado fica congelada no Google, e um vínculo vivo criaria diferença silenciosa entre o app e a agenda.
+- Os grupos **sincronizam** entre seus aparelhos e entram no backup JSON.
+- ⚠️ Os e-mails de terceiros que você guarda são de **sua responsabilidade** — veja o [Aviso de Privacidade](./PRIVACY.md).
+
+### ⏰ Ajuste
+- O **alerta antecipado** de um evento novo passa a vir com **10 minutos** por padrão (era 15).
+
+> 💡 **Opcional:** para os grupos sincronizarem, rode no seu Supabase:
+> `alter table cal_sync add column if not exists participant_groups text;`
+> Sem isso eles continuam funcionando, mas ficam só neste aparelho.
+
+---
+
 ## [2.9.1] — Julho 2026
 
 ### 🐛 Correção — evento voltava para o dia antigo depois de sincronizar com o Google

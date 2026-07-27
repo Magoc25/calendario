@@ -6,7 +6,7 @@ Desenvolvido por **Marlon Gomes da Costa (MGC Dev)**
 
 > ⚠️ **Este é um projeto pessoal**, desenvolvido de forma independente pelo autor. Não representa, não é financiado e não tem vínculo institucional com o IFMA ou qualquer outra organização. O autor é professor do IFMA Campus São Raimundo das Mangabeiras, mas o Calendário MGC é uma iniciativa exclusivamente pessoal.
 
-[![Versão](https://img.shields.io/badge/versão-2.9.1-blue)](./CHANGELOG.md)
+[![Versão](https://img.shields.io/badge/versão-2.10.0-blue)](./CHANGELOG.md)
 [![Licença](https://img.shields.io/badge/licença-não%20comercial-orange)](#licença)
 [![PIX](https://img.shields.io/badge/apoie-PIX-brightgreen)](#apoiar)
 [![Dispositivos ativos](https://img.shields.io/badge/dynamic/json?url=https://raw.githubusercontent.com/Magoc25/calendario/main/stats.json&query=$.active_30d&label=dispositivos%20ativos%20(30d)&color=blue&suffix=%20dispositivos)](./stats.json)
@@ -116,7 +116,7 @@ Quando quiser sincronizar entre computadores ou acessar pelo celular, basta conf
 ### Integração e Export
 - **Sincronização Supabase** — dados em nuvem, automática entre dispositivos
 - **Google Calendar** — sincronização bidirecional com OAuth2; basta conectar em um dispositivo, os demais recebem via Supabase
-- **Participantes no evento** — digite e-mails (ou cole uma lista): cada pessoa vira convidada no Google Agenda e é lembrada pela agenda dela
+- **Participantes no evento** — digite e-mails (ou cole uma lista): cada pessoa vira convidada no Google Agenda e é lembrada pela agenda dela; salve listas recorrentes como **grupos** ("Turma A") e reutilize com um clique
 - **Reunião do Google Meet** — marque a opção no evento e o link da sala é criado ao sincronizar, já indo no convite dos participantes
 - **Aviso por e-mail opcional** — desmarque para o evento entrar na agenda do convidado sem disparar e-mail. ⚠️ Nesse modo a entrega depende da configuração *dele* no Google Agenda ("Adicionar convites à minha agenda"); quem usa "só quando eu responder", ou não tem conta Google, não fica sabendo. Os e-mails que você guarda no app são de sua responsabilidade — veja o [Aviso de Privacidade](./PRIVACY.md)
 - **Exportar .ics** — compatível com Google Calendar, Apple Calendar e Outlook
