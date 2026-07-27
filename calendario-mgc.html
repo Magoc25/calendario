@@ -2358,7 +2358,7 @@ body.large .sidebar-year{font-size:22px}
             </a>
             <button class="footer-link-btn pix-btn" id="pixBtn" title="Apoiar o projeto">☕ Apoiar</button>
             <button class="footer-link-btn" id="reviewsBtn" title="Ver avaliações">⭐ Avaliações</button>
-            <span id="appVersion" style="font-size:11px;color:var(--text);user-select:none">© MGC · v2.8.2</span>
+            <span id="appVersion" style="font-size:11px;color:var(--text);user-select:none">© MGC · v2.9.0</span>
           </span>
         </div>
       </div>
@@ -2487,6 +2487,14 @@ body.large .sidebar-year{font-size:22px}
     </div>
     <div class="field" id="guestNoticeField" style="display:none">
       <div class="color-hint" style="font-style:normal;color:var(--accent)">👤 Você é convidado neste evento — o organizador é o dono, então alterações feitas aqui ficam só nos seus aparelhos.</div>
+    </div>
+    <div class="field" id="meetOptField">
+      <div class="done-row" id="addMeetRow"><div class="done-check-box" id="addMeetBox"></div><span class="done-label" id="addMeetLabel">🎥 Criar reunião do Google Meet</span></div>
+      <div class="color-hint" id="addMeetHint">O link é gerado pelo Google ao sincronizar e enviado aos participantes.</div>
+    </div>
+    <div class="field" id="notifyOptField">
+      <div class="done-row" id="notifyRow"><div class="done-check-box" id="notifyBox"></div><span class="done-label" id="notifyLabel">✉️ Avisar convidados por e-mail</span></div>
+      <div class="color-hint">Desmarcado, o evento entra na agenda do convidado <b>sem e-mail</b> — mas só se a configuração do Google Agenda dele aceitar convites automaticamente. Quem usa “adicionar só quando eu responder”, ou não tem conta Google, <b>não fica sabendo</b>.</div>
     </div>
     <div class="field" id="meetLinkField" style="display:none"><label>Google Meet</label><div style="display:flex;align-items:center;gap:8px"><a id="meetLinkAnchor" href="#" target="_blank" rel="noopener" class="meet-modal-link">🎥 Entrar na videochamada</a><button id="meetLinkCopy" class="meet-copy-btn" title="Copiar link">📋</button></div></div>
     <div class="field"><label>Descrição</label><textarea id="evDesc" placeholder="Notas, links, observações…"></textarea></div>
@@ -4550,6 +4558,27 @@ document.querySelectorAll('.day-chip').forEach(chip=>{chip.addEventListener('cli
 document.getElementById('doneRow').addEventListener('click',function(){isDone=!isDone;this.classList.toggle('done-active',isDone);document.getElementById('doneCheckBox').textContent=isDone?'✓':'';document.getElementById('doneLabel').textContent=isDone?'Concluído ✓':'Marcar como concluído';});
 function setDoneUI(val){isDone=val;document.getElementById('doneRow').classList.toggle('done-active',val);document.getElementById('doneCheckBox').textContent=val?'✓':'';document.getElementById('doneLabel').textContent=val?'Concluído ✓':'Marcar como concluído';}
 
+/* ── Reunião do Meet + aviso por e-mail (v2.9.0) ──────────────────────────
+   addMeet é INTENÇÃO ("quero uma sala"); meetLink é FATO (o Google criou).
+   Nunca derive um do outro no push: sala já criada não se pede de novo. ── */
+let wantsMeet=false,notifyGuests=true;
+function _setCheckRow(rowId,boxId,val){
+  document.getElementById(rowId).classList.toggle('done-active',val);
+  document.getElementById(boxId).textContent=val?'✓':'';
+}
+// travado = sala já existe (pedir de novo não faz nada; remover é fora de escopo)
+function setMeetUI(val,travado){
+  wantsMeet=val;_setCheckRow('addMeetRow','addMeetBox',val);
+  const row=document.getElementById('addMeetRow');
+  row.style.opacity=travado?'.6':'';row.style.pointerEvents=travado?'none':'';
+  document.getElementById('addMeetHint').textContent=travado
+    ?'Sala já criada — o link aparece abaixo.'
+    :'O link é gerado pelo Google ao sincronizar e enviado aos participantes.';
+}
+function setNotifyUI(val){notifyGuests=val;_setCheckRow('notifyRow','notifyBox',val);}
+document.getElementById('addMeetRow').addEventListener('click',()=>setMeetUI(!wantsMeet,false));
+document.getElementById('notifyRow').addEventListener('click',()=>setNotifyUI(!notifyGuests));
+
 // Tags input
 document.getElementById('tagInput').addEventListener('keydown',function(e){
   if((e.key==='Enter'||e.key===','||e.key===' ')&&this.value.trim()){
@@ -4716,6 +4745,7 @@ function openNew(date){
   currentTags=[];renderTagPills();
   currentParticipants=[];renderPartPills();
   document.getElementById('guestNoticeField').style.display='none';
+  setMeetUI(false,false);setNotifyUI(true);
   const ccw=document.getElementById('colorCustom').closest('.color-custom-wrap');ccw.querySelector('.color-custom-btn').style.cssText='';ccw.querySelector('.color-custom-btn').textContent='+';
   setColor('#3b5bdb');setDoneUI(false);
   document.getElementById('meetLinkField').style.display='none';
@@ -4752,6 +4782,11 @@ function openEdit(id,dateCtx){
   currentTags=[...(ev.tags||[])];renderTagPills();
   currentParticipants=[...(ev.participants||[])];renderPartPills();
   document.getElementById('partInput').value='';
+  // sala já criada → checkbox marcado e travado; notifyGuests ausente (evento
+  // anterior à v2.9.0) = avisar, para o silêncio nunca ser acidental
+  const _temSala=!!ev.meetLink;
+  setMeetUI(_temSala||!!ev.addMeet,_temSala);
+  setNotifyUI(ev.notifyGuests!==false);
   // Evento de convite (o dono é outra pessoa): o push ao Google é bloqueado pelo
   // shouldPushUpdate — avisar, senão a edição parece "não sincronizar" sem motivo
   document.getElementById('guestNoticeField').style.display=ev.gcalIsGuest?'':'none';
@@ -4778,6 +4813,7 @@ document.getElementById('saveBtn').addEventListener('click',()=>{
   if(cat&&selectedColor){categoryColors[cat]=selectedColor;saveCatColors();}
   const ev={id:editingId||uid(),title,category:cat,color:selectedColor,tags:[...currentTags],
     participants:[...currentParticipants], // e-mails → attendees do Google (sempre presente, como tags: o merge do pull é spread)
+    addMeet:wantsMeet,notifyGuests:notifyGuests,
     calendarId:document.getElementById('evCalendar').value||'default',
     alert:alertVal!==''?parseInt(alertVal):null,
     date:document.getElementById('evDate').value,
@@ -9082,6 +9118,16 @@ function mgcToGcal(ev){
     obj.guestsCanSeeOtherGuests=false;
     obj.guestsCanInviteOthers=false;
   }
+  // Sala do Meet: só PEDIR quando o usuário marcou E o evento ainda não tem sala.
+  // requestId derivado do id do evento = idempotente: um reenvio (retry, sync
+  // repetido) devolve A MESMA sala. Com id aleatório, geraria uma segunda sala e o
+  // link que já foi por e-mail aos convidados viraria órfão.
+  if(ev.addMeet&&!ev.meetLink){
+    obj.conferenceData={createRequest:{
+      requestId:'mgc-'+ev.id,
+      conferenceSolutionKey:{type:'hangoutsMeet'}
+    }};
+  }
   // Store MGC metadata so we can read back on import
   obj.extendedProperties={private:{mgcCalendarId:ev.calendarId||'default',mgcId:ev.id}};
   return obj;
@@ -9125,7 +9171,22 @@ function shouldPushUpdate(ev){
 // O default da API é NÃO notificar: sem sendUpdates=all o evento é criado e ninguém
 // recebe o convite (falha silenciosa). Condicional para que o sync de eventos sem
 // participantes não dispare e-mail à toa.
-function gcalNotifyParam(ev){return (ev&&ev.participants&&ev.participants.length)?'?sendUpdates=all':'';}
+function gcalNotifyParam(ev){return (ev&&ev.participants&&ev.participants.length&&ev.notifyGuests!==false)?'?sendUpdates=all':'';}
+
+// Query completa do push. Duas regras que precisam ser INVARIANTE, não cuidado:
+//
+// 1. sendUpdates=all só com participantes E com o aviso ligado (notifyGuests
+//    ausente = evento anterior à v2.9.0 → avisa, o silêncio nunca é acidental).
+// 2. conferenceDataVersion=1 DERIVA DO CORPO, nunca da intenção: mandá-lo num PUT
+//    cujo corpo não traz conferenceData faz o Google APAGAR a sala do evento (o PUT
+//    é substituição total) — e o link que os convidados já receberam morre. Lendo do
+//    corpo, é estruturalmente impossível enviar o parâmetro sem a conferência junto.
+function gcalPushParams(ev,body){
+  const p=[];
+  if(ev&&ev.participants&&ev.participants.length&&ev.notifyGuests!==false)p.push('sendUpdates=all');
+  if(body&&body.conferenceData)p.push('conferenceDataVersion=1');
+  return p.length?'?'+p.join('&'):'';
+}
 
 // Grava o resultado do push RELOCALIZANDO o evento por id — nunca na referência
 // capturada antes do `await` do fetch.
@@ -9361,7 +9422,7 @@ async function gcalSync(pullOnly=false){
       for(const ev of toPush){
         try{
           const body=mgcToGcal(ev);
-          const res=await fetch(`${GCAL_API}/calendars/${encodeURIComponent(calId)}/events${gcalNotifyParam(ev)}`,{
+          const res=await fetch(`${GCAL_API}/calendars/${encodeURIComponent(calId)}/events${gcalPushParams(ev,body)}`,{
             method:'POST',
             headers:{Authorization:`Bearer ${gcalToken}`,'Content-Type':'application/json'},
             body:JSON.stringify(body)
@@ -9381,7 +9442,7 @@ async function gcalSync(pullOnly=false){
       for(const ev of toUpdate){
         try{
           const body=mgcToGcal(ev);
-          const res=await fetch(`${GCAL_API}/calendars/${encodeURIComponent(calId)}/events/${encodeURIComponent(ev.gcalId)}${gcalNotifyParam(ev)}`,{
+          const res=await fetch(`${GCAL_API}/calendars/${encodeURIComponent(calId)}/events/${encodeURIComponent(ev.gcalId)}${gcalPushParams(ev,body)}`,{
             method:'PUT',
             headers:{Authorization:`Bearer ${gcalToken}`,'Content-Type':'application/json'},
             body:JSON.stringify(body)
@@ -10075,7 +10136,7 @@ try{localStorage.removeItem('mgc_app_version');}catch(e){} // remove o cache de 
 /* ── Verificação de nova versão via Supabase ── */
 (async()=>{
   if(!revClient)return;
-  const LOCAL_VERSION='2.8.2';
+  const LOCAL_VERSION='2.9.0';
   const CACHE_KEY='mgc_update_check';
   const CACHE_TTL=24*60*60*1000; // 24 horas
   let cached=null;try{cached=JSON.parse(localStorage.getItem(CACHE_KEY)||'null');}catch(e){} // valor corrompido não pode matar o banner de update
@@ -10114,7 +10175,7 @@ try{localStorage.removeItem('mgc_app_version');}catch(e){} // remove o cache de 
   if(!deviceId){deviceId=crypto.randomUUID();localStorage.setItem('calendario_device_id',deviceId);}
   try{
     await revClient.from('app_pings').upsert(
-      {app_name:'Calendario MGC',version:'2.8.2',device_id:deviceId,ping_date:today},
+      {app_name:'Calendario MGC',version:'2.9.0',device_id:deviceId,ping_date:today},
       {onConflict:'app_name,device_id,ping_date',ignoreDuplicates:true}
     );
     localStorage.setItem(PING_KEY,today);

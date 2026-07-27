@@ -600,6 +600,64 @@ function run() {
       return mergeEventCollections([local],{},[],{d6:Date.parse('2026-09-09T12:00:00Z')}).events.length===0;
     })()`) === true);
 
+  /* ── Reunião do Meet + controle de notificação (v2.9.0) ── */
+  check('mgcToGcal: addMeet pede sala com requestId ESTÁVEL (reenvio não cria 2ª sala)',
+    ev(`(function(){
+      const o=mgcToGcal({id:'ev9',title:'x',date:'2026-09-01',addMeet:true});
+      const c=o.conferenceData&&o.conferenceData.createRequest;
+      return !!c && c.requestId==='mgc-ev9' && c.conferenceSolutionKey.type==='hangoutsMeet';
+    })()`) === true);
+  check('mgcToGcal: evento que JÁ tem sala não pede outra (intenção ≠ fato)',
+    ev(`!mgcToGcal({id:'ev9',title:'x',date:'2026-09-01',addMeet:true,meetLink:'https://meet.google.com/abc'}).conferenceData`) === true);
+  check('mgcToGcal: sem addMeet não emite conferenceData (não vaza campo)',
+    ev(`!mgcToGcal({id:'ev9',title:'x',date:'2026-09-01'}).conferenceData`) === true);
+  check('gcalPushParams: conferenceDataVersion só quando o CORPO traz a conferência',
+    ev(`(function(){
+      const evc={id:'a',participants:[]};
+      return gcalPushParams(evc,{conferenceData:{createRequest:{}}})==='?conferenceDataVersion=1'
+        && gcalPushParams(evc,{})==='';
+    })()`) === true);
+  check('🛡️ REGRESSÃO: corpo SEM conferência nunca leva conferenceDataVersion (PUT apagaria a sala)',
+    ev(`(function(){
+      const casos=[{},{summary:'x'},{attendees:[{email:'a@x.com'}]}];
+      const evc={id:'a',participants:['a@x.com'],notifyGuests:true};
+      return casos.every(b=>gcalPushParams(evc,b).indexOf('conferenceDataVersion')===-1);
+    })()`) === true);
+  check('gcalPushParams: notifyGuests=false não manda e-mail (mas mantém a sala)',
+    ev(`(function(){
+      const evc={id:'a',participants:['a@x.com'],notifyGuests:false};
+      return gcalPushParams(evc,{})===''
+        && gcalPushParams(evc,{conferenceData:{}})==='?conferenceDataVersion=1';
+    })()`) === true);
+  check('gcalPushParams: notifyGuests ausente (evento pré-v2.9.0) AVISA — silêncio não é acidental',
+    ev(`gcalPushParams({id:'a',participants:['a@x.com']},{})`) === '?sendUpdates=all');
+  check('gcalPushParams: os dois parâmetros convivem',
+    ev(`gcalPushParams({id:'a',participants:['a@x.com'],notifyGuests:true},{conferenceData:{}})`) === '?sendUpdates=all&conferenceDataVersion=1');
+  check('gcalPushParams: sem participantes não manda sendUpdates (ninguém a notificar)',
+    ev(`gcalPushParams({id:'a',participants:[],notifyGuests:true},{})`) === '');
+  /* UI: os dois checkboxes no formulário */
+  ev(`openNew('2026-09-01')`);
+  check('novo evento nasce sem Meet e COM aviso ligado',
+    ev(`wantsMeet===false && notifyGuests===true`) &&
+    ev(`document.getElementById('notifyRow').classList.contains('done-active')`) === true);
+  ev(`document.getElementById('addMeetRow').click()`);
+  $('evTitle').value = 'Smoke Meet';
+  $('saveBtn').click();
+  check('save persiste addMeet/notifyGuests no evento',
+    ev(`(function(){const e=AppState.events.find(x=>x.title==='Smoke Meet');
+      return !!e&&e.addMeet===true&&e.notifyGuests===true;})()`) === true);
+  const meetId = ev(`(function(){const e=AppState.events.find(x=>x.title==='Smoke Meet');
+    e.meetLink='https://meet.google.com/abc-defg-hij';save();return e.id;})()`);
+  ev(`openEdit('${meetId}')`);
+  check('evento com sala já criada: checkbox marcado e travado',
+    ev(`wantsMeet===true && document.getElementById('addMeetRow').style.pointerEvents`) === 'none');
+  ev(`closeModal();AppState.events=AppState.events.filter(e=>e.title!=='Smoke Meet');save()`);
+  // cross-check estático: o parâmetro perigoso só pode existir dentro de gcalPushParams
+  const _srcCdv = fs.readFileSync(HTML_PATH,'utf8').split('\n')
+    .filter(l=>!/^\s*\/\//.test(l) && /conferenceDataVersion/.test(l));
+  check('conferenceDataVersion aparece só na função que o deriva do corpo',
+    _srcCdv.length === 1 && /p\.push\('conferenceDataVersion=1'\)/.test(_srcCdv[0]), _srcCdv.join(' | '));
+
   check('gcalNotifyParam: só manda sendUpdates=all quando há participantes',
     ev(`gcalNotifyParam({participants:['a@x.com']})==='?sendUpdates=all' && gcalNotifyParam({})==='' && gcalNotifyParam({participants:[]})===''`) === true);
   check('gcalOwnershipFields backfilla evento local já existente (guard não fica cego)',

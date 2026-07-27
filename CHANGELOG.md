@@ -5,6 +5,26 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 
 ---
 
+## [2.9.0] — Julho 2026
+
+Agora dá para marcar uma **reunião do Google Meet** direto no evento — e decidir se os convidados são avisados por e-mail. 🎥
+
+### 🎥 Reunião do Google Meet no próprio app
+- Nova opção **"Criar reunião do Google Meet"** no formulário do evento. Ao sincronizar, o Google cria a sala e o **link vai junto no convite** dos participantes.
+- O link aparece no evento assim que a sala fica pronta (às vezes só na sincronização seguinte — é o Google terminando de criar).
+- Evento que **já tem** sala mostra a opção marcada e travada: pedir de novo não cria uma segunda sala nem troca o link que os convidados receberam.
+- Não é preciso reautorizar o Google — a permissão que o app já tinha cobre isto.
+
+### ✉️ Aviso por e-mail agora é opcional
+- Nova caixa **"Avisar convidados por e-mail"**, ligada por padrão. Antes, **toda** alteração num evento com participantes disparava e-mail para todos.
+- Desmarcada, o evento entra na agenda do convidado **sem e-mail**. ⚠️ Nesse modo a entrega depende da configuração da conta Google **dele** ("Adicionar convites à minha agenda"): quem usa *"só quando eu responder"*, ou não tem conta Google, **não fica sabendo**. O próprio campo avisa disso.
+- Eventos criados antes desta versão continuam avisando — o silêncio nunca é acidental.
+
+### 📄 Documentação
+- **Aviso de Privacidade** e **Termos**: os e-mails de terceiros guardados no app são **responsabilidade do usuário** (é ele quem coleta, responde pela base legal e informa os titulares; o desenvolvedor não recebe cópia); a sala do Meet é criada e hospedada **pelo Google**, na conta do usuário; e a configuração do convidado que afeta a entrega silenciosa está documentada.
+
+---
+
 ## [2.8.2] — Julho 2026
 
 ### 🐛 Correção — evento duplicado quando você usa **dois aparelhos**

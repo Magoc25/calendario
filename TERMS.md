@@ -64,6 +64,10 @@ O Calendário MGC pode se integrar com:
 
 O desenvolvedor não é responsável por falhas, mudanças de política, interrupções ou custos decorrentes do uso desses serviços. O usuário deve consultar os termos de serviço de cada plataforma separadamente.
 
+**Reunião do Google Meet.** A sala criada pela opção "Criar reunião do Google Meet" é gerada e hospedada **pelo Google, na conta do usuário** — o app apenas solicita a criação e exibe o link devolvido. Disponibilidade, capacidade, gravação, retenção e regras de uso da videochamada são do Google e da política do domínio do usuário (contas institucionais podem ter a criação restrita pelo administrador). O desenvolvedor não opera, não grava e não tem acesso às reuniões.
+
+**Aviso por e-mail é opcional.** Com a caixa "Avisar convidados por e-mail" desmarcada, o convite entra na agenda do convidado sem e-mail — e a entrega passa a depender da configuração da conta Google **dele**; quem usa "adicionar convites só quando eu responder", ou não tem conta Google, pode não tomar conhecimento do evento. Cabe ao usuário escolher o modo adequado a cada convite.
+
 **Convites a participantes.** Ao adicionar e-mails no campo **Participantes** de um evento, o usuário instrui a **sua própria conta Google** a enviar convites — é ele quem compartilha o evento e responde pelo uso dos e-mails de terceiros. O envio, a entrega e o horário do lembrete de cada convidado são do Google, não do app: o convidado é alertado pela **configuração da agenda dele**, e um destinatário sem conta Google recebe apenas o e-mail. Listas grandes podem ser barradas pelas regras antispam do Google.
 
 ---

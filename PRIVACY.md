@@ -145,6 +145,18 @@ Ao preencher o campo **Participantes (e-mail)** de um evento e sincronizar com o
 - Quem controla esse tratamento é **você** (é a sua conta Google que emite o convite); o desenvolvedor **não** recebe cópia dos e-mails nem do evento.
 - Remover um participante e sincronizar de novo retira a pessoa do evento no Google; o convite já entregue no e-mail dela, porém, não pode ser "desenviado".
 
+> ⚠️ **Os e-mails de terceiros que você guarda no app são de sua responsabilidade.** É **você** quem decide coletá-los e mantê-los (nos participantes de um evento e, futuramente, em grupos salvos), e portanto é **você** o controlador desses dados: cabe a você ter base legal para tratá-los, informar os titulares e atender pedidos de exclusão. O desenvolvedor **não recebe cópia** — os e-mails ficam no seu dispositivo e, se você ligar a sincronização, no **seu** Supabase e nos **seus** backups. Para apagar, remova o participante (ou o grupo) e sincronize; para apagar tudo, use "Remover configuração" do painel ☁️ e limpe os dados do app.
+
+### Aviso por e-mail e a configuração do convidado
+
+O envio de convite por e-mail é **opcional** (caixa "Avisar convidados por e-mail" no evento). Com ela **desmarcada**, o app pede ao Google para adicionar o evento à agenda do convidado **sem** disparar e-mail — mas a entrega passa a depender de uma configuração da conta Google **dele** ("Adicionar convites à minha agenda"):
+
+- **"De todos"** (padrão comum) → o evento aparece na agenda dele, em silêncio.
+- **"Só quando eu responder"** → ele **não fica sabendo**: não há e-mail para responder e o evento não é adicionado.
+- **Sem conta Google** → não recebe nada.
+
+Ou seja: desmarcar é entrega silenciosa *best-effort*. Para garantir que a pessoa saiba, mantenha o aviso ligado.
+
 ### Não compartilhamos com:
 
 - ❌ Anunciantes
