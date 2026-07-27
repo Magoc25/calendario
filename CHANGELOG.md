@@ -5,6 +5,20 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 
 ---
 
+## [2.9.1] — Julho 2026
+
+### 🐛 Correção — evento voltava para o dia antigo depois de sincronizar com o Google
+
+Mover um evento (arrastando ou editando) e sincronizar podia **desfazer a mudança**: o evento voltava para o dia/horário anterior, e a versão antiga ainda era reenviada ao Google como se fosse a sua edição.
+
+**A causa:** ao sincronizar, o app comparava apenas *"o evento mudou no Google desde a última vez que olhei?"* — sem levar em conta **quando você editou**. Qualquer alteração do lado do Google, mesmo mais antiga que a sua, descartava a edição que ainda não tinha sido enviada.
+
+**Por que apareceu agora:** ao criar uma reunião do Meet, o Google atualiza o evento logo depois de responder ao app (a sala fica pronta em seguida). Isso bastava para o app achar que "o Google é mais novo" e desfazer a sua mudança. O defeito é anterior; a reunião do Meet apenas o tornou frequente.
+
+Agora o Google só substitui o evento local quando a alteração **dele** for mais recente que a sua edição pendente — e, quando a sua é mais recente, ela é enviada ao Google na mesma sincronização.
+
+---
+
 ## [2.9.0] — Julho 2026
 
 Agora dá para marcar uma **reunião do Google Meet** direto no evento — e decidir se os convidados são avisados por e-mail. 🎥

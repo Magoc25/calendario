@@ -600,6 +600,30 @@ function run() {
       return mergeEventCollections([local],{},[],{d6:Date.parse('2026-09-09T12:00:00Z')}).events.length===0;
     })()`) === true);
 
+  /* ── O Google não pode atropelar edição local pendente (v2.9.1) ──
+     Caso real: evento arrastado no PC para outro dia; ao sincronizar, a sala do Meet
+     havia bumpado o `updated` do Google → a versão velha do Google voltava e a
+     edição do usuário sumia (e ainda era reenviada como se fosse dele). */
+  check('🛡️ edição local pendente MAIS NOVA vence o Google (não perde o que o usuário fez)',
+    ev(`gcalRemoteWins(
+      {gcalUpdated:'2026-09-01T10:00:00Z',localUpdatedAt:'2026-09-01T12:00:00Z'},
+      {updated:'2026-09-01T11:00:00Z'})`) === false);
+  check('Google mais novo que a edição local vence (edição feita no Google chega ao app)',
+    ev(`gcalRemoteWins(
+      {gcalUpdated:'2026-09-01T10:00:00Z',localUpdatedAt:'2026-09-01T11:00:00Z'},
+      {updated:'2026-09-01T12:00:00Z'})`) === true);
+  check('Google inalterado desde a última sincronização não mexe em nada',
+    ev(`gcalRemoteWins({gcalUpdated:'2026-09-01T10:00:00Z'},{updated:'2026-09-01T10:00:00Z'})`) === false);
+  check('sem edição local pendente, o Google mais novo vence',
+    ev(`gcalRemoteWins({gcalUpdated:'2026-09-01T10:00:00Z'},{updated:'2026-09-01T12:00:00Z'})`) === true);
+  check('empate entre mudança do Google e edição local: vence o Google (evita pingue-pongue)',
+    ev(`gcalRemoteWins(
+      {gcalUpdated:'2026-09-01T10:00:00Z',localUpdatedAt:'2026-09-01T12:00:00Z'},
+      {updated:'2026-09-01T12:00:00Z'})`) === true);
+  check('o pull usa o predicado nomeado (não a comparação antiga)',
+    /if\(gcalRemoteWins\(local,gcEv\)\)/.test(fs.readFileSync(HTML_PATH,'utf8')) &&
+    !/gcUpdated>localUpdated/.test(fs.readFileSync(HTML_PATH,'utf8').split('\n').filter(l=>!/^\s*\/\//.test(l)).join('\n')));
+
   /* ── Reunião do Meet + controle de notificação (v2.9.0) ── */
   check('mgcToGcal: addMeet pede sala com requestId ESTÁVEL (reenvio não cria 2ª sala)',
     ev(`(function(){

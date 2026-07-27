@@ -2358,7 +2358,7 @@ body.large .sidebar-year{font-size:22px}
             </a>
             <button class="footer-link-btn pix-btn" id="pixBtn" title="Apoiar o projeto">☕ Apoiar</button>
             <button class="footer-link-btn" id="reviewsBtn" title="Ver avaliações">⭐ Avaliações</button>
-            <span id="appVersion" style="font-size:11px;color:var(--text);user-select:none">© MGC · v2.9.0</span>
+            <span id="appVersion" style="font-size:11px;color:var(--text);user-select:none">© MGC · v2.9.1</span>
           </span>
         </div>
       </div>
@@ -9161,6 +9161,23 @@ function participantsSummary(ev,max){
   return list.length>lim?`${shown} +${list.length-lim}`:shown;
 }
 
+/* O Google só sobrescreve o evento local se a mudança DELE for mais recente que a
+   edição local ainda não enviada. Antes a comparação era só "o Google mudou desde a
+   última vez que vimos?" (`updated` × `gcalUpdated`), ignorando `localUpdatedAt`:
+   qualquer toque do lado do Google DESCARTAVA a edição pendente — preservando o
+   carimbo dela e reenviando a versão do Google como se fosse do usuário. Foi o
+   "arrastei o evento no PC e ele voltou para o dia velho": criar a sala do Meet faz
+   o Google atualizar o evento DEPOIS da resposta que o app guardou (conferência
+   "pendente"→"pronta"), então `updated` passava o `gcalUpdated` e o atropelo virava
+   regra. Empate vai para o Google (mudança dele é pelo menos tão recente).
+   Local vencendo, o push da MESMA sincronização leva a edição ao Google e converge. */
+function gcalRemoteWins(local,gcEv){
+  const gcUpdated=new Date(gcEv&&gcEv.updated||0).getTime();
+  const jaVisto=new Date(local&&local.gcalUpdated||0).getTime();
+  const edicaoLocal=new Date(local&&local.localUpdatedAt||0).getTime();
+  return gcUpdated>jaVisto && gcUpdated>=edicaoLocal;
+}
+
 // Só o DONO empurra edição ao Google: o PUT de um convidado em evento alheio dá 403.
 // Predicado nomeado (não inline no filter) para o smoke §35 poder exercitá-lo.
 function shouldPushUpdate(ev){
@@ -9383,10 +9400,8 @@ async function gcalSync(pullOnly=false){
         added++;
         }
       } else {
-        // Exists — check if Google version is newer
-        const gcUpdated=new Date(gcEv.updated||0).getTime();
-        const localUpdated=new Date(local.gcalUpdated||0).getTime();
-        if(gcUpdated>localUpdated){
+        // Exists — quem vence: o Google ou uma edição local ainda não enviada?
+        if(gcalRemoteWins(local,gcEv)){
           // Google is newer → update local (but keep localUpdatedAt so pending local edits still sync)
           const updated_ev=gcalToMgc(gcEv);
           updated_ev.id=local.id; // keep local ID
@@ -10136,7 +10151,7 @@ try{localStorage.removeItem('mgc_app_version');}catch(e){} // remove o cache de 
 /* ── Verificação de nova versão via Supabase ── */
 (async()=>{
   if(!revClient)return;
-  const LOCAL_VERSION='2.9.0';
+  const LOCAL_VERSION='2.9.1';
   const CACHE_KEY='mgc_update_check';
   const CACHE_TTL=24*60*60*1000; // 24 horas
   let cached=null;try{cached=JSON.parse(localStorage.getItem(CACHE_KEY)||'null');}catch(e){} // valor corrompido não pode matar o banner de update
@@ -10175,7 +10190,7 @@ try{localStorage.removeItem('mgc_app_version');}catch(e){} // remove o cache de 
   if(!deviceId){deviceId=crypto.randomUUID();localStorage.setItem('calendario_device_id',deviceId);}
   try{
     await revClient.from('app_pings').upsert(
-      {app_name:'Calendario MGC',version:'2.9.0',device_id:deviceId,ping_date:today},
+      {app_name:'Calendario MGC',version:'2.9.1',device_id:deviceId,ping_date:today},
       {onConflict:'app_name,device_id,ping_date',ignoreDuplicates:true}
     );
     localStorage.setItem(PING_KEY,today);
