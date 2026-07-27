@@ -624,6 +624,38 @@ function run() {
     /if\(gcalRemoteWins\(local,gcEv\)\)/.test(fs.readFileSync(HTML_PATH,'utf8')) &&
     !/gcUpdated>localUpdated/.test(fs.readFileSync(HTML_PATH,'utf8').split('\n').filter(l=>!/^\s*\/\//.test(l)).join('\n')));
 
+  /* ── Cancelamento silencioso (v2.10.2): a preferência viaja NA FILA ── */
+  check('fila de exclusão lê o formato antigo (string) e o novo ({id,notify})',
+    ev(`_dqId('abc')==='abc' && _dqNotify('abc')===true
+      && _dqId({id:'x',notify:false})==='x' && _dqNotify({id:'x',notify:false})===false
+      && _dqNotify({id:'y',notify:true})===true && _dqNotify({id:'z'})===true`) === true);
+  check('🔇 excluir evento com aviso DESMARCADO enfileira cancelamento silencioso',
+    ev(`(function(){
+      localStorage.removeItem('cal_gcal_delete_queue');
+      gcalMarkDeleted('g-silencioso',false);
+      const q=JSON.parse(localStorage.getItem('cal_gcal_delete_queue'));
+      return q.length===1&&q[0].id==='g-silencioso'&&_dqNotify(q[0])===false;
+    })()`) === true);
+  check('excluir com aviso LIGADO mantém o cancelamento notificado (padrão)',
+    ev(`(function(){
+      localStorage.removeItem('cal_gcal_delete_queue');
+      gcalMarkDeleted('g-avisa',true);
+      return _dqNotify(JSON.parse(localStorage.getItem('cal_gcal_delete_queue'))[0])===true;
+    })()`) === true);
+  check('desfazer a exclusão tira o item da fila (nos dois formatos)',
+    ev(`(function(){
+      localStorage.setItem('cal_gcal_delete_queue',JSON.stringify(['antigo',{id:'novo',notify:false}]));
+      gcalUnmarkDeleted('novo');
+      const q=JSON.parse(localStorage.getItem('cal_gcal_delete_queue'));
+      gcalUnmarkDeleted('antigo');
+      const q2=JSON.parse(localStorage.getItem('cal_gcal_delete_queue'));
+      return q.length===1&&_dqId(q[0])==='antigo'&&q2.length===0;
+    })()`) === true);
+  check('o DELETE monta sendUpdates a partir da fila (não fixo na URL)',
+    /const _upd=_dqNotify\(item\)\?'\?sendUpdates=all':'';/.test(fs.readFileSync(HTML_PATH,'utf8')) &&
+    !/events\/\$\{encodeURIComponent\(gcalId\)\}\?sendUpdates=all/.test(fs.readFileSync(HTML_PATH,'utf8')));
+  ev(`localStorage.removeItem('cal_gcal_delete_queue')`);
+
   /* ── Grupos de participantes (v2.10.0): ATALHO, não vínculo ── */
   ev(`openNew('2026-10-01')`);
   check('alerta padrão de evento novo é 10 min', $('evAlert').value === '10');

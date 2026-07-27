@@ -2358,7 +2358,7 @@ body.large .sidebar-year{font-size:22px}
             </a>
             <button class="footer-link-btn pix-btn" id="pixBtn" title="Apoiar o projeto">☕ Apoiar</button>
             <button class="footer-link-btn" id="reviewsBtn" title="Ver avaliações">⭐ Avaliações</button>
-            <span id="appVersion" style="font-size:11px;color:var(--text);user-select:none">© MGC · v2.10.1</span>
+            <span id="appVersion" style="font-size:11px;color:var(--text);user-select:none">© MGC · v2.10.2</span>
           </span>
         </div>
       </div>
@@ -4993,11 +4993,16 @@ function gcalUnmarkDeleted(gcalId){
     const ids=gcalGetDeletedIds();ids.delete(gcalId);
     localStorage.setItem(GCAL_DELETED_IDS_KEY,JSON.stringify([...ids]));
     const q=JSON.parse(localStorage.getItem(GCAL_DELETE_QUEUE_KEY)||'[]');
-    localStorage.setItem(GCAL_DELETE_QUEUE_KEY,JSON.stringify(q.filter(x=>x!==gcalId)));
+    localStorage.setItem(GCAL_DELETE_QUEUE_KEY,JSON.stringify(q.filter(x=>_dqId(x)!==gcalId)));
   }catch(e){}
 }
 // Registra gcalId como "excluído pelo usuário" — nunca reimportar
-function gcalMarkDeleted(gcalId){
+// Item da fila: string (formato antigo) ou {id,notify}. Helpers p/ ler os dois.
+const _dqId=x=>(typeof x==='string'?x:(x&&x.id)||'');
+const _dqNotify=x=>(typeof x==='string'?true:!(x&&x.notify===false));
+// notify=false quando o evento tinha "Avisar convidados" desmarcado: o cancelamento
+// também tem de ser silencioso, senão a preferência valia só até a exclusão.
+function gcalMarkDeleted(gcalId,notify){
   try{
     const ids=gcalGetDeletedIds();
     ids.add(gcalId);
@@ -5008,7 +5013,7 @@ function gcalMarkDeleted(gcalId){
     localStorage.setItem('cal_gcal_deleted_ts',JSON.stringify(ts));
     // Também na fila para apagar no Google
     const q=JSON.parse(localStorage.getItem(GCAL_DELETE_QUEUE_KEY)||'[]');
-    if(!q.includes(gcalId)){q.push(gcalId);localStorage.setItem(GCAL_DELETE_QUEUE_KEY,JSON.stringify(q));}
+    if(!q.some(x=>_dqId(x)===gcalId)){q.push({id:gcalId,notify:notify!==false});localStorage.setItem(GCAL_DELETE_QUEUE_KEY,JSON.stringify(q));}
   }catch(e){}
 }
 
@@ -5033,20 +5038,23 @@ async function gcalProcessDeleteQueue(){
     if(!q.length)return;
     const calId=localStorage.getItem(GCAL_CAL_KEY)||'primary';
     const remaining=[];
-    for(const gcalId of q){
+    for(const item of q){
+      const gcalId=_dqId(item);
+      if(!gcalId)continue;
       try{
-        // sendUpdates=all sem condicional: a fila guarda só o gcalId (o evento já saiu
-        // do AppState), e evento sem convidados não tem ninguém a notificar — no-op.
-        // Com convidados, avisa que o dono cancelou (ou que este convidado saiu).
-        const res=await fetch(`${GCAL_API}/calendars/${encodeURIComponent(calId)}/events/${encodeURIComponent(gcalId)}?sendUpdates=all`,{
+        // A preferência "Avisar convidados" viaja NA FILA porque aqui o evento já saiu
+        // do AppState. Sem convidados o parâmetro é no-op (não há quem notificar);
+        // com convidados, avisa o cancelamento — a menos que o usuário tenha desmarcado.
+        const _upd=_dqNotify(item)?'?sendUpdates=all':'';
+        const res=await fetch(`${GCAL_API}/calendars/${encodeURIComponent(calId)}/events/${encodeURIComponent(gcalId)}${_upd}`,{
           method:'DELETE',
           headers:{Authorization:`Bearer ${gcalToken}`}
         });
         // 204=deletado, 404=já não existe — ambos ok, remover da fila
         if(res.status!==204&&res.status!==200&&res.status!==404){
-          remaining.push(gcalId);
+          remaining.push(item);
         }
-      }catch(e){remaining.push(gcalId);}
+      }catch(e){remaining.push(item);}
     }
     localStorage.setItem(GCAL_DELETE_QUEUE_KEY,JSON.stringify(remaining));
   }catch(e){console.warn('gcalProcessDeleteQueue error:',e);}
@@ -5062,7 +5070,7 @@ function deleteEventById(id){
   Object.keys(notesStore).forEach(k=>{if(k===id||k.startsWith(id+'#')){_removedNotes[k]=notesStore[k];delete notesStore[k];}});
   if(Object.keys(_removedNotes).length)saveNotes();
   save();render();if(AppState.selectedDay)renderDayPanel(AppState.selectedDay);
-  if(ev?.gcalId)gcalMarkDeleted(ev.gcalId);
+  if(ev?.gcalId)gcalMarkDeleted(ev.gcalId,ev.notifyGuests!==false);
   toastUndo('Evento excluído.',()=>{
     if(ev){
       delete AppState.eventsDel[id];
@@ -7202,7 +7210,7 @@ function applyRemoteEventsMerge(row){
       else if(p&&typeof p==='object'){re=Array.isArray(p.events)?p.events:[];rd=(p.del&&typeof p.del==='object')?p.del:{};}
     }
     AppState.events.forEach(ev=>{
-      if(ev.gcalId&&rd[ev.id]&&rd[ev.id]>=_evUt(ev))gcalMarkDeleted(ev.gcalId);
+      if(ev.gcalId&&rd[ev.id]&&rd[ev.id]>=_evUt(ev))gcalMarkDeleted(ev.gcalId,ev.notifyGuests!==false);
     });
     const _before=JSON.stringify(AppState.events);
     const mg=mergeEventCollections(AppState.events,AppState.eventsDel,re,rd);
@@ -10279,7 +10287,7 @@ try{localStorage.removeItem('mgc_app_version');}catch(e){} // remove o cache de 
 /* ── Verificação de nova versão via Supabase ── */
 (async()=>{
   if(!revClient)return;
-  const LOCAL_VERSION='2.10.1';
+  const LOCAL_VERSION='2.10.2';
   const CACHE_KEY='mgc_update_check';
   const CACHE_TTL=24*60*60*1000; // 24 horas
   let cached=null;try{cached=JSON.parse(localStorage.getItem(CACHE_KEY)||'null');}catch(e){} // valor corrompido não pode matar o banner de update
@@ -10318,7 +10326,7 @@ try{localStorage.removeItem('mgc_app_version');}catch(e){} // remove o cache de 
   if(!deviceId){deviceId=crypto.randomUUID();localStorage.setItem('calendario_device_id',deviceId);}
   try{
     await revClient.from('app_pings').upsert(
-      {app_name:'Calendario MGC',version:'2.10.1',device_id:deviceId,ping_date:today},
+      {app_name:'Calendario MGC',version:'2.10.2',device_id:deviceId,ping_date:today},
       {onConflict:'app_name,device_id,ping_date',ignoreDuplicates:true}
     );
     localStorage.setItem(PING_KEY,today);

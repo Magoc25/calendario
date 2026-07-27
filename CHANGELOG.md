@@ -5,6 +5,16 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 
 ---
 
+## [2.10.2] — Julho 2026
+
+### 🔇 O cancelamento agora também respeita "Avisar convidados por e-mail"
+
+Com a caixa **desmarcada**, criar e editar o evento já eram silenciosos — mas **excluir** ainda mandava e-mail de cancelamento para todo mundo. Agora não manda mais: a sua escolha vale do começo ao fim do evento.
+
+Com a caixa **marcada** (padrão), nada muda — o convidado continua sendo avisado do cancelamento, que é o comportamento esperado de um convite.
+
+---
+
 ## [2.10.1] — Julho 2026
 
 ### 🐛 Correção — grupos de participantes sumiam
