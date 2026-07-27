@@ -5,6 +5,20 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 
 ---
 
+## [2.10.1] — Julho 2026
+
+### 🐛 Correção — grupos de participantes sumiam
+
+Um grupo salvo podia **desaparecer** logo depois, sem você ter excluído nada — bastava o app sincronizar.
+
+**A causa:** cada aparelho publicava a **lista inteira** de grupos, e a última publicação vencia. Um aparelho que ainda não tinha recebido os grupos publicava uma lista **vazia**, e ela apagava os grupos do outro. Como salvar ou apagar qualquer evento dispara uma sincronização, isso acontecia em segundos.
+
+Agora os grupos usam a mesma proteção dos eventos, listas e notas: **união por item**, com registro de exclusão. Ausência não apaga mais nada — só uma exclusão explícita apaga, e apenas se for mais recente que a última edição do grupo. Grupos criados na v2.10.0 continuam sendo lidos normalmente.
+
+> Se algum grupo sumiu, ele não é recuperável — recrie-o após atualizar todos os aparelhos.
+
+---
+
 ## [2.10.0] — Julho 2026
 
 ### 👥 Grupos de participantes

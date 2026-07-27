@@ -2358,7 +2358,7 @@ body.large .sidebar-year{font-size:22px}
             </a>
             <button class="footer-link-btn pix-btn" id="pixBtn" title="Apoiar o projeto">☕ Apoiar</button>
             <button class="footer-link-btn" id="reviewsBtn" title="Ver avaliações">⭐ Avaliações</button>
-            <span id="appVersion" style="font-size:11px;color:var(--text);user-select:none">© MGC · v2.10.0</span>
+            <span id="appVersion" style="font-size:11px;color:var(--text);user-select:none">© MGC · v2.10.1</span>
           </span>
         </div>
       </div>
@@ -4674,10 +4674,47 @@ document.getElementById('partInputWrap').addEventListener('click',()=>document.g
    entre o app e a agenda. ── */
 try{AppState.participantGroups=JSON.parse(localStorage.getItem('cal_participant_groups')||'[]');}catch(e){AppState.participantGroups=[];}
 if(!Array.isArray(AppState.participantGroups))AppState.participantGroups=[];
+try{AppState.participantGroupsDel=JSON.parse(localStorage.getItem('cal_participant_groups_del')||'{}');}catch(e){AppState.participantGroupsDel={};}
 function saveParticipantGroups(){
   localStorage.setItem('cal_participant_groups',JSON.stringify(AppState.participantGroups));
+  localStorage.setItem('cal_participant_groups_del',JSON.stringify(AppState.participantGroupsDel||{}));
   localStorage.setItem('cal_local_ts',new Date().toISOString());
   scheduleCloudPush();
+}
+const _pgUt=g=>g&&g.updatedAt?new Date(g.updatedAt).getTime():0;
+/* Coleção NUNCA entra em last-write-wins (r12/r42): união por id + carimbo por item
+   + tombstones. Sem isto, um aparelho que ainda não tem grupos publica [] e APAGA os
+   do outro — foi o que aconteceu na v2.10.0. Ausência não apaga nada; só tombstone
+   apaga, e só se for posterior à última edição do item. */
+function mergeParticipantGroups(locais,locaisDel,remotos,remotosDel){
+  locais=Array.isArray(locais)?locais:[];remotos=Array.isArray(remotos)?remotos:[];
+  const del={...(locaisDel&&typeof locaisDel==='object'?locaisDel:{})};
+  const rd=(remotosDel&&typeof remotosDel==='object')?remotosDel:{};
+  for(const id in rd)del[id]=Math.max(del[id]||0,rd[id]||0);
+  const byId=new Map();locais.forEach(g=>byId.set(g.id,g));
+  const ordem=[...locais.map(g=>g.id)];
+  remotos.forEach(r=>{
+    const cur=byId.get(r.id);
+    if(!cur){byId.set(r.id,r);ordem.push(r.id);}
+    else if(_pgUt(r)>_pgUt(cur))byId.set(r.id,r);
+  });
+  const vis=new Set(),out=[];
+  ordem.forEach(id=>{if(!vis.has(id)){vis.add(id);out.push(byId.get(id));}});
+  return {groups:out.filter(g=>!(del[g.id]&&del[g.id]>=_pgUt(g))),del};
+}
+// Aceita o envelope {v:2,groups,del} e o array cru da v2.10.0 (retrocompat)
+function applyRemoteParticipantGroups(row){
+  if(!row||!row.participant_groups)return;
+  try{
+    const p=JSON.parse(row.participant_groups);
+    const re=Array.isArray(p)?p:(Array.isArray(p&&p.groups)?p.groups:[]);
+    const rd=(!Array.isArray(p)&&p&&typeof p.del==='object')?p.del:{};
+    const m=mergeParticipantGroups(AppState.participantGroups,AppState.participantGroupsDel,re,rd);
+    AppState.participantGroups=m.groups;AppState.participantGroupsDel=m.del;
+    localStorage.setItem('cal_participant_groups',JSON.stringify(m.groups));
+    localStorage.setItem('cal_participant_groups_del',JSON.stringify(m.del));
+    if(typeof renderPartGroups==='function')renderPartGroups();
+  }catch(e){console.warn('[MGC] merge de grupos:',e);}
 }
 function renderPartGroups(){
   const chips=document.getElementById('pgChips');
@@ -4702,12 +4739,13 @@ function renderPartGroups(){
   list.querySelectorAll('[data-pg-ren]').forEach(b=>b.addEventListener('click',()=>{
     const g=AppState.participantGroups.find(x=>x.id===b.dataset.pgRen);if(!g)return;
     const n=prompt('Novo nome do grupo:',g.name);
-    if(n&&n.trim()){g.name=n.trim();saveParticipantGroups();renderPartGroups();}
+    if(n&&n.trim()){g.name=n.trim();g.updatedAt=new Date().toISOString();saveParticipantGroups();renderPartGroups();}
   }));
   list.querySelectorAll('[data-pg-del]').forEach(b=>b.addEventListener('click',()=>{
     const g=AppState.participantGroups.find(x=>x.id===b.dataset.pgDel);if(!g)return;
     if(!confirm(`Excluir o grupo "${g.name}"? Os eventos já criados não mudam.`))return;
     AppState.participantGroups=AppState.participantGroups.filter(x=>x.id!==g.id);
+    AppState.participantGroupsDel[g.id]=Date.now(); // tombstone: a exclusão propaga; ausência não apaga
     saveParticipantGroups();renderPartGroups();
   }));
 }
@@ -4716,8 +4754,9 @@ function savePartGroupFromCurrent(nome){
   const name=String(nome||'').trim();
   if(!name||!currentParticipants.length)return false;
   const ex=AppState.participantGroups.find(g=>g.name.toLowerCase()===name.toLowerCase());
-  if(ex)ex.emails=[...currentParticipants];
-  else AppState.participantGroups.unshift({id:uid(),name,emails:[...currentParticipants]});
+  const agora=new Date().toISOString();
+  if(ex){ex.emails=[...currentParticipants];ex.updatedAt=agora;}
+  else AppState.participantGroups.unshift({id:uid(),name,emails:[...currentParticipants],updatedAt:agora});
   saveParticipantGroups();renderPartGroups();
   return true;
 }
@@ -8823,7 +8862,7 @@ function getLocalPayload(){
     standalone_notes: JSON.stringify({v:2,notes:AppState.standaloneNotes,del:AppState.standaloneNotesDel||{}}), // v2: tombstones p/ merge por id
     lists: JSON.stringify({v:2,lists:AppState.lists,del:AppState.listsDel||{}}), // v2: inclui tombstones p/ merge no sync
     list_templates: JSON.stringify(AppState.listTemplates||[]), // modelos de lista (coluna nova; fallback r9 cobre tabela antiga)
-    participant_groups: JSON.stringify(AppState.participantGroups||[]), // grupos de e-mail (coluna nova; fallback r9 cobre tabela antiga)
+    participant_groups: JSON.stringify({v:2,groups:AppState.participantGroups||[],del:AppState.participantGroupsDel||{}}), // v2: merge por id + tombstones (r12) — array cru da v2.10.0 ainda é lido
     routine_checks: JSON.stringify(rchecks),
     updated_at: new Date().toISOString()
   };
@@ -8850,7 +8889,7 @@ function applyRemotePayload(row){
     if(row.top3)try{const t3=JSON.parse(row.top3);if(t3&&typeof t3==='object')AppState.top3Data=t3;}catch(e){}
     applyRemoteStandaloneNotesMerge(row); // aba Notas: merge por id + tombstones (persiste internamente)
     if(row.list_templates)try{const lt=JSON.parse(row.list_templates);if(Array.isArray(lt)){AppState.listTemplates=lt;localStorage.setItem('cal_list_templates',row.list_templates);}}catch(e){}
-    if(row.participant_groups)try{const pg=JSON.parse(row.participant_groups);if(Array.isArray(pg)){AppState.participantGroups=pg;localStorage.setItem('cal_participant_groups',row.participant_groups);if(typeof renderPartGroups==='function')renderPartGroups();}}catch(e){}
+    applyRemoteParticipantGroups(row); // merge por id + tombstones (persiste internamente)
     applyRemoteListsMerge(row); // mescla por id + tombstones (persiste cal_lists/cal_lists_del internamente)
     // Persist locally (eventos/notas/listas já persistidos pelos merges acima)
     localStorage.setItem('cal_catcolors',row.category_colors||'{}');
@@ -10240,7 +10279,7 @@ try{localStorage.removeItem('mgc_app_version');}catch(e){} // remove o cache de 
 /* ── Verificação de nova versão via Supabase ── */
 (async()=>{
   if(!revClient)return;
-  const LOCAL_VERSION='2.10.0';
+  const LOCAL_VERSION='2.10.1';
   const CACHE_KEY='mgc_update_check';
   const CACHE_TTL=24*60*60*1000; // 24 horas
   let cached=null;try{cached=JSON.parse(localStorage.getItem(CACHE_KEY)||'null');}catch(e){} // valor corrompido não pode matar o banner de update
@@ -10279,7 +10318,7 @@ try{localStorage.removeItem('mgc_app_version');}catch(e){} // remove o cache de 
   if(!deviceId){deviceId=crypto.randomUUID();localStorage.setItem('calendario_device_id',deviceId);}
   try{
     await revClient.from('app_pings').upsert(
-      {app_name:'Calendario MGC',version:'2.10.0',device_id:deviceId,ping_date:today},
+      {app_name:'Calendario MGC',version:'2.10.1',device_id:deviceId,ping_date:today},
       {onConflict:'app_name,device_id,ping_date',ignoreDuplicates:true}
     );
     localStorage.setItem(PING_KEY,today);

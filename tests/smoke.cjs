@@ -655,7 +655,51 @@ function run() {
       return !('participantGroups' in o)&&o.attendees.length===1;})()`) === true);
   check('grupos entram no payload do Supabase (coluna nova, fallback r9 cobre tabela antiga)',
     ev(`(function(){const p=getLocalPayload();
-      return typeof p.participant_groups==='string'&&JSON.parse(p.participant_groups).some(g=>g.name==='Turma A');})()`) === true);
+      return typeof p.participant_groups==='string'&&JSON.parse(p.participant_groups).groups.some(g=>g.name==='Turma A');})()`) === true);
+  /* 🛡️ REGRESSÃO v2.10.1: coleção nunca em last-write-wins (r12/r42).
+     Na v2.10.0 um aparelho sem grupos publicava [] e APAGAVA os do outro. */
+  check('🛡️ aparelho SEM grupos não apaga os grupos do outro (ausência ≠ exclusão)',
+    ev(`(function(){
+      const antes=AppState.participantGroups.length;
+      applyRemoteParticipantGroups({participant_groups:JSON.stringify({v:2,groups:[],del:{}})});
+      return antes>0 && AppState.participantGroups.length===antes;
+    })()`) === true);
+  check('grupo excluído em outro aparelho some por TOMBSTONE (não por ausência)',
+    ev(`(function(){
+      AppState.participantGroups=[{id:'pg1',name:'X',emails:['a@x.com'],updatedAt:'2026-10-01T10:00:00Z'}];
+      applyRemoteParticipantGroups({participant_groups:JSON.stringify({v:2,groups:[],del:{pg1:Date.parse('2026-10-01T12:00:00Z')}})});
+      return AppState.participantGroups.length===0;
+    })()`) === true);
+  check('edição posterior ao tombstone sobrevive (undo em outro aparelho não é reapagado)',
+    ev(`(function(){
+      AppState.participantGroups=[{id:'pg2',name:'Y',emails:['a@x.com'],updatedAt:'2026-10-02T10:00:00Z'}];
+      AppState.participantGroupsDel={};
+      applyRemoteParticipantGroups({participant_groups:JSON.stringify({v:2,groups:[],del:{pg2:Date.parse('2026-10-01T10:00:00Z')}})});
+      return AppState.participantGroups.length===1;
+    })()`) === true);
+  check('conflito de mesmo id: vence o carimbo mais recente',
+    ev(`(function(){
+      AppState.participantGroups=[{id:'pg3',name:'Velho',emails:['a@x.com'],updatedAt:'2026-10-01T10:00:00Z'}];
+      AppState.participantGroupsDel={};
+      applyRemoteParticipantGroups({participant_groups:JSON.stringify({v:2,groups:[{id:'pg3',name:'Novo',emails:['b@x.com'],updatedAt:'2026-10-01T12:00:00Z'}],del:{}})});
+      return AppState.participantGroups[0].name==='Novo';
+    })()`) === true);
+  check('lê o formato antigo da v2.10.0 (array cru) sem quebrar',
+    ev(`(function(){
+      AppState.participantGroups=[];AppState.participantGroupsDel={};
+      applyRemoteParticipantGroups({participant_groups:JSON.stringify([{id:'pg4',name:'Antigo',emails:['a@x.com']}])});
+      return AppState.participantGroups.length===1&&AppState.participantGroups[0].name==='Antigo';
+    })()`) === true);
+  check('grupo novo é carimbado (senão o merge não sabe quem é mais recente)',
+    ev(`(function(){
+      AppState.participantGroups=[];currentParticipants=['a@x.com'];
+      savePartGroupFromCurrent('Carimbo');
+      return !!AppState.participantGroups[0].updatedAt;
+    })()`) === true);
+  check('payload dos grupos vai no envelope v2 com tombstones',
+    ev(`(function(){const p=JSON.parse(getLocalPayload().participant_groups);
+      return p.v===2&&Array.isArray(p.groups)&&typeof p.del==='object';})()`) === true);
+
   check('applyRemotePayload traz grupos de outro aparelho',
     ev(`(function(){
       applyRemotePayload({participant_groups:JSON.stringify([{id:'r1',name:'Remoto',emails:['z@x.com']}])});
