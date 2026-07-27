@@ -327,9 +327,9 @@ function run() {
   const newLid = ev(`(createListFromTemplate('${tplId}')||{}).id`);
   check('criar lista a partir do modelo gera itens novos (todos desmarcados)',
     ev(`(function(){const l=AppState.lists.find(x=>x.id==='${newLid}');return !!l&&l.title==='Viagem'&&l.items.length===2&&l.items.every(i=>i.done===false)&&l.items[0].id!=='lt1a';})()`));
-  check('payload de sync inclui list_templates (array)',
-    ev(`Array.isArray(JSON.parse(getLocalPayload().list_templates))`) === true &&
-    ev(`JSON.parse(getLocalPayload().list_templates).length`) >= 1);
+  check('payload de sync inclui list_templates (envelope v2 com tombstones — r66a)',
+    ev(`(function(){const p=JSON.parse(getLocalPayload().list_templates);
+      return p.v===2&&Array.isArray(p.templates)&&p.templates.length>=1&&typeof p.del==='object';})()`) === true);
   check('applyRemotePayload carrega list_templates',
     ev(`(function(){applyRemotePayload({events:'[]',list_templates:JSON.stringify([{id:'rt9',name:'Remoto',items:[{title:'x'}],createdAt:Date.now()}])});return AppState.listTemplates.some(t=>t.id==='rt9');})()`) === true);
   // painel de modelos na visão geral
@@ -623,6 +623,55 @@ function run() {
   check('o pull usa o predicado nomeado (não a comparação antiga)',
     /if\(gcalRemoteWins\(local,gcEv\)\)/.test(fs.readFileSync(HTML_PATH,'utf8')) &&
     !/gcUpdated>localUpdated/.test(fs.readFileSync(HTML_PATH,'utf8').split('\n').filter(l=>!/^\s*\/\//.test(l)).join('\n')));
+
+  /* ── r66(a) aplicado aos modelos de lista (v2.10.3) ── */
+  check('🛡️ modelos: aparelho SEM modelos não apaga os do outro (ausência ≠ exclusão)',
+    ev(`(function(){
+      AppState.listTemplates=[{id:'lt1',name:'Compras',items:[{title:'x'}],updatedAt:'2026-10-01T10:00:00Z'}];
+      AppState.listTemplatesDel={};
+      applyRemoteListTemplates({list_templates:JSON.stringify({v:2,templates:[],del:{}})});
+      return AppState.listTemplates.length===1;
+    })()`) === true);
+  check('modelos: exclusão em outro aparelho propaga por tombstone',
+    ev(`(function(){
+      applyRemoteListTemplates({list_templates:JSON.stringify({v:2,templates:[],del:{lt1:Date.parse('2026-10-01T12:00:00Z')}})});
+      return AppState.listTemplates.length===0;
+    })()`) === true);
+  check('modelos: conflito de mesmo id vence o carimbo mais recente',
+    ev(`(function(){
+      AppState.listTemplates=[{id:'lt2',name:'Velho',items:[],updatedAt:'2026-10-01T10:00:00Z'}];
+      AppState.listTemplatesDel={};
+      applyRemoteListTemplates({list_templates:JSON.stringify({v:2,templates:[{id:'lt2',name:'Novo',items:[],updatedAt:'2026-10-01T12:00:00Z'}],del:{}})});
+      return AppState.listTemplates[0].name==='Novo';
+    })()`) === true);
+  check('modelos: lê o formato antigo (array cru) e usa createdAt como carimbo',
+    ev(`(function(){
+      AppState.listTemplates=[];AppState.listTemplatesDel={};
+      applyRemoteListTemplates({list_templates:JSON.stringify([{id:'lt3',name:'Antigo',items:[],createdAt:1750000000000}])});
+      return AppState.listTemplates.length===1&&_ltUt(AppState.listTemplates[0])===1750000000000;
+    })()`) === true);
+  check('modelos: novo modelo nasce carimbado e o payload vai no envelope v2',
+    ev(`(function(){
+      AppState.lists.unshift({id:'ltl1',title:'Base',createdAt:Date.now(),updatedAt:Date.now(),items:[{id:'i1',title:'a',done:false}]});
+      const t=saveListAsTemplate('ltl1','Modelo Smoke');
+      const p=JSON.parse(getLocalPayload().list_templates);
+      const ok=!!t.updatedAt&&p.v===2&&Array.isArray(p.templates)&&typeof p.del==='object';
+      AppState.lists=AppState.lists.filter(l=>l.id!=='ltl1');
+      return ok;
+    })()`) === true);
+  check('modelos: excluir grava tombstone e o desfazer recarimba (não é reapagado)',
+    ev(`(function(){
+      const t=AppState.listTemplates.find(x=>x.name==='Modelo Smoke');if(!t)return false;
+      deleteListTemplate(t.id);
+      const temTomb=!!AppState.listTemplatesDel[t.id];
+      const sumiu=!AppState.listTemplates.find(x=>x.id===t.id);
+      document.getElementById('toastUndoBtn').onclick();
+      const voltou=!!AppState.listTemplates.find(x=>x.id===t.id);
+      const semTomb=!AppState.listTemplatesDel[t.id];
+      AppState.listTemplates=AppState.listTemplates.filter(x=>x.name!=='Modelo Smoke');
+      AppState.listTemplatesDel={};saveListTemplates();
+      return temTomb&&sumiu&&voltou&&semTomb;
+    })()`) === true);
 
   /* ── Cancelamento silencioso (v2.10.2): a preferência viaja NA FILA ── */
   check('fila de exclusão lê o formato antigo (string) e o novo ({id,notify})',

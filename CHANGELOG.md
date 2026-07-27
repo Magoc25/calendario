@@ -5,6 +5,18 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 
 ---
 
+## [2.10.3] — Julho 2026
+
+### 🛡️ Modelos de lista protegidos contra sumiço
+
+Os **modelos de lista** usavam a mesma proteção frágil que fez os grupos de participantes desaparecerem na v2.10.0: cada aparelho publicava a lista inteira e a última publicação vencia — um aparelho sem modelos podia apagar os do outro.
+
+O problema ainda não tinha aparecido (normalmente você cria modelos num aparelho só), mas a falha estava armada. Agora os modelos usam a mesma proteção dos eventos, listas, notas e grupos: **união por item**, com registro de exclusão. Ausência não apaga; só uma exclusão explícita apaga, e o **Desfazer** devolve o modelo sem risco de ele ser reapagado por outro aparelho.
+
+Modelos criados em versões anteriores continuam sendo lidos normalmente.
+
+---
+
 ## [2.10.2] — Julho 2026
 
 ### 🔇 O cancelamento agora também respeita "Avisar convidados por e-mail"

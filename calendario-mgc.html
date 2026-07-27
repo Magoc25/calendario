@@ -2358,7 +2358,7 @@ body.large .sidebar-year{font-size:22px}
             </a>
             <button class="footer-link-btn pix-btn" id="pixBtn" title="Apoiar o projeto">☕ Apoiar</button>
             <button class="footer-link-btn" id="reviewsBtn" title="Ver avaliações">⭐ Avaliações</button>
-            <span id="appVersion" style="font-size:11px;color:var(--text);user-select:none">© MGC · v2.10.2</span>
+            <span id="appVersion" style="font-size:11px;color:var(--text);user-select:none">© MGC · v2.10.3</span>
           </span>
         </div>
       </div>
@@ -6897,16 +6897,50 @@ function saveLists(){
 // Modelos de lista (reutilizáveis). Sincronizam pela coluna list_templates com o
 // fallback genérico r9 (degrada p/ local-only se a coluna não existir). LWW é ok
 // aqui (raramente se edita o mesmo modelo em 2 aparelhos ao mesmo tempo).
+try{AppState.listTemplatesDel=JSON.parse(localStorage.getItem('cal_list_templates_del')||'{}');}catch(e){AppState.listTemplatesDel={};}
 function saveListTemplates(){
   localStorage.setItem('cal_list_templates',JSON.stringify(AppState.listTemplates));
+  localStorage.setItem('cal_list_templates_del',JSON.stringify(AppState.listTemplatesDel||{}));
   localStorage.setItem('cal_local_ts',new Date().toISOString());
   scheduleCloudPush();
+}
+const _ltUt=t=>t&&t.updatedAt?new Date(t.updatedAt).getTime():(t&&t.createdAt?+t.createdAt:0);
+/* r66(a): coleção sincronizada NUNCA em last-write-wins. Antes, o aparelho que
+   ainda não tinha modelos publicava [] e apagava os do outro — o mesmo defeito que
+   apagou os grupos de participantes na v2.10.0. União por id + carimbo + tombstone. */
+function mergeListTemplates(locais,locaisDel,remotos,remotosDel){
+  locais=Array.isArray(locais)?locais:[];remotos=Array.isArray(remotos)?remotos:[];
+  const del={...(locaisDel&&typeof locaisDel==='object'?locaisDel:{})};
+  const rd=(remotosDel&&typeof remotosDel==='object')?remotosDel:{};
+  for(const id in rd)del[id]=Math.max(del[id]||0,rd[id]||0);
+  const byId=new Map();locais.forEach(t=>byId.set(t.id,t));
+  const ordem=[...locais.map(t=>t.id)];
+  remotos.forEach(r=>{const cur=byId.get(r.id);
+    if(!cur){byId.set(r.id,r);ordem.push(r.id);}
+    else if(_ltUt(r)>_ltUt(cur))byId.set(r.id,r);});
+  const vis=new Set(),out=[];
+  ordem.forEach(id=>{if(!vis.has(id)){vis.add(id);out.push(byId.get(id));}});
+  return {templates:out.filter(t=>!(del[t.id]&&del[t.id]>=_ltUt(t))),del};
+}
+// Aceita o envelope {v:2,templates,del} e o array cru das versões anteriores
+function applyRemoteListTemplates(row){
+  if(!row||!row.list_templates)return;
+  try{
+    const p=JSON.parse(row.list_templates);
+    const re=Array.isArray(p)?p:(Array.isArray(p&&p.templates)?p.templates:[]);
+    const rd=(!Array.isArray(p)&&p&&typeof p.del==='object')?p.del:{};
+    const m=mergeListTemplates(AppState.listTemplates,AppState.listTemplatesDel,re,rd);
+    AppState.listTemplates=m.templates;AppState.listTemplatesDel=m.del;
+    localStorage.setItem('cal_list_templates',JSON.stringify(m.templates));
+    localStorage.setItem('cal_list_templates_del',JSON.stringify(m.del));
+    if(typeof _renderListTemplates==='function')_renderListTemplates();
+  }catch(e){console.warn('[MGC] merge de modelos de lista:',e);}
 }
 function saveListAsTemplate(listId,name){
   const l=AppState.lists.find(x=>x.id===listId);if(!l)return null;
   name=(name||'').trim()||l.title||'Modelo';
   const items=(l.items||[]).map(i=>({title:i.title}));
-  const tpl={id:uid(),name,items,createdAt:Date.now()};
+  const tpl={id:uid(),name,items,createdAt:Date.now(),updatedAt:new Date().toISOString()};
   AppState.listTemplates.unshift(tpl);saveListTemplates();
   return tpl;
 }
@@ -6923,9 +6957,16 @@ function createListFromTemplate(templateId){
 function deleteListTemplate(templateId){
   const tpl=AppState.listTemplates.find(t=>t.id===templateId);
   const idx=AppState.listTemplates.findIndex(t=>t.id===templateId);if(idx<0)return;
-  AppState.listTemplates.splice(idx,1);saveListTemplates();
+  AppState.listTemplates.splice(idx,1);
+  AppState.listTemplatesDel[templateId]=Date.now(); // tombstone: a exclusão propaga; ausência não apaga
+  saveListTemplates();
   _renderListTemplates();
-  if(tpl)toastUndo('Modelo excluído.',()=>{AppState.listTemplates.splice(Math.min(idx,AppState.listTemplates.length),0,tpl);saveListTemplates();_renderListTemplates();});
+  if(tpl)toastUndo('Modelo excluído.',()=>{
+    delete AppState.listTemplatesDel[templateId];
+    tpl.updatedAt=new Date().toISOString(); // recarimba: sem isto o tombstone já enviado reapagaria
+    AppState.listTemplates.splice(Math.min(idx,AppState.listTemplates.length),0,tpl);
+    saveListTemplates();_renderListTemplates();
+  });
 }
 
 /* ── Fixar lista na aba Hoje + concluir lista ──────────────────
@@ -8869,7 +8910,7 @@ function getLocalPayload(){
     top3: JSON.stringify(AppState.top3Data),
     standalone_notes: JSON.stringify({v:2,notes:AppState.standaloneNotes,del:AppState.standaloneNotesDel||{}}), // v2: tombstones p/ merge por id
     lists: JSON.stringify({v:2,lists:AppState.lists,del:AppState.listsDel||{}}), // v2: inclui tombstones p/ merge no sync
-    list_templates: JSON.stringify(AppState.listTemplates||[]), // modelos de lista (coluna nova; fallback r9 cobre tabela antiga)
+    list_templates: JSON.stringify({v:2,templates:AppState.listTemplates||[],del:AppState.listTemplatesDel||{}}), // v2: merge por id + tombstones (r66a); array cru anterior ainda é lido
     participant_groups: JSON.stringify({v:2,groups:AppState.participantGroups||[],del:AppState.participantGroupsDel||{}}), // v2: merge por id + tombstones (r12) — array cru da v2.10.0 ainda é lido
     routine_checks: JSON.stringify(rchecks),
     updated_at: new Date().toISOString()
@@ -8896,7 +8937,7 @@ function applyRemotePayload(row){
     if(row.reviews)try{const rv=JSON.parse(row.reviews);if(rv&&typeof rv==='object')AppState.reviews=rv;}catch(e){}
     if(row.top3)try{const t3=JSON.parse(row.top3);if(t3&&typeof t3==='object')AppState.top3Data=t3;}catch(e){}
     applyRemoteStandaloneNotesMerge(row); // aba Notas: merge por id + tombstones (persiste internamente)
-    if(row.list_templates)try{const lt=JSON.parse(row.list_templates);if(Array.isArray(lt)){AppState.listTemplates=lt;localStorage.setItem('cal_list_templates',row.list_templates);}}catch(e){}
+    applyRemoteListTemplates(row); // merge por id + tombstones (persiste internamente)
     applyRemoteParticipantGroups(row); // merge por id + tombstones (persiste internamente)
     applyRemoteListsMerge(row); // mescla por id + tombstones (persiste cal_lists/cal_lists_del internamente)
     // Persist locally (eventos/notas/listas já persistidos pelos merges acima)
@@ -10287,7 +10328,7 @@ try{localStorage.removeItem('mgc_app_version');}catch(e){} // remove o cache de 
 /* ── Verificação de nova versão via Supabase ── */
 (async()=>{
   if(!revClient)return;
-  const LOCAL_VERSION='2.10.2';
+  const LOCAL_VERSION='2.10.3';
   const CACHE_KEY='mgc_update_check';
   const CACHE_TTL=24*60*60*1000; // 24 horas
   let cached=null;try{cached=JSON.parse(localStorage.getItem(CACHE_KEY)||'null');}catch(e){} // valor corrompido não pode matar o banner de update
@@ -10326,7 +10367,7 @@ try{localStorage.removeItem('mgc_app_version');}catch(e){} // remove o cache de 
   if(!deviceId){deviceId=crypto.randomUUID();localStorage.setItem('calendario_device_id',deviceId);}
   try{
     await revClient.from('app_pings').upsert(
-      {app_name:'Calendario MGC',version:'2.10.2',device_id:deviceId,ping_date:today},
+      {app_name:'Calendario MGC',version:'2.10.3',device_id:deviceId,ping_date:today},
       {onConflict:'app_name,device_id,ping_date',ignoreDuplicates:true}
     );
     localStorage.setItem(PING_KEY,today);
