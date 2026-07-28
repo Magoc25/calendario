@@ -1078,6 +1078,112 @@ body.large .sidebar-year{font-size:22px}
   body.compact .search-item{padding:4px 8px!important;font-size:10.5px!important}
   body.comfortable .search-item{padding:8px 11px!important;font-size:12.5px!important}
   body.large .search-item{padding:10px 13px!important;font-size:13.5px!important}
+
+  /* ── (1) Sheet do dia no mobile — era a MAIOR lacuna: é a principal forma de ver
+     os eventos de um dia no celular e ignorava a densidade por completo, porque usa
+     classes próprias (mds-event*) em vez de reusar as do painel desktop (dp-ev*).
+     Base: padding 10px 18px · time 10px · title 13px · sub 10px. ── */
+  body.compact .mds-event{padding:6px 14px!important;gap:7px!important}
+  body.compact .mds-event-time{font-size:9px!important;min-width:44px!important}
+  body.compact .mds-event-title{font-size:11.5px!important}
+  body.compact .mds-event-sub{font-size:9px!important}
+  body.comfortable .mds-event{padding:10px 18px!important;gap:10px!important}
+  body.comfortable .mds-event-time{font-size:10px!important}
+  body.comfortable .mds-event-title{font-size:13px!important}
+  body.large .mds-event{padding:13px 20px!important;gap:12px!important}
+  body.large .mds-event-time{font-size:11.5px!important;min-width:58px!important}
+  body.large .mds-event-title{font-size:15px!important}
+  body.large .mds-event-sub{font-size:11.5px!important}
+
+  /* ── (4) Completa o que tinha regra no DESKTOP mas era vencido no mobile pelas
+     ~189 declarações !important dos blocos responsivos: sem repetir com !important
+     aqui, o componente fica travado no tamanho fixo do mobile. ── */
+  body.compact .top3-item{padding:5px 8px!important;font-size:11px!important}
+  body.compact .qt-item{padding:4px 7px!important;font-size:11px!important}
+  body.compact .tr-item{padding:5px 8px!important;font-size:11px!important}
+  body.compact .tv-ev-item{padding:5px 8px!important;font-size:11px!important}
+  body.compact .tv-panel-title{font-size:11px!important}
+  body.large .top3-item{padding:11px 13px!important;font-size:14px!important}
+  body.large .qt-item{padding:10px 12px!important;font-size:14px!important}
+  body.large .tr-item{padding:11px 13px!important;font-size:14px!important}
+  body.large .tv-ev-item{padding:11px 13px!important;font-size:14px!important}
+  body.large .tv-panel-title{font-size:14px!important}
+  body.compact .rv-bar-name{font-size:9.5px!important}
+  body.compact .rv-bar-track{height:8px!important}
+  body.large .rv-bar-name{font-size:12.5px!important}
+  body.large .rv-bar-track{height:14px!important}
+  body.compact .rew-field textarea{font-size:11px!important;min-height:52px!important}
+  body.compact .rew-metric-card,body.compact .rew-streak-card{padding:8px!important}
+  body.compact .rew-streak-num{font-size:18px!important}
+  body.compact .rew-hist-item{padding:5px 8px!important;font-size:10.5px!important}
+  body.large .rew-field textarea{font-size:14px!important;min-height:80px!important}
+  body.large .rew-metric-card,body.large .rew-streak-card{padding:16px!important}
+  body.large .rew-streak-num{font-size:28px!important}
+  body.large .rew-hist-item{padding:10px 13px!important;font-size:13.5px!important}
+}
+
+/* ═══ (2) Aba Listas — a aba inteira ignorava a densidade: nasceu na v2.3.0, depois
+   do sistema de densidade, e nunca foi incluída. Vale nos dois tamanhos de tela
+   (sem !important no desktop; com, no mobile, pelo motivo do bloco acima).
+   Base: card 11px 13px / título 13px / item 7px 9px / título do item 13px. ═══ */
+body.compact .list-card{padding:7px 10px;gap:7px}
+body.compact .list-card-title{font-size:11.5px}
+body.compact .list-card-count{font-size:10px;padding:1px 6px}
+body.compact .list-card-date{font-size:9px}
+body.compact .list-item{padding:4px 7px;gap:7px}
+body.compact .list-item-title{font-size:11.5px}
+body.compact .list-item-check{font-size:12px}
+body.compact .list-add-input{padding:6px 9px}
+body.comfortable .list-card{padding:11px 13px}
+body.comfortable .list-card-title{font-size:13px}
+body.comfortable .list-item{padding:7px 9px}
+body.comfortable .list-item-title{font-size:13px}
+body.large .list-card{padding:15px 17px;gap:13px}
+body.large .list-card-title{font-size:15px}
+body.large .list-card-count{font-size:12.5px;padding:2px 10px}
+body.large .list-card-date{font-size:11.5px}
+body.large .list-item{padding:11px 13px;gap:11px}
+body.large .list-item-title{font-size:15px}
+body.large .list-item-check{font-size:17px}
+body.large .list-add-input{padding:11px 14px}
+@media(max-width:768px){
+  body.compact .list-card{padding:7px 10px!important}
+  body.compact .list-card-title{font-size:11.5px!important}
+  body.compact .list-item{padding:4px 7px!important}
+  body.compact .list-item-title{font-size:11.5px!important}
+  body.large .list-card{padding:15px 17px!important}
+  body.large .list-card-title{font-size:15px!important}
+  body.large .list-item{padding:11px 13px!important}
+  body.large .list-item-title{font-size:15px!important}
+}
+
+/* ═══ (3) Modais e formulários — nenhuma densidade os alcançava. Importa sobretudo
+   para quem escolhe "Grande" por acessibilidade: era justamente onde se digita.
+   ⚠️ No mobile o input NÃO desce de 16px: abaixo disso o iOS dá zoom automático ao
+   focar o campo (§24). Por isso o compacto reduz padding e rótulo, não a fonte.
+   Base: modal padding 20px · título 18px · field 10px · label 10px · input 13px. ═══ */
+body.compact .modal{padding:14px}
+body.compact .modal-title{font-size:15px;margin-bottom:8px}
+body.compact .field{margin-bottom:7px}
+body.compact .field label{font-size:9px;margin-bottom:2px}
+body.compact .field input,body.compact .field textarea,body.compact .field select{font-size:12px;padding:5px 8px}
+body.compact .field textarea{min-height:40px}
+body.comfortable .modal{padding:20px}
+body.comfortable .modal-title{font-size:18px}
+body.comfortable .field{margin-bottom:10px}
+body.comfortable .field input,body.comfortable .field textarea,body.comfortable .field select{font-size:13px;padding:7px 10px}
+body.large .modal{padding:26px}
+body.large .modal-title{font-size:21px;margin-bottom:16px}
+body.large .field{margin-bottom:14px}
+body.large .field label{font-size:11.5px;margin-bottom:5px}
+body.large .field input,body.large .field textarea,body.large .field select{font-size:15px;padding:10px 13px}
+body.large .field textarea{min-height:64px}
+@media(max-width:768px){
+  /* piso de 16px no input: menos que isso e o iOS dá zoom ao focar */
+  body.compact .field input,body.compact .field textarea,body.compact .field select{font-size:16px!important;padding:6px 9px!important}
+  body.large .field input,body.large .field textarea,body.large .field select{font-size:16px!important;padding:11px 14px!important}
+  body.compact .modal{padding:14px!important}
+  body.large .modal{padding:24px!important}
 }
 
 /* Transition animation */
@@ -2358,7 +2464,7 @@ body.large .sidebar-year{font-size:22px}
             </a>
             <button class="footer-link-btn pix-btn" id="pixBtn" title="Apoiar o projeto">☕ Apoiar</button>
             <button class="footer-link-btn" id="reviewsBtn" title="Ver avaliações">⭐ Avaliações</button>
-            <span id="appVersion" style="font-size:11px;color:var(--text);user-select:none">© MGC · v2.11.1</span>
+            <span id="appVersion" style="font-size:11px;color:var(--text);user-select:none">© MGC · v2.12.0</span>
           </span>
         </div>
       </div>
@@ -3679,8 +3785,14 @@ document.getElementById('dpClose').addEventListener('click',()=>{
 
 /* ═══════ WEEK VIEW ═══════ */
 const WEEK_START_H=6,WEEK_END_H=23;
-const HOUR_H_MAP={compact:36,comfortable:56,large:64,normal:48};
-function getHourH(){const d=localStorage.getItem('cal_density')||'normal';return HOUR_H_MAP[d]||48;}
+// Sem preferência gravada o <body> não recebe classe de densidade e vale o CSS-BASE
+// (`.week-slot{height:48px}`) — por isso o fallback é 48 e NÃO o comfortable (56).
+// Este JS tem de espelhar exatamente o CSS em vigor: se divergir, os eventos e a
+// linha do "agora" saem deslocados na Semana. (A chave 'normal' do mapa antigo tinha
+// esse papel, com nome enganoso — o seletor só grava compact|comfortable|large.)
+const HOUR_H_BASE=48; // = .week-slot sem classe de densidade
+const HOUR_H_MAP={compact:36,comfortable:56,large:64};
+function getHourH(){return HOUR_H_MAP[localStorage.getItem('cal_density')]||HOUR_H_BASE;}
 
 let _nowLineTimer=null;
 function updateNowLineTime(){
@@ -5132,7 +5244,11 @@ document.getElementById('sYearNext').addEventListener('click',()=>{AppState.side
 /* ═══════ DENSITY ═══════ */
 const _densityMap={compact:'btnCompact',comfortable:'btnComfort',large:'btnLarge'};
 const _applyDensity=d=>{
-  document.body.className=document.body.className.replace(/compact|comfortable|large/g,'').trim()+(d?' '+d:'');
+  // Remove a densidade anterior por CLASSE INTEIRA. O replace por substring de antes
+  // funcionava só pela ausência de vizinho: uma classe futura como `design-large` ou
+  // `compact-mode` seria corrompida em silêncio (mesma família de fragilidade do r66).
+  document.body.classList.remove('compact','comfortable','large');
+  if(d)document.body.classList.add(d);
   localStorage.setItem('cal_density',d);
   DOM.themePopup.classList.remove('open');
   Object.entries(_densityMap).forEach(([k,id])=>document.getElementById(id).classList.toggle('density-active',k===d));
@@ -10347,7 +10463,7 @@ try{localStorage.removeItem('mgc_app_version');}catch(e){} // remove o cache de 
 /* ── Verificação de nova versão via Supabase ── */
 (async()=>{
   if(!revClient)return;
-  const LOCAL_VERSION='2.11.1';
+  const LOCAL_VERSION='2.12.0';
   const CACHE_KEY='mgc_update_check';
   const CACHE_TTL=24*60*60*1000; // 24 horas
   let cached=null;try{cached=JSON.parse(localStorage.getItem(CACHE_KEY)||'null');}catch(e){} // valor corrompido não pode matar o banner de update
@@ -10386,7 +10502,7 @@ try{localStorage.removeItem('mgc_app_version');}catch(e){} // remove o cache de 
   if(!deviceId){deviceId=crypto.randomUUID();localStorage.setItem('calendario_device_id',deviceId);}
   try{
     await revClient.from('app_pings').upsert(
-      {app_name:'Calendario MGC',version:'2.11.1',device_id:deviceId,ping_date:today},
+      {app_name:'Calendario MGC',version:'2.12.0',device_id:deviceId,ping_date:today},
       {onConflict:'app_name,device_id,ping_date',ignoreDuplicates:true}
     );
     localStorage.setItem(PING_KEY,today);

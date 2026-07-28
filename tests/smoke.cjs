@@ -787,6 +787,43 @@ function run() {
       return AppState.participantGroups.some(g=>g.name==='Remoto');})()`) === true);
   ev(`AppState.participantGroups=[];saveParticipantGroups();renderPartGroups();currentParticipants=[];renderPartPills();closeModal()`);
 
+  /* ── Densidade (v2.12.0): cobertura das superfícies + coerência JS×CSS ── */
+  {
+    const _css = fs.readFileSync(HTML_PATH,'utf8');
+    // superfícies que a auditoria apontou como descobertas
+    const _novas = ['mds-event','mds-event-title','mds-event-time','list-card','list-card-title',
+                    'list-item','list-item-title','modal','modal-title','field'];
+    const _semRegra = _novas.filter(c =>
+      !new RegExp(`body\\.compact \\.?${c}[{,\\s]`).test(_css) ||
+      !new RegExp(`body\\.large \\.?${c}[{,\\s]`).test(_css));
+    check('densidade alcança sheet do dia, Listas e modais (compact E large)',
+      _semRegra.length === 0, 'sem regra: ' + _semRegra.join(', '));
+    // no mobile, regra sem !important perde para as ~189 declarações dos blocos responsivos
+    const _mob = _css.slice(_css.indexOf('Sheet do dia no mobile'));
+    check('regras de densidade do sheet mobile usam !important (senão perdem no mobile)',
+      (_mob.slice(0,1200).match(/!important/g)||[]).length >= 8);
+    check('input no mobile não desce de 16px (evita zoom automático do iOS — §24)',
+      /body\.compact \.field input[^}]*font-size:16px!important/.test(_css));
+  }
+  check('getHourH espelha o CSS: sem preferência = base 48px (não o comfortable)',
+    ev(`(function(){const bk=localStorage.getItem('cal_density');
+      localStorage.removeItem('cal_density');const semPref=getHourH();
+      localStorage.setItem('cal_density','comfortable');const conf=getHourH();
+      localStorage.setItem('cal_density','compact');const comp=getHourH();
+      localStorage.setItem('cal_density','large');const lg=getHourH();
+      if(bk)localStorage.setItem('cal_density',bk);else localStorage.removeItem('cal_density');
+      return semPref===48&&conf===56&&comp===36&&lg===64;})()`) === true);
+  check('_applyDensity troca a classe sem corromper vizinhas (remoção por classe inteira)',
+    ev(`(function(){
+      document.body.classList.add('design-extra');
+      _applyDensity('large');
+      const a=document.body.classList.contains('large')&&document.body.classList.contains('design-extra');
+      _applyDensity('compact');
+      const b=document.body.classList.contains('compact')&&!document.body.classList.contains('large')
+        &&document.body.classList.contains('design-extra');
+      document.body.classList.remove('design-extra','compact');
+      return a&&b;})()`) === true);
+
   /* ── O campo Alerta reflete a escolha ao reabrir (v2.11.1) ── */
   check('reabrir evento com "Sem alerta" mostra "Sem alerta" (não o padrão)',
     ev(`(function(){

@@ -5,6 +5,24 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 
 ---
 
+## [2.12.0] — Julho 2026
+
+### 📐 Densidade (Compacto / Normal / Grande) agora vale no app inteiro
+
+Auditoria da aba **Tema & Design** revelou que a densidade não alcançava várias partes do app — o ajuste era aplicado em silêncio só em algumas telas. Agora alcança todas:
+
+- **Sheet do dia no celular** — era a maior falha: a principal forma de ver os eventos de um dia no mobile ignorava a densidade por completo, porque usa componentes próprios.
+- **Aba Listas inteira** — cartões, itens e campo de adicionar. A aba nasceu depois do sistema de densidade e nunca tinha sido incluída.
+- **Modais e formulários** — título, rótulos, campos de texto e espaçamento. Importa principalmente para quem escolhe **Grande** por acessibilidade: era justamente onde se digita.
+- **Completados no celular** os componentes que tinham ajuste no computador mas ficavam travados no tamanho fixo do mobile: Top 3, tarefas do dia, rotinas da Hoje, barras do painel de rotinas e cards da Revisão.
+
+> No celular, os campos de texto **não** diminuem abaixo do tamanho mínimo mesmo no modo Compacto — abaixo dele o iPhone dá zoom sozinho ao tocar no campo. O modo Compacto reduz espaçamento e rótulos.
+
+### 🐛 Ajustes
+- Trocar a densidade não pode mais afetar outras configurações visuais (a troca de classe era feita por substituição de texto, frágil a nomes parecidos).
+
+---
+
 ## [2.11.1] — Julho 2026
 
 ### 🐛 O campo "Alerta antecipado" mostrava a opção errada ao reabrir o evento
