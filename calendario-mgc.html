@@ -2358,7 +2358,7 @@ body.large .sidebar-year{font-size:22px}
             </a>
             <button class="footer-link-btn pix-btn" id="pixBtn" title="Apoiar o projeto">☕ Apoiar</button>
             <button class="footer-link-btn" id="reviewsBtn" title="Ver avaliações">⭐ Avaliações</button>
-            <span id="appVersion" style="font-size:11px;color:var(--text);user-select:none">© MGC · v2.11.0</span>
+            <span id="appVersion" style="font-size:11px;color:var(--text);user-select:none">© MGC · v2.11.1</span>
           </span>
         </div>
       </div>
@@ -4888,7 +4888,10 @@ function openEdit(id,dateCtx){
   document.getElementById('evTitle').value=ev.title;document.getElementById('evCategory').value=ev.category||'';
   document.getElementById('evDate').value=ev.date;document.getElementById('evDateEnd').value=ev.dateEnd||ev.date;
   document.getElementById('evStart').value=ev.start||'08:00';document.getElementById('evEnd').value=ev.end||'09:00';
-  document.getElementById('evAlert').value=ev.alert!=null?String(ev.alert):'15';
+  // "Sem alerta" grava null EXPLÍCITO e tem de reaparecer como "Sem alerta" — antes
+  // caía no padrão e o campo mentia sobre a escolha do usuário. Só o campo AUSENTE
+  // (undefined: evento antigo ou importado sem lembrete próprio) assume o padrão.
+  document.getElementById('evAlert').value=ev.alert!=null?String(ev.alert):(ev.alert===null?'':'10');
   document.getElementById('evRrule').value=ev.rrule||'';document.getElementById('evUntil').value=ev.until||'';
   document.getElementById('evLocation').value=ev.location||'';document.getElementById('evDesc').value=ev.desc||'';
   document.getElementById('recurBox').classList.toggle('show',!!ev.rrule);document.getElementById('customDaysWrap').classList.toggle('show',ev.rrule==='CUSTOM');
@@ -10344,7 +10347,7 @@ try{localStorage.removeItem('mgc_app_version');}catch(e){} // remove o cache de 
 /* ── Verificação de nova versão via Supabase ── */
 (async()=>{
   if(!revClient)return;
-  const LOCAL_VERSION='2.11.0';
+  const LOCAL_VERSION='2.11.1';
   const CACHE_KEY='mgc_update_check';
   const CACHE_TTL=24*60*60*1000; // 24 horas
   let cached=null;try{cached=JSON.parse(localStorage.getItem(CACHE_KEY)||'null');}catch(e){} // valor corrompido não pode matar o banner de update
@@ -10383,7 +10386,7 @@ try{localStorage.removeItem('mgc_app_version');}catch(e){} // remove o cache de 
   if(!deviceId){deviceId=crypto.randomUUID();localStorage.setItem('calendario_device_id',deviceId);}
   try{
     await revClient.from('app_pings').upsert(
-      {app_name:'Calendario MGC',version:'2.11.0',device_id:deviceId,ping_date:today},
+      {app_name:'Calendario MGC',version:'2.11.1',device_id:deviceId,ping_date:today},
       {onConflict:'app_name,device_id,ping_date',ignoreDuplicates:true}
     );
     localStorage.setItem(PING_KEY,today);

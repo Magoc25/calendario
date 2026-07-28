@@ -5,6 +5,16 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 
 ---
 
+## [2.11.1] — Julho 2026
+
+### 🐛 O campo "Alerta antecipado" mostrava a opção errada ao reabrir o evento
+
+Escolher **"Sem alerta"**, salvar e reabrir o evento mostrava **"15 min antes"**. O alerta de fato não disparava — era só o campo exibindo o valor errado, o que dava a impressão de que a escolha não tinha sido salva.
+
+A causa: o app não distinguia "o usuário escolheu não ter alerta" de "este evento nunca teve o campo" e, nos dois casos, exibia o padrão (que ainda era o antigo de 15 min). Agora **"Sem alerta" reaparece como "Sem alerta"**, e só eventos antigos — ou importados do Google sem lembrete próprio — assumem o padrão de 10 minutos.
+
+---
+
 ## [2.11.0] — Julho 2026
 
 ### ⏰ O alerta que você escolhe no app agora vale no Google Agenda

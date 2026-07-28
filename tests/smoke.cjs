@@ -787,6 +787,51 @@ function run() {
       return AppState.participantGroups.some(g=>g.name==='Remoto');})()`) === true);
   ev(`AppState.participantGroups=[];saveParticipantGroups();renderPartGroups();currentParticipants=[];renderPartPills();closeModal()`);
 
+  /* ── O campo Alerta reflete a escolha ao reabrir (v2.11.1) ── */
+  check('reabrir evento com "Sem alerta" mostra "Sem alerta" (não o padrão)',
+    ev(`(function(){
+      AppState.events.push({id:'al1',title:'Sem alerta smoke',date:'2026-11-05',dateEnd:'2026-11-05',start:'09:00',end:'10:00',alert:null,calendarId:'default'});
+      openEdit('al1');
+      const v=document.getElementById('evAlert').value;
+      closeModal();AppState.events=AppState.events.filter(e=>e.id!=='al1');
+      return v==='';
+    })()`) === true);
+  check('reabrir evento com alerta escolhido mostra o valor escolhido',
+    ev(`(function(){
+      AppState.events.push({id:'al2',title:'Alerta smoke',date:'2026-11-05',dateEnd:'2026-11-05',start:'09:00',end:'10:00',alert:30,calendarId:'default'});
+      openEdit('al2');
+      const v=document.getElementById('evAlert').value;
+      closeModal();AppState.events=AppState.events.filter(e=>e.id!=='al2');
+      return v==='30';
+    })()`) === true);
+  check('"Na hora" (0) reabre como "Na hora", não como padrão',
+    ev(`(function(){
+      AppState.events.push({id:'al3',title:'Na hora smoke',date:'2026-11-05',dateEnd:'2026-11-05',start:'09:00',end:'10:00',alert:0,calendarId:'default'});
+      openEdit('al3');
+      const v=document.getElementById('evAlert').value;
+      closeModal();AppState.events=AppState.events.filter(e=>e.id!=='al3');
+      return v==='0';
+    })()`) === true);
+  check('evento SEM o campo alerta (antigo/importado) assume o padrão de 10 min',
+    ev(`(function(){
+      AppState.events.push({id:'al4',title:'Legado smoke',date:'2026-11-05',dateEnd:'2026-11-05',start:'09:00',end:'10:00',calendarId:'default'});
+      openEdit('al4');
+      const v=document.getElementById('evAlert').value;
+      closeModal();AppState.events=AppState.events.filter(e=>e.id!=='al4');
+      return v==='10';
+    })()`) === true);
+  check('round-trip: salvar "Sem alerta" persiste null e não vira o padrão',
+    ev(`(function(){
+      openNew('2026-11-06');
+      document.getElementById('evTitle').value='RT alerta';
+      document.getElementById('evAlert').value='';
+      document.getElementById('saveBtn').click();
+      const e=AppState.events.find(x=>x.title==='RT alerta');
+      const ok=!!e&&e.alert===null;
+      AppState.events=AppState.events.filter(x=>x.title!=='RT alerta');save();
+      return ok;
+    })()`) === true);
+
   /* ── Lembrete por evento no Google (v2.11.0) ── */
   check('mgcToGcal: o alerta do app vira lembrete do evento no Google',
     ev(`(function(){const r=mgcToGcal({id:'a1',title:'x',date:'2026-11-01',alert:20}).reminders;
