@@ -5,6 +5,31 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 
 ---
 
+## [2.13.0] — Agosto 2026
+
+### 🐛 Sincronização entre aparelhos: sete tipos de dado saíram do "quem salva por último apaga"
+
+Categorias, rotinas, tarefas rápidas, calendários, cores de categoria, Top 3 e revisões viajavam para a nuvem por **substituição**: o aparelho que salvasse por último apagava o que o outro tinha criado, e o item sumia dos dois. Eventos, notas e listas já eram protegidos desde a v2.6.1; estes sete ficaram para trás.
+
+Agora cada um deles **se une** em vez de se substituir: o que existe num aparelho e não no outro é somado, e uma exclusão feita num aparelho continua propagando de verdade para o outro — em vez de "voltar sozinha" na sincronização seguinte.
+
+- **O envio à nuvem também foi corrigido.** Ele juntava só parte dos dados antes de enviar: os **modelos de lista** e os **grupos de participantes** tinham sido protegidos na chegada (v2.10.3) e continuavam sendo sobrescritos na saída. Enviar e receber passaram a usar o mesmo caminho, então nenhum tipo de dado pode ficar de fora de novo.
+- **Importar um backup** agora marca as revisões como recém-restauradas — antes, a sincronização seguinte podia desfazer parte do que acabara de ser importado.
+
+> ⚠️ Correção de sincronização só vale com **todos os aparelhos atualizados**. Abra o app em cada um e confirme `v2.13.0` no rodapé antes de voltar a editar.
+
+### 🔧 Melhorado
+
+- **Versão do app com uma fonte só.** O número exibido no rodapé passou a ser escrito a partir da versão embutida no código, em vez de existir copiado em três lugares. Menos um ponto para mostrar versão antiga quando algo falha.
+- **Proteção contra pausa do banco.** A verificação diária automática passou a alcançar também o banco que guarda a sua agenda — antes cuidava só do banco de avaliações compartilhado.
+
+### 📄 Documentação
+
+- **O README parou de recomendar o agendamento (`pg_cron`) para evitar a suspensão do Supabase.** Foi medido e **não funciona**: o agendamento roda dentro do banco, e o Supabase conta acesso ao serviço. No lugar entra o que de fato acontece e como usar o **Restore project**, que resolve em minutos sem apagar nada.
+- **O SQL de criação da tabela ganhou as colunas `list_templates` e `participant_groups`**, que faltavam — quem seguisse o passo a passo criaria uma tabela sem elas.
+
+---
+
 ## [2.12.0] — Julho 2026
 
 ### 📐 Densidade (Compacto / Normal / Grande) agora vale no app inteiro
