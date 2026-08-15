@@ -1,4 +1,4 @@
-# Inventário de Tratamento de Dados Pessoais — Calendário MGC
+# Inventário de Tratamento de Dados Pessoais — Rumo
 
 **Versão:** 1.0 · **Última atualização:** 2026-05-16
 
@@ -25,8 +25,8 @@
 
 | Campo | Valor |
 |---|---|
-| **Nome** | Calendário MGC |
-| **Versão atual** | 2.1.0 (v2.2.0 em preparação) |
+| **Nome** | Rumo (anteriormente "Calendário MGC") |
+| **Versão atual** | ver [CHANGELOG.md](./CHANGELOG.md) — número não replicado aqui de propósito: nenhum passo do release atualiza este arquivo, e um número parado passa a mentir |
 | **Repositório** | https://github.com/Magoc25/calendario |
 | **URL pública** | https://magoc25.github.io/calendario/calendario-mgc.html |
 | **Modelo** | PWA (Progressive Web App) — arquivo HTML único + Service Worker |

@@ -1,4 +1,4 @@
-# Política de Segurança e Resposta a Incidentes — Calendário MGC
+# Política de Segurança e Resposta a Incidentes — Rumo
 
 **Versão:** 1.0 · **Última atualização:** 2026-05-16
 
@@ -13,7 +13,7 @@
 
 ## 1. Escopo da responsabilidade — três camadas
 
-A responsabilidade pela segurança no Calendário MGC é **distribuída** conforme o modelo de operação:
+A responsabilidade pela segurança no Rumo é **distribuída** conforme o modelo de operação:
 
 | Camada | Quem é responsável | O que cobre |
 |---|---|---|
@@ -86,7 +86,7 @@ Se você é pesquisador de segurança ou usuário e identificou uma vulnerabilid
 
 ### 4.1 Definição de "incidente reportável"
 
-Conforme **Resolução CD/ANPD nº 15/2024 Art. 4º**, um incidente é reportável quando "pode causar risco ou dano relevante aos titulares". Para o Calendário MGC, isso inclui:
+Conforme **Resolução CD/ANPD nº 15/2024 Art. 4º**, um incidente é reportável quando "pode causar risco ou dano relevante aos titulares". Para o Rumo, isso inclui:
 
 | Cenário | Reportável à ANPD? |
 |---|---|

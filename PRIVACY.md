@@ -1,4 +1,4 @@
-# Aviso de Privacidade — Calendário MGC
+# Aviso de Privacidade — Rumo
 
 **Versão:** 1.0 · **Última atualização:** 2026-05-16
 **Vigência:** a partir desta data até nova versão publicada
@@ -10,7 +10,7 @@
 ## 1. Quem somos e contato
 
 **Controlador dos dados:** Marlon Gomes da Costa (pessoa natural)
-**Nome do projeto:** Calendário MGC
+**Nome do projeto:** Rumo _(anteriormente "Calendário MGC" — mesmo software, mesmo controlador; o nome de exibição mudou, o endereço e os dados não)_
 **Identidade jurídica:** desenvolvedor independente, atuando como **Agente de Tratamento de Pequeno Porte (ATPP)** conforme Art. 4º da Resolução CD/ANPD nº 2/2022
 **Canal de privacidade (Encarregado / Contato LGPD):** marlongc25@protonmail.com
 **Foro:** São Raimundo das Mangabeiras — MA, Brasil
@@ -21,7 +21,7 @@
 
 ## 2. Arquitetura de tratamento de dados — três camadas
 
-O Calendário MGC tem um modelo de distribuição **descentralizado** que afeta diretamente quem é responsável por seus dados:
+O Rumo tem um modelo de distribuição **descentralizado** que afeta diretamente quem é responsável por seus dados:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -64,7 +64,7 @@ O Calendário MGC tem um modelo de distribuição **descentralizado** que afeta 
 
 | Campo | Conteúdo | Identifica o usuário? |
 |---|---|---|
-| `app_name` | Nome do app (constante: "Calendário MGC") | ❌ Não |
+| `app_name` | Identificador do app (constante: `Calendario MGC` — valor técnico mantido do nome anterior para não quebrar o histórico de estatísticas; o app se chama **Rumo**) | ❌ Não |
 | `device_id` | UUID aleatório gerado no dispositivo | ❌ Não (anônimo) |
 | `ping_date` | Data (YYYY-MM-DD) sem horário | ❌ Não |
 
@@ -252,7 +252,7 @@ Você tem direito a, **sobre os dados da Camada 1** (os únicos que controlamos)
 
 ## 10. Tratamento de dados de crianças e adolescentes
 
-O Calendário MGC **não é destinado a menores de 18 anos** sem supervisão de pais ou responsáveis. Não há funcionalidade que solicite ou retenha dados de menores na Camada 1 (todos os dados são anônimos).
+O Rumo **não é destinado a menores de 18 anos** sem supervisão de pais ou responsáveis. Não há funcionalidade que solicite ou retenha dados de menores na Camada 1 (todos os dados são anônimos).
 
 Para uso por menores:
 - Pais/responsáveis devem supervisionar o uso
@@ -264,7 +264,7 @@ Se identificarmos uso indevido envolvendo dados de menores, removeremos os dados
 
 ## 11. Cookies e tecnologias similares
 
-### O Calendário MGC **não usa cookies** no sentido estrito.
+### O Rumo **não usa cookies** no sentido estrito.
 
 ### Tecnologias similares utilizadas:
 
@@ -280,7 +280,7 @@ Se identificarmos uso indevido envolvendo dados de menores, removeremos os dados
 
 Conforme o **Guia Orientativo de Cookies e Proteção de Dados Pessoais** da ANPD (2025), localStorage e tecnologias similares são tratados sob as mesmas regras de cookies quando relacionados a dados pessoais.
 
-> ✅ O Calendário MGC usa essas tecnologias **estritamente necessárias** para funcionamento — não há cookies/storage de análise, publicidade ou rastreamento.
+> ✅ O Rumo usa essas tecnologias **estritamente necessárias** para funcionamento — não há cookies/storage de análise, publicidade ou rastreamento.
 
 ---
 

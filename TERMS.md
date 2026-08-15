@@ -1,4 +1,4 @@
-# Calendário MGC — Termos de Uso e Isenção de Responsabilidade
+# Rumo — Termos de Uso e Isenção de Responsabilidade
 
 **Versão:** 2.0  
 **Data:** Maio de 2026  
@@ -10,13 +10,13 @@
 > - [`ACCESSIBILITY.md`](./ACCESSIBILITY.md) — Declaração de Acessibilidade
 > - [`DATA_INVENTORY.md`](./DATA_INVENTORY.md) — Inventário de tratamento de dados
 
-> ⚠️ **Este é um projeto pessoal e independente.** O Calendário MGC não é produto, serviço ou iniciativa do IFMA (Instituto Federal do Maranhão) ou de qualquer outra instituição. O desenvolvedor é professor do IFMA, mas atua aqui exclusivamente em capacidade pessoal.
+> ⚠️ **Este é um projeto pessoal e independente.** O Rumo não é produto, serviço ou iniciativa do IFMA (Instituto Federal do Maranhão) ou de qualquer outra instituição. O desenvolvedor é professor do IFMA, mas atua aqui exclusivamente em capacidade pessoal.
 
 ---
 
 ## 1. Natureza do Software
 
-O **Calendário MGC** é um software de uso pessoal distribuído gratuitamente como arquivo HTML de código aberto. Sua finalidade é auxiliar no gerenciamento de agenda, compromissos e produtividade pessoal.
+O **Rumo** é um software de uso pessoal distribuído gratuitamente como arquivo HTML de código aberto. Sua finalidade é auxiliar no gerenciamento de agenda, compromissos e produtividade pessoal.
 
 O software é fornecido **"no estado em que se encontra"** (*as is*), sem garantias de qualquer natureza, expressas ou implícitas.
 
@@ -24,7 +24,7 @@ O software é fornecido **"no estado em que se encontra"** (*as is*), sem garant
 
 ## 2. Aceitação dos Termos
 
-Ao baixar, instalar, copiar ou utilizar o Calendário MGC em qualquer forma, o usuário declara que:
+Ao baixar, instalar, copiar ou utilizar o Rumo em qualquer forma, o usuário declara que:
 
 - Leu e compreendeu estes termos;
 - Concorda integralmente com as condições aqui estabelecidas;
@@ -38,7 +38,7 @@ Ao baixar, instalar, copiar ou utilizar o Calendário MGC em qualquer forma, o u
 
 ### 3.1 Uso por conta e risco do usuário
 
-O uso do Calendário MGC é de **exclusiva responsabilidade do usuário**. O desenvolvedor (MGC Dev / Marlon Gomes da Costa) não se responsabiliza por:
+O uso do Rumo é de **exclusiva responsabilidade do usuário**. O desenvolvedor (MGC Dev / Marlon Gomes da Costa) não se responsabiliza por:
 
 - Perda, corrupção ou indisponibilidade de dados armazenados;
 - Falhas de sincronização com serviços de terceiros (Supabase, Google Agenda);
@@ -57,7 +57,7 @@ O uso do Calendário MGC é de **exclusiva responsabilidade do usuário**. O des
 
 ### 3.3 Serviços de terceiros
 
-O Calendário MGC pode se integrar com:
+O Rumo pode se integrar com:
 - **Supabase** (supabase.com) — banco de dados em nuvem;
 - **Google Calendar API** (developers.google.com) — sincronização de agenda;
 - **GitHub Pages** (pages.github.com) — hospedagem.
@@ -74,7 +74,7 @@ O desenvolvedor não é responsável por falhas, mudanças de política, interru
 
 ## 4. Licença de Uso
 
-O Calendário MGC é distribuído sob os seguintes termos:
+O Rumo é distribuído sob os seguintes termos:
 
 ### 4.1 Uso pessoal e educacional — **Gratuito e livre**
 
@@ -111,7 +111,7 @@ As avaliações enviadas através da funcionalidade de apoio são de responsabil
 
 ### 6.1 Mecanismo de notificação de atualizações
 
-Quando uma nova versão do Calendário MGC é publicada, o usuário é notificado através de:
+Quando uma nova versão do Rumo é publicada, o usuário é notificado através de:
 
 1. **Banner de atualização** no app (para usuários com Supabase configurado, via `app_config`)
 2. **Histórico no [CHANGELOG.md](./CHANGELOG.md)** com identificação clara de **correções de segurança** marcadas com `🔒 Security`
@@ -151,7 +151,7 @@ O usuário é **inteiramente responsável** por realizar backups regulares dos s
 
 ## 8. Acessibilidade
 
-O Calendário MGC adota as **Diretrizes WCAG 2.2 nível AA** (em conformidade parcial) e a **norma ABNT NBR 17225:2025**, em atendimento ao **Art. 63 da Lei 13.146/2015 (LBI)**.
+O Rumo adota as **Diretrizes WCAG 2.2 nível AA** (em conformidade parcial) e a **norma ABNT NBR 17225:2025**, em atendimento ao **Art. 63 da Lei 13.146/2015 (LBI)**.
 
 Detalhes completos, limitações conhecidas e canal para reportar problemas estão em [`ACCESSIBILITY.md`](./ACCESSIBILITY.md).
 
@@ -159,7 +159,7 @@ Detalhes completos, limitações conhecidas e canal para reportar problemas est�
 
 ## 9. Uso por menores de idade
 
-O Calendário MGC **não é destinado a menores de 18 anos** sem supervisão de pais ou responsáveis. Conforme **Lei 15.211/2025 (ECA Digital)**:
+O Rumo **não é destinado a menores de 18 anos** sem supervisão de pais ou responsáveis. Conforme **Lei 15.211/2025 (ECA Digital)**:
 
 - Não há coleta de dados pessoais identificáveis de menores na infraestrutura do desenvolvedor (Camada 1);
 - Pais/responsáveis devem supervisionar o uso por menores;

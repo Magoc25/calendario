@@ -1,4 +1,4 @@
-# Licença de Uso Não Comercial — Calendário MGC
+# Licença de Uso Não Comercial — Rumo
 
 **Copyright (c) 2026 Marlon Gomes da Costa (MGC Dev)**
 
@@ -34,6 +34,8 @@ Para licenciamento comercial: **marlongc25@protonmail.com**
 ## Propriedade intelectual e créditos
 
 O acesso público ao código-fonte não implica cessão de titularidade. O autor mantém todos os direitos sobre o software original. A remoção de créditos ou avisos de copyright não extingue os direitos do autor.
+
+O nome **"Rumo"** (anteriormente **"Calendário MGC"**) e a identidade visual do projeto pertencem ao autor. Ambas as denominações se referem ao mesmo software e permanecem cobertas por esta licença.
 
 ## Ausência de garantia
 

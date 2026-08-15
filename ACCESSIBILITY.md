@@ -1,4 +1,4 @@
-# Declaração de Acessibilidade — Calendário MGC
+# Declaração de Acessibilidade — Rumo
 
 **Versão:** 1.0 · **Última atualização:** 2026-05-16
 
@@ -8,7 +8,7 @@
 
 ## 1. Compromisso de acessibilidade
 
-O Calendário MGC é desenvolvido com o compromisso de **inclusão e usabilidade para todas as pessoas**, incluindo aquelas com deficiência visual, motora, auditiva ou cognitiva. Esta é uma obrigação legal e um valor do projeto.
+O Rumo é desenvolvido com o compromisso de **inclusão e usabilidade para todas as pessoas**, incluindo aquelas com deficiência visual, motora, auditiva ou cognitiva. Esta é uma obrigação legal e um valor do projeto.
 
 **Base legal:**
 > *"É obrigatória a acessibilidade nos sítios da internet mantidos por empresas com sede ou representação comercial no País ou por órgãos de governo, para uso da pessoa com deficiência, garantindo-lhe acesso às informações disponíveis, conforme as melhores práticas e diretrizes de acessibilidade adotadas internacionalmente."* — Art. 63 da LBI

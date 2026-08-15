@@ -1,10 +1,10 @@
-# 📅 Calendário MGC
+# 🧭 Rumo
 
 > **Calendário pessoal completo, gratuito e com código-fonte disponível — sem instalação, sem servidor obrigatório.**
 
 Desenvolvido por **Marlon Gomes da Costa (MGC Dev)**
 
-> ⚠️ **Este é um projeto pessoal**, desenvolvido de forma independente pelo autor. Não representa, não é financiado e não tem vínculo institucional com o IFMA ou qualquer outra organização. O autor é professor do IFMA Campus São Raimundo das Mangabeiras, mas o Calendário MGC é uma iniciativa exclusivamente pessoal.
+> ⚠️ **Este é um projeto pessoal**, desenvolvido de forma independente pelo autor. Não representa, não é financiado e não tem vínculo institucional com o IFMA ou qualquer outra organização. O autor é professor do IFMA Campus São Raimundo das Mangabeiras, mas o Rumo é uma iniciativa exclusivamente pessoal.
 
 [![Versão](https://img.shields.io/badge/versão-2.13.0-blue)](./CHANGELOG.md)
 [![Licença](https://img.shields.io/badge/licença-não%20comercial-orange)](#licença)
@@ -17,7 +17,7 @@ Desenvolvido por **Marlon Gomes da Costa (MGC Dev)**
 
 O app já está publicado online. Clique e use:
 
-**[▶ Abrir o Calendário MGC](https://Magoc25.github.io/calendario/calendario-mgc.html)**
+**[▶ Abrir o Rumo](https://Magoc25.github.io/calendario/calendario-mgc.html)**
 
 Funciona em qualquer navegador moderno (Chrome, Edge, Firefox, Safari) — no celular, tablet ou computador. **Não precisa de cadastro, login nem download.** Após o primeiro acesso, o app funciona **offline**, e seus dados ficam **somente no seu dispositivo** (no armazenamento do próprio navegador).
 
@@ -39,7 +39,7 @@ Depois de abrir a URL acima, dá para instalar como aplicativo, com ícone na te
 
 ---
 
-## 🤔 Por que usar o Calendário MGC?
+## 🤔 Por que usar o Rumo?
 
 Se você está avaliando este app, provavelmente já viu opções na Play Store ou App Store. Antes de decidir, considere:
 
@@ -71,7 +71,7 @@ Para você, o que importa é simples:
 
 ## ✨ O que é
 
-O Calendário MGC é um **arquivo HTML único** que roda direto no navegador — Chrome, Edge, Firefox ou Safari. Não precisa instalar nada, não precisa de servidor e funciona offline. Seus dados ficam no próprio computador.
+O Rumo é um **arquivo HTML único** que roda direto no navegador — Chrome, Edge, Firefox ou Safari. Não precisa instalar nada, não precisa de servidor e funciona offline. Seus dados ficam no próprio computador.
 
 Quando quiser sincronizar entre computadores ou acessar pelo celular, basta configurar o Supabase (gratuito). É totalmente opcional.
 
@@ -227,8 +227,8 @@ Quando quiser sincronizar entre computadores ou acessar pelo celular, basta conf
 ```
  📅 Google Agenda
         ↕ (sync manual)
- 📅 Calendário MGC  ◄──►  ☁️ Supabase  ◄──►  📱 Celular / outros dispositivos
-   (1 dispositivo)              (automático)
+ 🧭 Rumo  ◄──►  ☁️ Supabase  ◄──►  📱 Celular / outros dispositivos
+ (1 dispositivo)              (automático)
 ```
 
 > 💡 **Você só precisa conectar o Google em um dispositivo.** Os eventos sincronizados chegam automaticamente nos outros via Supabase. O celular não precisa ter conta Google configurada.
@@ -244,7 +244,7 @@ Quando quiser sincronizar entre computadores ou acessar pelo celular, basta conf
 
 ## 🪜 Evolua no seu ritmo — Do básico ao completo
 
-> Não precisa configurar tudo de uma vez. O Calendário MGC funciona bem em qualquer nível — use o básico hoje e avance quando sentir necessidade.
+> Não precisa configurar tudo de uma vez. O Rumo funciona bem em qualquer nível — use o básico hoje e avance quando sentir necessidade.
 
 ---
 
@@ -297,7 +297,7 @@ Depois de abrir a URL pública pelo celular:
 
 #### Instalar como app no desktop (Windows e macOS)
 
-O Calendário MGC também pode ser instalado como aplicativo no computador, sem precisar do navegador aberto.
+O Rumo também pode ser instalado como aplicativo no computador, sem precisar do navegador aberto.
 
 **Windows / macOS — Chrome ou Edge:**
 1. Acesse a URL do app no Chrome ou Edge
@@ -309,7 +309,7 @@ O Calendário MGC também pode ser instalado como aplicativo no computador, sem 
 
 > 💡 Após instalar, o app aparece no menu Iniciar (Windows) ou no Launchpad (macOS) e pode ser aberto como qualquer outro programa.
 
-**Quando avançar para o Nível 3?** Quando quiser que o Google Agenda e o Calendário MGC fiquem sincronizados automaticamente — criar um evento em um aparece no outro.
+**Quando avançar para o Nível 3?** Quando quiser que o Google Agenda e o Rumo fiquem sincronizados automaticamente — criar um evento em um aparece no outro.
 
 ---
 
@@ -445,7 +445,7 @@ Vá em **Settings → Data API**:
 #### 1. Criar projeto no Google Cloud Console
 1. Acesse [console.cloud.google.com](https://console.cloud.google.com) com sua conta Google
 2. No seletor de projetos (topo da página) → clique em **Novo projeto**
-3. Nome: `Calendario MGC` → clique em **Criar**
+3. Nome: `Rumo` → clique em **Criar**
 4. Aguarde a criação e certifique-se que o novo projeto está selecionado no seletor de projetos
 
 #### 2. Ativar a Google Calendar API
@@ -459,7 +459,7 @@ Vá em **Settings → Data API**:
 1. No menu lateral → **APIs e serviços → Tela de permissão OAuth** (ou **OAuth consent screen**)
 2. Clique em **Vamos começar** (ou **Get started**)
 3. Preencha os campos:
-   - **Nome do app:** `Calendario MGC`
+   - **Nome do app:** `Rumo`
    - **E-mail de suporte ao usuário:** seu e-mail Google (o mesmo que usa no Google Agenda)
 4. Clique em **Próximo**
 5. Em **Público-alvo**, selecione **Externo** → clique em **Próximo**
@@ -473,7 +473,7 @@ Vá em **Settings → Data API**:
 1. Ainda em **APIs e serviços → Tela de permissão OAuth**, clique na aba **Clientes** (no topo da página)
 2. Clique em **Criar cliente** (ou **+ Create client**)
 3. Em **Tipo de aplicativo**, selecione **Aplicativo da Web**
-4. Em **Nome**, coloque: `Calendario MGC`
+4. Em **Nome**, coloque: `Rumo`
 5. Em **Origens JavaScript autorizadas**, clique em **+ Adicionar URI** e insira:
    ```
    https://magoc25.github.io
@@ -496,7 +496,7 @@ Como o app está em modo **Externo** e não verificado pelo Google, apenas conta
 
 > 💡 A lista controla **quais contas têm permissão** para autorizar — não define qual será usada automaticamente. A escolha acontece no momento do login.
 
-#### 6. Configurar no Calendário MGC
+#### 6. Configurar no Rumo
 1. Abra o calendário → clique em **📆 Google**
 2. Cole o **Client ID** no campo indicado
 3. No campo **E-mail da conta Google** (opcional), insira o e-mail que deseja usar — isso faz o login ir direto para a conta correta, sem mostrar seletor
@@ -506,7 +506,7 @@ Como o app está em modo **Externo** e não verificado pelo Google, apenas conta
 5. Clique em **🔑 Conectar com Google**
 6. Na janela pop-up que abrir:
    - Selecione sua conta Google
-   - Se aparecer aviso "Google não verificou este app" → clique em **Avançado** → **Ir para Calendario MGC (não seguro)**
+   - Se aparecer aviso "Google não verificou este app" → clique em **Avançado** → **Ir para Rumo (não seguro)**
    - Clique em **Continuar** para autorizar
 7. Após autorizar, selecione **qual agenda** deseja sincronizar (geralmente é o seu e-mail principal)
 8. Clique em **Sincronizar agora**
@@ -517,8 +517,8 @@ Como o app está em modo **Externo** e não verificado pelo Google, apenas conta
 ```
 Sync concluído: X importados · Y atualizados · Z enviados · W erro(s)
 ```
-- **Importados** — eventos do Google Agenda trazidos para o Calendário MGC
-- **Enviados** — eventos do Calendário MGC enviados para o Google Agenda
+- **Importados** — eventos do Google Agenda trazidos para o Rumo
+- **Enviados** — eventos do Rumo enviados para o Google Agenda
 - **Erros** — eventos que não puderam ser sincronizados (datas inválidas, campos obrigatórios ausentes, etc.)
 
 > 💡 Alguns erros na primeira sync são normais. Clique em **Sincronizar agora** novamente se necessário.
@@ -599,7 +599,7 @@ O arquivo JSON inclui **tudo**: eventos, notas de eventos, notas avulsas (aba �
 
 ## ☕ Apoiar o Projeto
 
-O Calendário MGC é gratuito e de código aberto. Se ele foi útil para você, considere apoiar o desenvolvimento:
+O Rumo é gratuito e de código aberto. Se ele foi útil para você, considere apoiar o desenvolvimento:
 
 Clique em **☕ Apoiar** no rodapé do calendário para fazer uma contribuição via PIX.
 
