@@ -391,6 +391,8 @@ create table cal_sync (
   top3 text,
   standalone_notes text,
   lists text,
+  list_templates text,
+  participant_groups text,
   categories text,
   routine_checks text,
   updated_at timestamptz default now()
@@ -409,23 +411,15 @@ create policy "Allow all operations" on cal_sync
 
 > ✅ Pronto — tabela, acessos (GRANTs) e segurança (RLS) ficam configurados de uma vez. Pode seguir para o passo 3.
 
-**Bloco extra — Evitar suspensão por inatividade (recomendado):**
+**Se ficar muito tempo sem abrir o app — o que acontece:**
 
-O Supabase pode suspender projetos gratuitos sem atividade por 7 dias. Para evitar isso, ative a extensão `pg_cron` e rode uma vez no SQL Editor:
+O Supabase pausa projetos gratuitos depois de cerca de **7 dias sem acesso**. Usar o calendário já conta como acesso, então quem abre o app de vez em quando nunca esbarra nisso.
 
-1. Supabase → **Database → Extensions** → buscar `pg_cron` → ativar o toggle
-2. No **SQL Editor**, execute:
+Se acontecer, **o calendário continua funcionando** — seus dados ficam no próprio aparelho. O que para é só a sincronização entre dispositivos, e o painel ☁️ passa a mostrar erro.
 
-```sql
-SELECT cron.schedule(
-  'calendario-mgc-keep-alive',
-  '0 8 * * 1',
-  $$SELECT COUNT(*) FROM public.cal_sync$$
-);
-```
+Para voltar ao normal: [supabase.com](https://supabase.com) → seu projeto → botão **Restore project**. Leva alguns minutos e **nada é apagado** — os dados voltam exatamente como estavam.
 
-> Agenda uma consulta toda segunda-feira às 5h Brasília — funciona sozinho a partir daí.
-> Para confirmar que foi criado: `SELECT * FROM cron.job;`
+> 💡 **Por que não agendar uma consulta automática (`pg_cron`)?** É a receita que circula por aí, e ela **não evita a pausa**: o agendamento roda *dentro* do banco, e o Supabase conta acesso ao **serviço**, não consulta interna. Medido num projeto real — o job rodou dez semanas seguidas sem falhar e o projeto pausou mesmo assim, cinco dias depois da última execução. Não vale o esforço.
 
 #### 3. Copiar as chaves
 Vá em **Settings → Data API**:
@@ -555,7 +549,7 @@ Na primeira sincronização, eventos recorrentes podem gerar cópias. Para remov
 | `icon-192.png` / `icon-512.png` | Ícones do app usados na tela inicial do celular e em notificações | Cenários 2, 3 e 4 |
 | `CHANGELOG.md` | Histórico de todas as versões e mudanças | Todos |
 | `tests/smoke.cjs` | Teste automatizado do app (uso do desenvolvedor — não requer ação do usuário) | — |
-| `.github/workflows/keep-alive.yml` | Mantém o banco de avaliações compartilhadas ativo — configurado pelo desenvolvedor, não requer ação do usuário. Para manter seu próprio Supabase ativo, use o **Bloco extra pg_cron** acima | Cenários 2, 3 e 4 |
+| `.github/workflows/keep-alive.yml` | Mantém o banco de avaliações compartilhadas ativo — configurado pelo desenvolvedor, não requer ação do usuário | Cenários 2, 3 e 4 |
 | `.github/workflows/update-stats.yml` + `stats.json` | Atualiza diariamente o contador de dispositivos ativos exibido no badge acima (configurado pelo desenvolvedor) | — |
 | `.github/workflows/deploy-pages.yml` | Publica o site no GitHub Pages a cada push (configurado pelo desenvolvedor) | — |
 
