@@ -3213,10 +3213,41 @@ function ensureGcalCalendar(){
     saveCalendars();
   }
 }
+/* ══════ Leitura tolerante de coleção local — e CURA de aparelho poluído ══════
+   A v2.13.0 passou a publicar as 7 coleções num envelope {v:2,itens,ts,del}. A
+   v2.12.0, ao puxar da nuvem, copiava a string remota **crua** para o
+   localStorage (fazia `setItem('cal_routines', row.routines)` sem olhar o
+   formato) — então todo aparelho que puxou ANTES de atualizar ficou com o
+   envelope no lugar do valor. No boot seguinte `AppState.routines` virava um
+   objeto, o primeiro `.filter` estourava e a aba Hoje abria **em branco** — e
+   atualizar para a v2.13.0 não resolvia, porque o estrago já estava gravado.
+   (As coleções antigas — eventos, listas — nunca sofreram isso: o merge delas
+   persistia internamente e jamais gravava a string da nuvem.)
+
+   Esta função desfaz o envelope, **regrava o valor limpo** (cura definitiva, não
+   a cada boot) e recusa qualquer formato impossível, caindo no padrão em vez de
+   quebrar o boot. Vale para qualquer lixo no armazenamento, não só o envelope. */
+function lerColecaoLocal(chave,padrao){
+  let bruto=null;
+  try{bruto=localStorage.getItem(chave);}catch(e){return padrao;}
+  if(bruto==null)return padrao;
+  let v;
+  try{v=JSON.parse(bruto);}catch(e){return padrao;}
+  if(v&&typeof v==='object'&&!Array.isArray(v)&&v.v===2&&'itens' in v){
+    v=v.itens;
+    try{localStorage.setItem(chave,JSON.stringify(v));}catch(e){}
+    console.warn('[MGC] '+chave+': envelope de sync desfeito no armazenamento local (curado).');
+  }
+  if(v==null)return padrao;
+  if(Array.isArray(padrao)!==Array.isArray(v))return padrao; // lista virou mapa (ou o contrário)
+  if(typeof v!=='object')return padrao;
+  return v;
+}
+
 let calendars=DEFAULT_CALS;
 let editingCalId=null,selectedCalColor='#3b5bdb';
 try{
-  const stored=JSON.parse(localStorage.getItem('cal_calendars')||'null');
+  const stored=lerColecaoLocal('cal_calendars',null);
   if(stored&&stored.length)calendars=stored;
 }catch(e){console.error('[MGC] Falha ao carregar calendários:',e);}
 function saveCalendars(){invalidateEvMapCache();carimbarColecao('calendars',calendars);localStorage.setItem('cal_calendars',JSON.stringify(calendars));localStorage.setItem('cal_local_ts',new Date().toISOString());scheduleCloudPush();}
@@ -3332,8 +3363,8 @@ document.getElementById('calDeleteBtn').addEventListener('click',()=>{
 try{AppState.events=JSON.parse(localStorage.getItem('cal_marlon_v8')||'[]')}catch(e){console.error('[MGC] Falha ao carregar eventos:',e);toast('⚠️ Erro ao carregar eventos — verifique o armazenamento local.');}
 try{AppState.eventsDel=JSON.parse(localStorage.getItem('cal_events_del')||'{}');}catch(e){AppState.eventsDel={};}
 if(!AppState.eventsDel||typeof AppState.eventsDel!=='object'||Array.isArray(AppState.eventsDel))AppState.eventsDel={};
-try{categoryColors=JSON.parse(localStorage.getItem('cal_catcolors')||'{}')}catch(e){console.error('[MGC] Falha ao carregar cores de categorias:',e);}
-try{AppState.categories=JSON.parse(localStorage.getItem('cal_categories')||'null')||DEFAULT_CATEGORIES.map(c=>({...c}));}catch(e){AppState.categories=DEFAULT_CATEGORIES.map(c=>({...c}));}
+try{categoryColors=lerColecaoLocal('cal_catcolors',{})}catch(e){console.error('[MGC] Falha ao carregar cores de categorias:',e);}
+try{AppState.categories=lerColecaoLocal('cal_categories',null)||DEFAULT_CATEGORIES.map(c=>({...c}));}catch(e){AppState.categories=DEFAULT_CATEGORIES.map(c=>({...c}));}
 rebuildCatIcons();
 
 const pad=n=>String(n).padStart(2,'0');
@@ -6659,7 +6690,7 @@ document.getElementById('sidebarOverlay').addEventListener('click',()=>{
 });
 
 /* ═══════ ROUTINES SYSTEM ═══════ */
-try{AppState.routines=JSON.parse(localStorage.getItem('cal_routines')||'[]');}catch(e){console.error('[MGC] Falha ao carregar rotinas:',e);toast('⚠️ Erro ao carregar rotinas — verifique o armazenamento local.');}
+try{AppState.routines=lerColecaoLocal('cal_routines',[]);}catch(e){console.error('[MGC] Falha ao carregar rotinas:',e);toast('⚠️ Erro ao carregar rotinas — verifique o armazenamento local.');}
 function saveRoutines(){
   carimbarColecao('routines',AppState.routines); // carimbo/tombstone por espelho (r69a)
   localStorage.setItem('cal_routines',JSON.stringify(AppState.routines));
@@ -7772,7 +7803,7 @@ function _renderListsGroups(){
 }
 
 /* ═══════ QUICK TASKS (today's tasks - lightweight) ═══════ */
-try{AppState.quickTasks=JSON.parse(localStorage.getItem('cal_qtasks')||'[]');}catch(e){console.error('[MGC] Falha ao carregar tarefas:',e);}
+try{AppState.quickTasks=lerColecaoLocal('cal_qtasks',[]);}catch(e){console.error('[MGC] Falha ao carregar tarefas:',e);}
 function saveQuickTasks(){
   const cutoff=new Date();cutoff.setDate(cutoff.getDate()-90);
   const co=ds(cutoff.getFullYear(),cutoff.getMonth(),cutoff.getDate());
@@ -7827,7 +7858,7 @@ function addQuickTask(title){
 }
 
 /* ═══════ TOP 3 FOCUS ═══════ */
-try{AppState.top3Data=JSON.parse(localStorage.getItem('cal_top3')||'{}');}catch(e){console.error('[MGC] Falha ao carregar Top 3:',e);}
+try{AppState.top3Data=lerColecaoLocal('cal_top3',{});}catch(e){console.error('[MGC] Falha ao carregar Top 3:',e);}
 function saveTop3(){carimbarColecao('top3',AppState.top3Data);localStorage.setItem('cal_top3',JSON.stringify(AppState.top3Data));localStorage.setItem('cal_local_ts',new Date().toISOString());scheduleCloudPush();}
 function getTop3(){return AppState.top3Data[todayDs()]||[{text:'',done:false},{text:'',done:false},{text:'',done:false}];}
 
@@ -8178,7 +8209,7 @@ function renderToday(){
 }
 
 /* ═══════ REVIEW VIEW ═══════ */
-try{AppState.reviews=JSON.parse(localStorage.getItem('cal_reviews')||'{}');}catch(e){console.error('[MGC] Falha ao carregar revisões:',e);}
+try{AppState.reviews=lerColecaoLocal('cal_reviews',{});}catch(e){console.error('[MGC] Falha ao carregar revisões:',e);}
 function saveReviews(){
   carimbarColecao('reviews',AppState.reviews); // carimbo/tombstone por espelho (r69a)
   localStorage.setItem('cal_reviews',JSON.stringify(AppState.reviews));
@@ -9078,18 +9109,33 @@ function carimbarColecao(col,valorNovo){
   }catch(e){console.warn('[MGC] carimbo de '+col+' falhou (save seguiu sem carimbo):',e);}
 }
 
-const envelopeColecao=(col,valor)=>JSON.stringify({v:2,itens:valor,ts:_scGet(col,'_ts'),del:_scGet(col,'_del')});
+/* ⚠️ A METADATA VIAJA NUMA COLUNA À PARTE — a coluna da coleção mantém a forma
+   CRUA (array ou mapa). A v2.13.0 tentou o envelope {v:2,itens,ts,del} dentro da
+   própria coluna e isso QUEBROU os aparelhos ainda na v2.12.0: ela copiava a
+   string remota crua para o localStorage, o boot seguinte encontrava um objeto
+   onde esperava lista, e a aba Hoje abria em branco. Aparelho antigo nunca lê
+   `sync_meta`, então não há como se envenenar com ela. Servidor sem a coluna cai
+   no fallback do r9 (o upsert reenvia sem ela) e os carimbos ficam locais até o
+   ALTER TABLE — degradado, nunca quebrado. */
+function metaColecoes(){
+  const m={v:2};
+  for(const col in SYNC_COLS)m[col]={ts:_scGet(col,'_ts'),del:_scGet(col,'_del')};
+  return JSON.stringify(m);
+}
 
 /* União remoto ⊎ local por chave. Devolve o valor fundido, ou null se não havia
    nada utilizável no remoto (coluna ausente/legada vazia). */
-function fundirColecao(col,bruto,valorLocal){
+function fundirColecao(col,bruto,valorLocal,metaRemota){
   const cfg=SYNC_COLS[col];if(!cfg||!bruto)return null;
   let p;try{p=JSON.parse(bruto);}catch(e){return null;}
   if(p==null)return null;
+  // Envelope na própria coluna: formato só da v2.13.0, aceito na leitura durante
+  // o rollout (esses aparelhos ainda publicam assim até atualizarem).
   const env=(typeof p==='object'&&!Array.isArray(p)&&p.v===2&&'itens' in p);
   const rIdx=_scIndex(cfg,env?p.itens:p);
-  const rts=(env&&p.ts&&typeof p.ts==='object')?p.ts:{};
-  const rdel=(env&&p.del&&typeof p.del==='object')?p.del:{};
+  const mr=(metaRemota&&typeof metaRemota==='object')?metaRemota:{};
+  const rts=(env&&p.ts&&typeof p.ts==='object')?p.ts:((mr.ts&&typeof mr.ts==='object')?mr.ts:{});
+  const rdel=(env&&p.del&&typeof p.del==='object')?p.del:((mr.del&&typeof mr.del==='object')?mr.del:{});
   const ts=_scGet(col,'_ts'),del=_scGet(col,'_del');
   for(const k in rdel)del[k]=Math.max(del[k]||0,rdel[k]||0);
   const lIdx=_scIndex(cfg,valorLocal);
@@ -9115,17 +9161,18 @@ function getLocalPayload(){
   return {
     events: JSON.stringify({v:2,events:AppState.events,del:AppState.eventsDel||{}}), // v2: tombstones p/ merge por id (Array.isArray no pull dá retrocompat)
     notes: JSON.stringify({...notesStore,__meta:{v:2,ts:notesMeta,del:notesDel}}), // __meta embutida: cliente antigo ignora e segue vendo as notas
-    // v2 {itens,ts,del}: união por chave — ver SYNC_COLS acima (r66a/r68a/r69a).
-    // Estas 7 estavam em last-write-wins: quem salvasse por último apagava o que
-    // o outro aparelho tinha criado. Array/mapa cru anterior ainda é lido no pull.
-    category_colors: envelopeColecao('category_colors',categoryColors),
-    categories: envelopeColecao('categories',AppState.categories), // nomes/ícones
-    calendars: envelopeColecao('calendars',calendars),
+    // FORMA CRUA (array/mapa), igual à que a v2.12.0 espera — os carimbos e
+    // tombstones viajam em `sync_meta`. Ver SYNC_COLS/metaColecoes acima: pôr o
+    // envelope aqui dentro quebrou os aparelhos que ainda não tinham atualizado.
+    category_colors: JSON.stringify(categoryColors),
+    categories: JSON.stringify(AppState.categories), // nomes/ícones
+    calendars: JSON.stringify(calendars),
     theme: currentTheme, // escalar: LWW é o comportamento correto
-    routines: envelopeColecao('routines',AppState.routines),
-    quick_tasks: envelopeColecao('quick_tasks',AppState.quickTasks),
-    reviews: envelopeColecao('reviews',AppState.reviews),
-    top3: envelopeColecao('top3',AppState.top3Data),
+    routines: JSON.stringify(AppState.routines),
+    quick_tasks: JSON.stringify(AppState.quickTasks),
+    reviews: JSON.stringify(AppState.reviews),
+    top3: JSON.stringify(AppState.top3Data),
+    sync_meta: metaColecoes(), // {v:2, <coleção>:{ts,del}} — união das 7 acima
     standalone_notes: JSON.stringify({v:2,notes:AppState.standaloneNotes,del:AppState.standaloneNotesDel||{}}), // v2: tombstones p/ merge por id
     lists: JSON.stringify({v:2,lists:AppState.lists,del:AppState.listsDel||{}}), // v2: inclui tombstones p/ merge no sync
     list_templates: JSON.stringify({v:2,templates:AppState.listTemplates||[],del:AppState.listTemplatesDel||{}}), // v2: merge por id + tombstones (r66a); array cru anterior ainda é lido
@@ -9146,12 +9193,14 @@ function applyRemoteColecoes(row){
     top3:            {ler:()=>AppState.top3Data,   gravar:v=>{AppState.top3Data=v;}},
     reviews:         {ler:()=>AppState.reviews,    gravar:v=>{AppState.reviews=v;}}
   };
+  let meta={};
+  try{const m=JSON.parse(row.sync_meta||'null');if(m&&typeof m==='object')meta=m;}catch(e){}
   let mudou=false;
   for(const col in alvos){
     if(!row[col])continue;
     try{
       const antes=JSON.stringify(alvos[col].ler());
-      const fundido=fundirColecao(col,row[col],alvos[col].ler());
+      const fundido=fundirColecao(col,row[col],alvos[col].ler(),meta[col]);
       if(fundido==null)continue;
       // Coleção estrutural não pode ficar vazia (getCal cai em calendars[0]).
       if((col==='calendars'||col==='categories')&&Array.isArray(fundido)&&!fundido.length)continue;
@@ -10593,7 +10642,7 @@ setInterval(()=>getActiveSW()?.postMessage({type:'PING'}),25000);
    mecanismo desligado — além de envelhecer sozinho se o hook não rodar.
    A detecção de "existe versão nova no servidor" continua no banner do Supabase
    (app_config) logo abaixo. */
-const APP_VERSION='2.13.0';
+const APP_VERSION='2.13.1';
 {const _vSpan=document.getElementById('appVersion');if(_vSpan)_vSpan.textContent='© MGC · v'+APP_VERSION;}
 try{localStorage.removeItem('mgc_app_version');}catch(e){} // remove o cache de versão antigo (não é mais usado)
 

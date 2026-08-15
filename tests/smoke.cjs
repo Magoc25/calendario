@@ -309,7 +309,7 @@ function run() {
   const _proprias = new Set([...(SRC.matchAll(/row\.(\w+)\)?return false;|if\(!row\|\|!row\.(\w+)\)/g))]
     .map(m => m[1] || m[2]).filter(Boolean));
   ['events','notes','standalone_notes','lists','routine_checks'].forEach(c => _proprias.add(c));
-  const _escalares = new Set(['theme','updated_at','id']);
+  const _escalares = new Set(['theme','updated_at','id','sync_meta']);
   const _orfas = _colunas.filter(c => !_genericas.has(c) && !_proprias.has(c) && !_escalares.has(c));
   check('toda coleção do blob cal_sync está inscrita num merge (r66a/r68b)',
     _colunas.length >= 14 && _orfas.length === 0,
@@ -1365,7 +1365,7 @@ function fakeSupabase(nuvem) {
   };
 }
 
-function bootAparelho(nuvem) {
+function bootAparelho(nuvem, seed) {
   return new Promise((resolve, reject) => {
     const vcA = new VirtualConsole();
     vcA.on('jsdomError', () => {}); vcA.on('error', () => {});
@@ -1384,6 +1384,7 @@ function bootAparelho(nuvem) {
         // Nuvem configurada ANTES do boot: initSupabase() precisa das chaves no storage
         w.localStorage.setItem('cal_sb_url', 'https://falso.supabase.co');
         w.localStorage.setItem('cal_sb_key', 'sb_publishable_falso');
+        if (seed) for (const k in seed) w.localStorage.setItem(k, seed[k]);
         w.__fakeSb = fakeSupabase(nuvem);
         w.QRCode = function(){}; w.QRCode.CorrectLevel = { M: 0 };
         w.DOMPurify = { sanitize: (h) => String(h == null ? '' : h) };
@@ -1466,7 +1467,53 @@ async function cenarioMultiAparelho() {
     nuvem.escritas > 0 && nuvem.leituras > 0,
     nuvem.escritas + ' escritas · ' + nuvem.leituras + ' leituras');
 
-  A.dom.window.close(); B.dom.window.close();
+  /* ── 5. A COLUNA MANTÉM A FORMA CRUA — o que o aparelho antigo espera ──
+     Bug de produção (tela em branco na v2.13.0): a metadata de sync foi publicada
+     DENTRO da coluna, como envelope `{v:2,itens,…}`. O build anterior copia a
+     string remota **crua** para o armazenamento local sem olhar o formato — logo
+     o boot seguinte achava um objeto onde esperava lista, o primeiro `.filter`
+     estourava e a aba Hoje abria vazia. Atualizar não resolvia: o estrago já
+     estava gravado. Regra: **coluna de coleção publica array como array e mapa
+     como mapa**; carimbo e tombstone viajam numa coluna à parte, que o cliente
+     antigo nunca lê. Complementa o r69(c) — não basta o build antigo *ler*, ele
+     não pode ser **envenenado** pelo que grava depois de ler. */
+  const forma = (col, esperado) => {
+    let v; try { v = JSON.parse(nuvem.row[col]); } catch (e) { return 'ilegível'; }
+    if (v && typeof v === 'object' && !Array.isArray(v) && v.v === 2 && 'itens' in v) return 'ENVELOPE';
+    return Array.isArray(v) ? 'lista' : (v && typeof v === 'object' ? 'mapa' : typeof v);
+  };
+  const formas = { routines: 'lista', quick_tasks: 'lista', calendars: 'lista', categories: 'lista',
+                   category_colors: 'mapa', top3: 'mapa', reviews: 'mapa' };
+  const erradas = Object.keys(formas).filter(c => forma(c) !== formas[c]);
+  check('coluna de coleção viaja CRUA (o build antigo copia a string sem olhar)',
+    erradas.length === 0,
+    'forma errada: ' + JSON.stringify(erradas.map(c => c + '=' + forma(c))));
+  check('a metadata de sync viaja em coluna própria (sync_meta), fora das coleções',
+    typeof nuvem.row.sync_meta === 'string' && /"v":\s*2/.test(nuvem.row.sync_meta),
+    'sync_meta = ' + String(nuvem.row.sync_meta).slice(0, 60));
+
+  /* ── 6. CURA: aparelho já envenenado tem de se recuperar sozinho ──
+     Quem puxou antes de atualizar ficou com o envelope gravado. O boot precisa
+     desfazê-lo e regravar limpo, senão a versão corrigida quebra igual. */
+  const veneno = {
+    cal_routines: JSON.stringify({ v: 2, itens: [{ id: 'rz', title: 'Envenenada' }], ts: {}, del: {} }),
+    cal_qtasks:   JSON.stringify({ v: 2, itens: [], ts: {}, del: {} }),
+    cal_catcolors:JSON.stringify({ v: 2, itens: { Trabalho: '#f00' }, ts: {}, del: {} })
+  };
+  const C = await bootAparelho({ row: null, escritas: 0, leituras: 0 }, veneno);
+  check('aparelho com armazenamento envenenado dá boot sem estourar',
+    ler(C, 'Array.isArray(AppState.routines)') === true,
+    'AppState.routines é ' + ler(C, 'Object.prototype.toString.call(AppState.routines)'));
+  check('a cura preserva o conteúdo que estava dentro do envelope',
+    ler(C, `(AppState.routines[0]||{}).title`) === 'Envenenada' &&
+    ler(C, `categoryColors && categoryColors.Trabalho`) === '#f00');
+  check('a cura é gravada (não se repete a cada boot)',
+    /^\[/.test(String(ler(C, `localStorage.getItem('cal_routines')`))),
+    String(ler(C, `localStorage.getItem('cal_routines')`)).slice(0, 50));
+  check('a aba Hoje renderiza no aparelho curado (era a tela em branco)',
+    !!ler(C, `document.getElementById('todayContent').innerHTML.trim().length`));
+
+  A.dom.window.close(); B.dom.window.close(); C.dom.window.close();
 }
 
 function finish() {

@@ -5,6 +5,22 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 
 ---
 
+## [2.13.1] — Agosto 2026
+
+### 🐛 Correção urgente — tela em branco em aparelho que ainda não tinha atualizado
+
+A v2.13.0 passou a publicar sete tipos de dado num formato novo **dentro da própria coluna** da nuvem. A versão anterior, ao receber, copiava o conteúdo para o armazenamento do aparelho **sem conferir o formato** — e na abertura seguinte encontrava um formato que não sabia ler. O app abria com a **aba Hoje em branco**, e atualizar sozinho não resolvia, porque o problema já estava gravado no aparelho.
+
+- **O app agora se cura sozinho.** Ao abrir, ele reconhece o dado gravado no formato errado, desfaz e regrava limpo — **sem perder nada**. Basta abrir o app atualizado; não é preciso apagar dados nem reinstalar.
+- **A causa foi removida.** As colunas voltaram a viajar exatamente no formato que a versão anterior espera; o controle de sincronização mudou-se para uma coluna separada, que versões antigas nunca leem. Nenhum aparelho volta a ser afetado, mesmo que demore para atualizar.
+- Proteção extra: qualquer conteúdo inesperado no armazenamento local passa a cair no valor padrão em vez de interromper a abertura do app.
+
+> 🔧 **Migração (opcional, para quem usa sincronização):** rode uma vez no SQL Editor do seu Supabase —
+> `alter table cal_sync add column if not exists sync_meta text;`
+> Sem ela nada quebra: o app detecta a coluna ausente e reenvia sem ela; o controle de sincronização fica só no aparelho até a coluna existir.
+
+---
+
 ## [2.13.0] — Agosto 2026
 
 ### 🐛 Sincronização entre aparelhos: sete tipos de dado saíram do "quem salva por último apaga"
