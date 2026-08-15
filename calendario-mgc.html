@@ -2464,7 +2464,7 @@ body.large .field textarea{min-height:64px}
             </a>
             <button class="footer-link-btn pix-btn" id="pixBtn" title="Apoiar o projeto">☕ Apoiar</button>
             <button class="footer-link-btn" id="reviewsBtn" title="Ver avaliações">⭐ Avaliações</button>
-            <span id="appVersion" style="font-size:11px;color:var(--text);user-select:none">© MGC · v2.12.0</span>
+            <span id="appVersion" style="font-size:11px;color:var(--text);user-select:none">© MGC</span>
           </span>
         </div>
       </div>
@@ -3219,7 +3219,7 @@ try{
   const stored=JSON.parse(localStorage.getItem('cal_calendars')||'null');
   if(stored&&stored.length)calendars=stored;
 }catch(e){console.error('[MGC] Falha ao carregar calendários:',e);}
-function saveCalendars(){invalidateEvMapCache();localStorage.setItem('cal_calendars',JSON.stringify(calendars));localStorage.setItem('cal_local_ts',new Date().toISOString());scheduleCloudPush();}
+function saveCalendars(){invalidateEvMapCache();carimbarColecao('calendars',calendars);localStorage.setItem('cal_calendars',JSON.stringify(calendars));localStorage.setItem('cal_local_ts',new Date().toISOString());scheduleCloudPush();}
 function getCal(id){return calendars.find(c=>c.id===id)||calendars[0];}
 function getCalColor(ev){
   const cal=getCal(ev.calendarId);
@@ -3374,8 +3374,8 @@ function touchEv(ev){if(ev)ev.localUpdatedAt=new Date().toISOString();}
 const save=()=>{invalidateEvMapCache();localStorage.setItem('cal_marlon_v8',JSON.stringify(AppState.events));localStorage.setItem('cal_events_del',JSON.stringify(AppState.eventsDel||{}));localStorage.setItem('cal_local_ts',new Date().toISOString());scheduleCloudPush();};
 let _gcalDragSyncTimer=null;
 function gcalSyncAfterDrag(){clearTimeout(_gcalDragSyncTimer);_gcalDragSyncTimer=setTimeout(()=>{if(typeof gcalIsConnected==='function'&&gcalIsConnected())gcalSync(false).catch(()=>{});},3000);}
-const saveCatColors=()=>{localStorage.setItem('cal_catcolors',JSON.stringify(categoryColors));localStorage.setItem('cal_local_ts',new Date().toISOString());scheduleCloudPush();};
-function saveCategories(){localStorage.setItem('cal_categories',JSON.stringify(AppState.categories));localStorage.setItem('cal_local_ts',new Date().toISOString());scheduleCloudPush();rebuildCatIcons();renderCatTags();};
+const saveCatColors=()=>{carimbarColecao('category_colors',categoryColors);localStorage.setItem('cal_catcolors',JSON.stringify(categoryColors));localStorage.setItem('cal_local_ts',new Date().toISOString());scheduleCloudPush();};
+function saveCategories(){carimbarColecao('categories',AppState.categories);localStorage.setItem('cal_categories',JSON.stringify(AppState.categories));localStorage.setItem('cal_local_ts',new Date().toISOString());scheduleCloudPush();rebuildCatIcons();renderCatTags();};
 const todayDs=()=>{const t=new Date();return ds(t.getFullYear(),t.getMonth(),t.getDate())};
 const toast=msg=>{const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2400)};
 // Debug log — só imprime em dev (localhost) ou se URL tiver ?debug=1
@@ -4816,17 +4816,19 @@ function mergeParticipantGroups(locais,locaisDel,remotos,remotosDel){
 }
 // Aceita o envelope {v:2,groups,del} e o array cru da v2.10.0 (retrocompat)
 function applyRemoteParticipantGroups(row){
-  if(!row||!row.participant_groups)return;
+  if(!row||!row.participant_groups)return false;
   try{
     const p=JSON.parse(row.participant_groups);
     const re=Array.isArray(p)?p:(Array.isArray(p&&p.groups)?p.groups:[]);
     const rd=(!Array.isArray(p)&&p&&typeof p.del==='object')?p.del:{};
+    const _antes=JSON.stringify(AppState.participantGroups);
     const m=mergeParticipantGroups(AppState.participantGroups,AppState.participantGroupsDel,re,rd);
     AppState.participantGroups=m.groups;AppState.participantGroupsDel=m.del;
     localStorage.setItem('cal_participant_groups',JSON.stringify(m.groups));
     localStorage.setItem('cal_participant_groups_del',JSON.stringify(m.del));
     if(typeof renderPartGroups==='function')renderPartGroups();
-  }catch(e){console.warn('[MGC] merge de grupos:',e);}
+    return JSON.stringify(m.groups)!==_antes; // sinal de mudança p/ o render do ramo de push
+  }catch(e){console.warn('[MGC] merge de grupos:',e);return false;}
 }
 function renderPartGroups(){
   const chips=document.getElementById('pgChips');
@@ -5421,7 +5423,7 @@ document.getElementById('importFile').addEventListener('change',function(){
         // v7: restaura o restante do backup (o import antigo ignorava o que o export incluía)
         if(Array.isArray(data.routines)){AppState.routines=data.routines;saveRoutines();}
         if(Array.isArray(data.quickTasks)){AppState.quickTasks=data.quickTasks;saveQuickTasks();}
-        if(data.reviews&&typeof data.reviews==='object'&&!Array.isArray(data.reviews)){AppState.reviews=data.reviews;localStorage.setItem('cal_reviews',JSON.stringify(AppState.reviews));}
+        if(data.reviews&&typeof data.reviews==='object'&&!Array.isArray(data.reviews)){AppState.reviews=data.reviews;saveReviews();} // via save(): o carimbo por espelho recarimba o importado e gera os tombstones (r69a)
         if(data.top3&&typeof data.top3==='object'&&!Array.isArray(data.top3)){AppState.top3Data=data.top3;saveTop3();}
         if(Array.isArray(data.standaloneNotes)){
           // Restauração explícita: recarimba como recente e zera tombstones (r12, igual Listas)
@@ -6659,6 +6661,7 @@ document.getElementById('sidebarOverlay').addEventListener('click',()=>{
 /* ═══════ ROUTINES SYSTEM ═══════ */
 try{AppState.routines=JSON.parse(localStorage.getItem('cal_routines')||'[]');}catch(e){console.error('[MGC] Falha ao carregar rotinas:',e);toast('⚠️ Erro ao carregar rotinas — verifique o armazenamento local.');}
 function saveRoutines(){
+  carimbarColecao('routines',AppState.routines); // carimbo/tombstone por espelho (r69a)
   localStorage.setItem('cal_routines',JSON.stringify(AppState.routines));
   localStorage.setItem('cal_local_ts',new Date().toISOString());
   scheduleCloudPush();
@@ -7043,17 +7046,19 @@ function mergeListTemplates(locais,locaisDel,remotos,remotosDel){
 }
 // Aceita o envelope {v:2,templates,del} e o array cru das versões anteriores
 function applyRemoteListTemplates(row){
-  if(!row||!row.list_templates)return;
+  if(!row||!row.list_templates)return false;
   try{
     const p=JSON.parse(row.list_templates);
     const re=Array.isArray(p)?p:(Array.isArray(p&&p.templates)?p.templates:[]);
     const rd=(!Array.isArray(p)&&p&&typeof p.del==='object')?p.del:{};
+    const _antes=JSON.stringify(AppState.listTemplates);
     const m=mergeListTemplates(AppState.listTemplates,AppState.listTemplatesDel,re,rd);
     AppState.listTemplates=m.templates;AppState.listTemplatesDel=m.del;
     localStorage.setItem('cal_list_templates',JSON.stringify(m.templates));
     localStorage.setItem('cal_list_templates_del',JSON.stringify(m.del));
     if(typeof _renderListTemplates==='function')_renderListTemplates();
-  }catch(e){console.warn('[MGC] merge de modelos de lista:',e);}
+    return JSON.stringify(m.templates)!==_antes; // sinal de mudança p/ o render do ramo de push
+  }catch(e){console.warn('[MGC] merge de modelos de lista:',e);return false;}
 }
 function saveListAsTemplate(listId,name){
   const l=AppState.lists.find(x=>x.id===listId);if(!l)return null;
@@ -7772,6 +7777,7 @@ function saveQuickTasks(){
   const cutoff=new Date();cutoff.setDate(cutoff.getDate()-90);
   const co=ds(cutoff.getFullYear(),cutoff.getMonth(),cutoff.getDate());
   AppState.quickTasks=AppState.quickTasks.filter(t=>t.date>=co);
+  carimbarColecao('quick_tasks',AppState.quickTasks); // carimbo/tombstone por espelho (r69a)
   localStorage.setItem('cal_qtasks',JSON.stringify(AppState.quickTasks));
   localStorage.setItem('cal_local_ts',new Date().toISOString());
   scheduleCloudPush();
@@ -7822,7 +7828,7 @@ function addQuickTask(title){
 
 /* ═══════ TOP 3 FOCUS ═══════ */
 try{AppState.top3Data=JSON.parse(localStorage.getItem('cal_top3')||'{}');}catch(e){console.error('[MGC] Falha ao carregar Top 3:',e);}
-function saveTop3(){localStorage.setItem('cal_top3',JSON.stringify(AppState.top3Data));localStorage.setItem('cal_local_ts',new Date().toISOString());scheduleCloudPush();}
+function saveTop3(){carimbarColecao('top3',AppState.top3Data);localStorage.setItem('cal_top3',JSON.stringify(AppState.top3Data));localStorage.setItem('cal_local_ts',new Date().toISOString());scheduleCloudPush();}
 function getTop3(){return AppState.top3Data[todayDs()]||[{text:'',done:false},{text:'',done:false},{text:'',done:false}];}
 
 /* ═══════ TODAY VIEW ═══════ */
@@ -8174,6 +8180,7 @@ function renderToday(){
 /* ═══════ REVIEW VIEW ═══════ */
 try{AppState.reviews=JSON.parse(localStorage.getItem('cal_reviews')||'{}');}catch(e){console.error('[MGC] Falha ao carregar revisões:',e);}
 function saveReviews(){
+  carimbarColecao('reviews',AppState.reviews); // carimbo/tombstone por espelho (r69a)
   localStorage.setItem('cal_reviews',JSON.stringify(AppState.reviews));
   localStorage.setItem('cal_local_ts',new Date().toISOString());
   scheduleCloudPush();
@@ -9014,19 +9021,111 @@ function collectRoutineChecks(){
   return rchecks;
 }
 
+/* ═══════ União genérica de coleção sincronizada (guia r66a · r68a · r69a) ═══════
+   Toda coleção que viaja no blob do cal_sync tem de UNIR por chave — nunca
+   substituir. `estado.X = JSON.parse(remoto.X)` para lista/mapa é bug até prova em
+   contrário (r66a): quem salvar por último apaga o que o outro aparelho criou.
+   Eventos, notas, listas, modelos e grupos já tinham merge próprio; estas SETE
+   ficaram em last-write-wins e são cobertas aqui por um módulo único.
+
+   Cada coleção guarda dois auxiliares no localStorage, ao lado do próprio valor:
+     <chave>_ts  → {chaveDoItem: carimboMs}    quem vence o conflito
+     <chave>_del → {chaveDoItem: apagadoEmMs}  tombstone — a AUSÊNCIA não apaga
+   Os carimbos são derivados POR ESPELHO no save (r69a) — diff contra o último
+   estado persistido —, nunca em cada call-site: estas coleções são mutadas de
+   dezenas de lugares, e retrofit por call-site fracassa por omissão. De brinde,
+   "apagar tudo" e "importar backup" geram os tombstones certos sem código próprio.
+
+   No fio viaja o envelope {v:2,itens,ts,del}. A forma antiga (array/mapa cru)
+   continua sendo lida: durante o rollout (r65b) o aparelho desatualizado ignora o
+   envelope e segue com a própria cópia — atrasa a convergência, não perde dado. */
+const SYNC_COLS={
+  categories:      {ls:'cal_categories', forma:'lista', chave:i=>i.name},
+  routines:        {ls:'cal_routines',   forma:'lista', chave:i=>i.id},
+  quick_tasks:     {ls:'cal_qtasks',     forma:'lista', chave:i=>i.id},
+  calendars:       {ls:'cal_calendars',  forma:'lista', chave:i=>i.id},
+  category_colors: {ls:'cal_catcolors',  forma:'mapa'},
+  top3:            {ls:'cal_top3',       forma:'mapa'},
+  reviews:         {ls:'cal_reviews',    forma:'mapa'}
+};
+const _scGet=(col,suf)=>{try{return JSON.parse(localStorage.getItem(SYNC_COLS[col].ls+suf)||'{}')||{};}catch(e){return{};}};
+const _scSet=(col,suf,v)=>localStorage.setItem(SYNC_COLS[col].ls+suf,JSON.stringify(v));
+function _scIndex(cfg,valor){
+  const out={};
+  if(cfg.forma==='lista'){(Array.isArray(valor)?valor:[]).forEach(i=>{const k=i&&cfg.chave(i);if(k!=null&&k!=='')out[k]=i;});}
+  else if(valor&&typeof valor==='object'&&!Array.isArray(valor))Object.keys(valor).forEach(k=>{out[k]=valor[k];});
+  return out;
+}
+
+/* Carimba por espelho. Chamar ANTES de gravar o valor novo no localStorage. */
+function carimbarColecao(col,valorNovo){
+  // try/catch: as funções de save são hoisted e o SYNC_COLS é `const` (temporal dead
+  // zone). Hoje nenhum save roda no boot antes desta linha — e se um dia rodar, o
+  // dado ainda é gravado; só o carimbo daquele save se perde, com aviso no console
+  // em vez de uma exceção que derruba o save inteiro.
+  try{
+  const cfg=SYNC_COLS[col];if(!cfg)return;
+  const ts=_scGet(col,'_ts'),del=_scGet(col,'_del'),agora=Date.now();
+  const atual=_scIndex(cfg,valorNovo);
+  let prev={};
+  try{prev=_scIndex(cfg,JSON.parse(localStorage.getItem(cfg.ls)||'null'));}catch(e){}
+  for(const k in atual){
+    if(!(k in prev)||JSON.stringify(prev[k])!==JSON.stringify(atual[k]))ts[k]=agora;
+    if(del[k])delete del[k]; // item de volta (undo/restauração) anula a exclusão
+  }
+  for(const k in prev)if(!(k in atual)){del[k]=agora;delete ts[k];}
+  _scSet(col,'_ts',ts);_scSet(col,'_del',_pruneDel(del)); // tombstone não cresce p/ sempre
+  }catch(e){console.warn('[MGC] carimbo de '+col+' falhou (save seguiu sem carimbo):',e);}
+}
+
+const envelopeColecao=(col,valor)=>JSON.stringify({v:2,itens:valor,ts:_scGet(col,'_ts'),del:_scGet(col,'_del')});
+
+/* União remoto ⊎ local por chave. Devolve o valor fundido, ou null se não havia
+   nada utilizável no remoto (coluna ausente/legada vazia). */
+function fundirColecao(col,bruto,valorLocal){
+  const cfg=SYNC_COLS[col];if(!cfg||!bruto)return null;
+  let p;try{p=JSON.parse(bruto);}catch(e){return null;}
+  if(p==null)return null;
+  const env=(typeof p==='object'&&!Array.isArray(p)&&p.v===2&&'itens' in p);
+  const rIdx=_scIndex(cfg,env?p.itens:p);
+  const rts=(env&&p.ts&&typeof p.ts==='object')?p.ts:{};
+  const rdel=(env&&p.del&&typeof p.del==='object')?p.del:{};
+  const ts=_scGet(col,'_ts'),del=_scGet(col,'_del');
+  for(const k in rdel)del[k]=Math.max(del[k]||0,rdel[k]||0);
+  const lIdx=_scIndex(cfg,valorLocal);
+  const out={...lIdx},ordem=Object.keys(lIdx);
+  for(const k in rIdx){
+    if(!(k in out)){
+      if(del[k]&&del[k]>=(rts[k]||0))continue; // exclusão local vigente vence
+      out[k]=rIdx[k];ordem.push(k);
+      if(rts[k])ts[k]=Math.max(ts[k]||0,rts[k]);
+    }else if((rts[k]||0)>(ts[k]||0)){
+      out[k]=rIdx[k];ts[k]=rts[k];
+    }
+  }
+  for(const k of Object.keys(out))if(del[k]&&del[k]>=(ts[k]||0)){
+    delete out[k];const i=ordem.indexOf(k);if(i>-1)ordem.splice(i,1);
+  }
+  _scSet(col,'_ts',ts);_scSet(col,'_del',_pruneDel(del));
+  return cfg.forma==='lista'?ordem.map(k=>out[k]):out;
+}
+
 function getLocalPayload(){
   const rchecks=collectRoutineChecks();
   return {
     events: JSON.stringify({v:2,events:AppState.events,del:AppState.eventsDel||{}}), // v2: tombstones p/ merge por id (Array.isArray no pull dá retrocompat)
     notes: JSON.stringify({...notesStore,__meta:{v:2,ts:notesMeta,del:notesDel}}), // __meta embutida: cliente antigo ignora e segue vendo as notas
-    category_colors: JSON.stringify(categoryColors),
-    categories: JSON.stringify(AppState.categories), // nomes/ícones — as CORES já sincronizavam mas as categorias não (coluna nova; fallback r9 abaixo cobre tabela antiga)
-    calendars: JSON.stringify(calendars),
-    theme: currentTheme,
-    routines: JSON.stringify(AppState.routines),
-    quick_tasks: JSON.stringify(AppState.quickTasks),
-    reviews: JSON.stringify(AppState.reviews),
-    top3: JSON.stringify(AppState.top3Data),
+    // v2 {itens,ts,del}: união por chave — ver SYNC_COLS acima (r66a/r68a/r69a).
+    // Estas 7 estavam em last-write-wins: quem salvasse por último apagava o que
+    // o outro aparelho tinha criado. Array/mapa cru anterior ainda é lido no pull.
+    category_colors: envelopeColecao('category_colors',categoryColors),
+    categories: envelopeColecao('categories',AppState.categories), // nomes/ícones
+    calendars: envelopeColecao('calendars',calendars),
+    theme: currentTheme, // escalar: LWW é o comportamento correto
+    routines: envelopeColecao('routines',AppState.routines),
+    quick_tasks: envelopeColecao('quick_tasks',AppState.quickTasks),
+    reviews: envelopeColecao('reviews',AppState.reviews),
+    top3: envelopeColecao('top3',AppState.top3Data),
     standalone_notes: JSON.stringify({v:2,notes:AppState.standaloneNotes,del:AppState.standaloneNotesDel||{}}), // v2: tombstones p/ merge por id
     lists: JSON.stringify({v:2,lists:AppState.lists,del:AppState.listsDel||{}}), // v2: inclui tombstones p/ merge no sync
     list_templates: JSON.stringify({v:2,templates:AppState.listTemplates||[],del:AppState.listTemplatesDel||{}}), // v2: merge por id + tombstones (r66a); array cru anterior ainda é lido
@@ -9036,47 +9135,80 @@ function getLocalPayload(){
   };
 }
 
-function applyRemotePayload(row){
-  if(!row) return;
+/* Une as 7 coleções do SYNC_COLS (antes em last-write-wins) sobre o estado local. */
+function applyRemoteColecoes(row){
+  const alvos={
+    categories:      {ler:()=>AppState.categories, gravar:v=>{AppState.categories=v;rebuildCatIcons();if(typeof renderCatTags==='function')renderCatTags();}},
+    routines:        {ler:()=>AppState.routines,   gravar:v=>{AppState.routines=v;}},
+    quick_tasks:     {ler:()=>AppState.quickTasks, gravar:v=>{AppState.quickTasks=v;}},
+    calendars:       {ler:()=>calendars,           gravar:v=>{calendars=v;invalidateEvMapCache();}},
+    category_colors: {ler:()=>categoryColors,      gravar:v=>{categoryColors=v;}},
+    top3:            {ler:()=>AppState.top3Data,   gravar:v=>{AppState.top3Data=v;}},
+    reviews:         {ler:()=>AppState.reviews,    gravar:v=>{AppState.reviews=v;}}
+  };
+  let mudou=false;
+  for(const col in alvos){
+    if(!row[col])continue;
+    try{
+      const antes=JSON.stringify(alvos[col].ler());
+      const fundido=fundirColecao(col,row[col],alvos[col].ler());
+      if(fundido==null)continue;
+      // Coleção estrutural não pode ficar vazia (getCal cai em calendars[0]).
+      if((col==='calendars'||col==='categories')&&Array.isArray(fundido)&&!fundido.length)continue;
+      const depois=JSON.stringify(fundido);
+      alvos[col].gravar(fundido);
+      localStorage.setItem(SYNC_COLS[col].ls,depois);
+      if(depois!==antes)mudou=true;
+    }catch(e){console.warn('[MGC] merge de '+col+':',e);}
+  }
+  return mudou;
+}
+
+/* Checks de rotina: mapa data→ids. União por data (a ausência de uma data no
+   remoto nunca apaga a local); cada data é independente. */
+function applyRemoteRoutineChecks(row){
+  if(!row||!row.routine_checks)return false;
+  try{
+    const rc=JSON.parse(row.routine_checks);
+    if(!rc||typeof rc!=='object')return false;
+    let mudou=false;
+    Object.entries(rc).forEach(([date,ids])=>{
+      const k='cal_rchecks_'+date,novo=JSON.stringify(ids);
+      if(localStorage.getItem(k)!==novo){localStorage.setItem(k,novo);mudou=true;}
+    });
+    return mudou;
+  }catch(e){return false;}
+}
+
+/* ── Caminho ÚNICO de fusão remoto→local (guia r68a) ──
+   O pull (nuvem mais nova) e o push (local mais novo) chamam ESTA função. Duas
+   funções que escrevem envelhecem desencontradas (r66b) — foi exatamente o que
+   aconteceu aqui: `list_templates` e `participant_groups` ganharam merge no pull
+   e continuaram sendo sobrescritos no ramo de push, que fundia só 4 coleções.
+   `preferRemote` decide empate de carimbo: pull = true, push = false. */
+function mergeRemoteIntoLocal(row,preferRemote){
+  if(!row)return false;
   invalidateEvMapCache();
   try{
-    const remoteCatColors=JSON.parse(row.category_colors||'{}');
-    const remoteCalendars=JSON.parse(row.calendars||'null');
-    // Eventos: merge por id + tombstones (persiste cal_marlon_v8/cal_events_del internamente).
-    // Exclusão em outro device propaga por tombstone explícito — ausência não apaga.
-    applyRemoteEventsMerge(row);
-    // Notas por data: merge por chave + carimbo (persiste cal_notes/_meta/_del internamente).
-    applyRemoteNotesMerge(row,true);
-    categoryColors=remoteCatColors;
-    if(remoteCalendars&&remoteCalendars.length)calendars=remoteCalendars;
-    if(row.theme)applyTheme(row.theme);
-    if(row.categories)try{const cs=JSON.parse(row.categories);if(Array.isArray(cs)&&cs.length){AppState.categories=cs;localStorage.setItem('cal_categories',row.categories);rebuildCatIcons();if(typeof renderCatTags==='function')renderCatTags();}}catch(e){}
-    if(row.routines)try{const r=JSON.parse(row.routines);if(Array.isArray(r))AppState.routines=r;}catch(e){}
-    if(row.quick_tasks)try{const q=JSON.parse(row.quick_tasks);if(Array.isArray(q))AppState.quickTasks=q;}catch(e){}
-    if(row.reviews)try{const rv=JSON.parse(row.reviews);if(rv&&typeof rv==='object')AppState.reviews=rv;}catch(e){}
-    if(row.top3)try{const t3=JSON.parse(row.top3);if(t3&&typeof t3==='object')AppState.top3Data=t3;}catch(e){}
-    applyRemoteStandaloneNotesMerge(row); // aba Notas: merge por id + tombstones (persiste internamente)
-    applyRemoteListTemplates(row); // merge por id + tombstones (persiste internamente)
-    applyRemoteParticipantGroups(row); // merge por id + tombstones (persiste internamente)
-    applyRemoteListsMerge(row); // mescla por id + tombstones (persiste cal_lists/cal_lists_del internamente)
-    // Persist locally (eventos/notas/listas já persistidos pelos merges acima)
-    localStorage.setItem('cal_catcolors',row.category_colors||'{}');
-    if(remoteCalendars)localStorage.setItem('cal_calendars',row.calendars);
-    if(row.routines)localStorage.setItem('cal_routines',row.routines);
-    if(row.quick_tasks)localStorage.setItem('cal_qtasks',row.quick_tasks);
-    if(row.reviews)localStorage.setItem('cal_reviews',row.reviews);
-    if(row.top3)localStorage.setItem('cal_top3',row.top3);
-    // cal_standalone_notes já persistido por applyRemoteStandaloneNotesMerge (merge por id, não substituição)
-    // cal_lists / cal_lists_del já persistidos por applyRemoteListsMerge (merge por id, não substituição)
-    if(row.routine_checks)try{
-      const rc=JSON.parse(row.routine_checks);
-      if(rc&&typeof rc==='object'){
-        Object.entries(rc).forEach(([date,ids])=>{
-          localStorage.setItem('cal_rchecks_'+date,JSON.stringify(ids));
-        });
-      }
-    }catch(e){}
-  }catch(e){console.warn('Error applying remote payload',e);}
+    return [
+      applyRemoteEventsMerge(row),            // merge por id + tombstones
+      applyRemoteNotesMerge(row,!!preferRemote), // notas por data: chave + carimbo
+      applyRemoteStandaloneNotesMerge(row),   // aba Notas
+      applyRemoteListsMerge(row),
+      applyRemoteListTemplates(row),
+      applyRemoteParticipantGroups(row),
+      applyRemoteColecoes(row),               // as 7 genéricas (SYNC_COLS)
+      applyRemoteRoutineChecks(row)
+    ].some(Boolean);
+  }catch(e){console.warn('[MGC] Falha ao fundir payload remoto:',e);return false;}
+}
+
+function applyRemotePayload(row){
+  if(!row) return;
+  mergeRemoteIntoLocal(row,true);
+  // Escalar: last-write-wins é o comportamento correto, e só no pull (no push o
+  // local é o mais novo por definição).
+  try{ if(row.theme)applyTheme(row.theme); }catch(e){console.warn('[MGC] tema remoto:',e);}
 }
 
 async function syncToCloud(silent=false){
@@ -9128,13 +9260,12 @@ async function syncFromCloud(silent=false){
         if(!silent)toast('✓ Dados atualizados da nuvem!');
       } else {
         // Local é mais recente (inclui alterações não enviadas antes de fechar) — envia para nuvem.
-        // Antes, mescla eventos, listas e notas remotos: assim um device com estado vazio/antigo
-        // não sobrescreve (push) o que outro device criou — ele incorpora e reenvia o conjunto completo.
+        // Antes, funde TUDO que veio do remoto (ler-fundir-gravar, guia r68a): assim um device
+        // com estado vazio/antigo não sobrescreve no push o que outro device criou — ele
+        // incorpora e reenvia o conjunto completo. É a MESMA função do pull, de propósito.
         // render() só quando o merge trouxe algo novo do remoto: este ramo roda a cada push
         // debounced e um re-render gratuito derrubaria o cursor de quem está digitando.
-        const _ch=[applyRemoteEventsMerge(data),applyRemoteListsMerge(data),
-                   applyRemoteStandaloneNotesMerge(data),applyRemoteNotesMerge(data,false)].some(Boolean);
-        if(_ch)render();
+        if(mergeRemoteIntoLocal(data,false))render();
         await syncToCloud(true);
         if(!silent)toast('✓ Nuvem atualizada com dados locais!');
       }
@@ -10452,18 +10583,24 @@ setInterval(()=>getActiveSW()?.postMessage({type:'PING'}),25000);
   if(params.get('view')==='today'){AppState.viewMode='today';render();}
 })();
 
-/* ── Versão no rodapé: vem do span ESTÁTICO (o hook pre-commit o sincroniza a
-   partir do CHANGELOG a cada release), refletindo sempre a versão do código que
-   está rodando. Antes, uma IIFE buscava o CHANGELOG em runtime e cacheava por 6h
-   → depois de atualizar, o rodapé mostrava a versão ANTIGA por horas (parecia que
-   não atualizou). A detecção de "existe versão nova no servidor" continua no
-   banner do Supabase (app_config) logo abaixo. */
+/* ── Versão do app: UMA constante embutida, escrita no rodapé pelo script ──
+   Fonte única da semver no HTML (o hook pre-commit a sincroniza a partir do
+   CHANGELOG a cada release); LOCAL_VERSION e o ping de telemetria leem daqui.
+   Nunca de fetch: antes, uma IIFE buscava o CHANGELOG em runtime e cacheava por
+   6h → depois de atualizar, o rodapé mostrava a versão ANTIGA por horas (r38a).
+   ⚠️ O span nasce NEUTRO ("© MGC") de propósito (r72a): placeholder que já traz
+   o número satisfaz o smoke sozinho, e o teste passa a ficar verde mesmo com o
+   mecanismo desligado — além de envelhecer sozinho se o hook não rodar.
+   A detecção de "existe versão nova no servidor" continua no banner do Supabase
+   (app_config) logo abaixo. */
+const APP_VERSION='2.12.0';
+{const _vSpan=document.getElementById('appVersion');if(_vSpan)_vSpan.textContent='© MGC · v'+APP_VERSION;}
 try{localStorage.removeItem('mgc_app_version');}catch(e){} // remove o cache de versão antigo (não é mais usado)
 
 /* ── Verificação de nova versão via Supabase ── */
 (async()=>{
   if(!revClient)return;
-  const LOCAL_VERSION='2.12.0';
+  const LOCAL_VERSION=APP_VERSION; // cópia única: ver APP_VERSION acima (r72a)
   const CACHE_KEY='mgc_update_check';
   const CACHE_TTL=24*60*60*1000; // 24 horas
   let cached=null;try{cached=JSON.parse(localStorage.getItem(CACHE_KEY)||'null');}catch(e){} // valor corrompido não pode matar o banner de update
@@ -10502,7 +10639,7 @@ try{localStorage.removeItem('mgc_app_version');}catch(e){} // remove o cache de 
   if(!deviceId){deviceId=crypto.randomUUID();localStorage.setItem('calendario_device_id',deviceId);}
   try{
     await revClient.from('app_pings').upsert(
-      {app_name:'Calendario MGC',version:'2.12.0',device_id:deviceId,ping_date:today},
+      {app_name:'Calendario MGC',version:APP_VERSION,device_id:deviceId,ping_date:today},
       {onConflict:'app_name,device_id,ping_date',ignoreDuplicates:true}
     );
     localStorage.setItem(PING_KEY,today);
