@@ -21,6 +21,10 @@ catch (e) {
 const HTML_PATH = process.argv[2] || path.join(__dirname, '..', 'calendario-mgc.html');
 
 let html = fs.readFileSync(HTML_PATH, 'utf8');
+/* Fonte intocada — as asserções ESTÁTICAS têm de olhar o HTML como ele vai ao ar,
+   não a cópia com stubs injetados (§35/r78c: regra que vive no texto-fonte só a
+   estática enxerga; o runtime já apagou a evidência). */
+const SRC = html;
 
 /* ── 1. Neutraliza <script src> de CDN e injeta stubs ─────────── */
 html = html.replace(/<script src="https:\/\/[^"]+"[^>]*><\/script>/g, '');
@@ -39,7 +43,9 @@ const STUBS = `<script>
     c.then = (res) => res({ data: null, error: null }); // awaitable
     return c;
   };
-  window.supabase = { createClient: () => ({ from: () => _sbChain() }) };
+  // __fakeSb: o cenário multi-aparelho instala um Supabase falso COM ESTADO no
+  // beforeParse; sem esta guarda o stub abaixo o sobrescreveria e nada sincronizaria.
+  window.supabase = window.__fakeSb || { createClient: () => ({ from: () => _sbChain() }) };
   // GSI ausente de propósito: o app usa window.google?.accounts (optional chaining)
 </script>`;
 html = html.replace('</head>', STUBS + '</head>');
@@ -98,12 +104,19 @@ const $ = (id) => window.document.getElementById(id);
 
 /* ── 3. Assertions ────────────────────────────────────────────── */
 let pass = 0, fail = 0;
+let harnessFail = null; // r74a: falha do harness é veredito próprio (INCONCLUSIVA)
 const results = [];
 function check(name, cond, extra) {
   if (cond) { pass++; results.push('  ✓ ' + name); }
   else { fail++; results.push('  ✗ ' + name + (extra ? ' — ' + extra : '')); }
 }
-const ev = (expr) => window.eval(expr);
+/* Leitura/execução TOLERANTE (guia r74a). Um `window.eval` cru derruba a fase
+   inteira no primeiro erro — e "sem nenhum ✗ no stdout" é indistinguível de
+   "passou", o que faz apagar teste bom. Aqui o erro vira `undefined` e a
+   asserção falha LOCALIZADA, sem levar junto as seções seguintes. Aparece na
+   prática ao rodar o build ANTERIOR como baseline (r69c): um identificador que
+   ainda não existia decapitava tudo depois dele. */
+const ev = (expr) => { try { return window.eval(expr); } catch (e) { return undefined; } };
 
 setTimeout(() => {
   try { run(); } catch (e) {
@@ -113,7 +126,12 @@ setTimeout(() => {
   setTimeout(() => {
     try { runAsync(); } catch (e) {
       errors.push('[harness-async] ' + e.message + '\n' + (e.stack||'').split('\n').slice(0,4).join('\n'));
-    } finally { finish(); }
+    }
+    // 3ª fase: cenário multi-aparelho (2 jsdom + Supabase falso). Não pode ser
+    // síncrona — precisa de dois boots completos e de idas e vindas à nuvem.
+    cenarioMultiAparelho()
+      .catch((e) => { harnessFail = 'cenário multi-aparelho: ' + (e && e.message || e); })
+      .then(finish);
   }, 1300);
 }, 600);
 
@@ -190,8 +208,70 @@ function run() {
   check('boot sem erro de runtime', errors.length === 0, errors[0]);
   check('render inicial rodou (today view visível)', $('todayCard') && !$('todayCard').hidden);
   check('AppState existe e expõe events[]', ev('Array.isArray(AppState.events)'));
-  check('rodapé mostra a versão do app no formato correto (© MGC · vX.Y.Z)',
-    /^© MGC · v\d+\.\d+\.\d+$/.test(($('appVersion').textContent||'').trim()), $('appVersion').textContent);
+  /* ── Versão exibida (r38a · r72a · r74b) ──
+     A DINÂMICA prova o mecanismo: o rodapé tem de bater com a constante embutida.
+     A ESTÁTICA prova a regra: nenhum espelho pode NASCER com o número no HTML —
+     com o placeholder trazendo o valor corrente, a dinâmica fica verde mesmo com
+     o mecanismo desligado, e o número envelhece sozinho se o hook não rodar. */
+  const _appVer = ev('APP_VERSION'); // r74a: undefined no build antigo não pode derrubar a fase
+  check('rodapé exibe a versão vinda da constante APP_VERSION',
+    !!_appVer && ($('appVersion').textContent||'').trim() === '© MGC · v' + _appVer,
+    $('appVersion').textContent + ' vs APP_VERSION=' + _appVer);
+  const _vLits = _appVer ? (SRC.match(new RegExp("'" + String(_appVer).replace(/\./g, '\\.') + "'", 'g')) || []) : [];
+  check('APP_VERSION é a ÚNICA cópia da semver no HTML (LOCAL_VERSION e ping leem dela)',
+    _vLits.length === 1, _vLits.length + ' literais `\'' + ev('APP_VERSION') + '\'` no fonte');
+  check('nenhum espelho de versão nasce com o número no HTML (r72a)',
+    !/id="appVersion"[^>]*>[^<]*\d+\.\d+\.\d+/.test(SRC),
+    (SRC.match(/id="appVersion"[^>]*>[^<]*/) || [''])[0]);
+
+  /* ── Gate do r68(b): transforme a REGRA em teste ──
+     Regra: TODA coluna do blob cal_sync que carrega coleção tem de estar inscrita
+     num merge — ou no módulo genérico (SYNC_COLS) ou num applyRemote* próprio.
+     A lista de colunas é DERIVADA de getLocalPayload, nunca escrita à mão: a
+     próxima coluna que nascer fora da união derruba este teste sozinha, sem
+     depender de alguém lembrar da regra (o autor do guia já a violou 7 vezes
+     no próprio app — categories, routines, quick_tasks, calendars,
+     category_colors, top3 e reviews nasceram em last-write-wins). */
+  const _payloadSrc = (SRC.match(/function getLocalPayload\(\)\{[\s\S]*?\n\}/) || [''])[0];
+  const _colunas = [..._payloadSrc.matchAll(/^\s{4}(\w+):/gm)].map(m => m[1]);
+  const _genericas = new Set();
+  const _scBloco = (SRC.match(/const SYNC_COLS=\{[\s\S]*?\n\};/) || [''])[0];
+  [...(_scBloco.matchAll(/^\s{2}(\w+):\s*\{/gm))].forEach(m => _genericas.add(m[1]));
+  const _proprias = new Set([...(SRC.matchAll(/row\.(\w+)\)?return false;|if\(!row\|\|!row\.(\w+)\)/g))]
+    .map(m => m[1] || m[2]).filter(Boolean));
+  ['events','notes','standalone_notes','lists','routine_checks'].forEach(c => _proprias.add(c));
+  const _escalares = new Set(['theme','updated_at','id']);
+  const _orfas = _colunas.filter(c => !_genericas.has(c) && !_proprias.has(c) && !_escalares.has(c));
+  check('toda coleção do blob cal_sync está inscrita num merge (r66a/r68b)',
+    _colunas.length >= 14 && _orfas.length === 0,
+    _colunas.length + ' colunas derivadas; órfãs: ' + JSON.stringify(_orfas));
+  check('as 7 coleções que estavam em last-write-wins estão no SYNC_COLS',
+    ['categories','routines','quick_tasks','calendars','category_colors','top3','reviews']
+      .every(c => _genericas.has(c)),
+    'SYNC_COLS = ' + JSON.stringify([..._genericas]));
+  /* r78a/r69a: gravar uma coleção sincronizada SEM passar pelo carimbo por espelho
+     é perda de dado silenciosa — o item entra/sai sem carimbo nem tombstone, e o
+     merge do outro aparelho decide errado. Era o caso do import de backup, que
+     gravava `cal_reviews` na mão. A regra é derivada: para cada chave do
+     SYNC_COLS, todo `setItem` dela tem de estar na mesma linha de um
+     `carimbarColecao` ou dentro de applyRemoteColecoes (que grava o já fundido). */
+  const _lsKeys = [...(_scBloco.matchAll(/ls:'([\w]+)'/g))].map(m => m[1]);
+  const _bypass = _lsKeys.filter(k => {
+    const re = new RegExp(`localStorage\\.setItem\\('${k}'`, 'g');
+    return [...SRC.matchAll(re)].some(m => {
+      // janela do trecho que ANTECEDE a gravação: o carimbo costuma vir na linha
+      // anterior, dentro da mesma função de save
+      const antes = SRC.slice(Math.max(0, m.index - 260), m.index);
+      return !/carimbarColecao/.test(antes);
+    });
+  });
+  check('nenhuma gravação de coleção sincronizada escapa do carimbo por espelho (r69a/r78a)',
+    _lsKeys.length === 7 && _bypass.length === 0,
+    _lsKeys.length + ' chaves derivadas; sem carimbo: ' + JSON.stringify(_bypass));
+  check('nenhuma coluna de coleção volta a ser substituída sem união (estado.X = parse(remoto.X))',
+    !/AppState\.\w+\s*=\s*JSON\.parse\(row\.\w+\)/.test(SRC) &&
+    !/=\s*JSON\.parse\(row\.(routines|categories|quick_tasks|reviews|top3|calendars|category_colors)\)/.test(SRC),
+    'atribuição direta de coluna remota ao estado');
 
   /* ── Evento: criar via modal ── */
   const n0 = ev('AppState.events.length');
@@ -1177,6 +1257,149 @@ function crossCheck() {
   return out;
 }
 
+/* ══════════ Cenário multi-aparelho — 2 jsdom contra UM Supabase falso ══════════
+   (guia §35 · r68 · r69 · r85a · r90b)
+
+   É o único arranjo que reproduz bug de sync: com UM aparelho a perda de dado em
+   blob compartilhado é invisível — ela precisa de um segundo gravando cego. Foi
+   assim que se pegou o buraco do push, que nenhum teste de merge alcança porque o
+   merge estava certo e a nuvem perdia dado mesmo assim.
+
+   ⚠️ O falso SERIALIZA na escrita E na leitura (r85a). Guardar a linha por
+   referência faria os dois aparelhos e a "nuvem" virarem UM objeto só, e toda
+   escrita cega pareceria preservar o que deveria perder — verde por engano
+   exatamente na suíte que existe para pegar perda de dado. `JSON.parse(JSON.
+   stringify(x))` é a semântica do `jsonb`. O gate do r90(b) mede identidade de
+   objeto para separar "asserção morta" de "condição ausente". */
+const _clone = (x) => (x == null ? x : JSON.parse(JSON.stringify(x)));
+
+function fakeSupabase(nuvem) {
+  return {
+    createClient: () => ({
+      from: (tabela) => {
+        const q = {};
+        q.select = () => q; q.order = () => q; q.limit = () => q; q.eq = () => q;
+        q.single = async () => {
+          if (tabela === 'cal_sync' && nuvem.row) { nuvem.leituras++; return { data: _clone(nuvem.row), error: null }; }
+          return { data: null, error: { code: 'PGRST116' } };
+        };
+        q.upsert = async (linha) => {
+          if (tabela === 'cal_sync') { nuvem.row = _clone(linha); nuvem.escritas++; }
+          return { error: null };
+        };
+        q.insert = async () => ({ error: null });
+        q.delete = () => q;
+        q.then = (res) => res({ data: null, error: null });
+        return q;
+      }
+    })
+  };
+}
+
+function bootAparelho(nuvem) {
+  return new Promise((resolve, reject) => {
+    const vcA = new VirtualConsole();
+    vcA.on('jsdomError', () => {}); vcA.on('error', () => {});
+    const d = new JSDOM(html, {
+      runScripts: 'dangerously', pretendToBeVisual: true,
+      url: 'https://localhost/calendario-mgc.html', virtualConsole: vcA,
+      beforeParse(w) {
+        w.HTMLCanvasElement.prototype.getContext = () => ({ fillRect(){}, clearRect(){}, beginPath(){}, arc(){}, fill(){}, stroke(){}, moveTo(){}, lineTo(){}, save(){}, restore(){}, measureText: () => ({ width: 0 }), fillText(){}, translate(){}, scale(){}, setTransform(){}, drawImage(){} });
+        w.matchMedia = w.matchMedia || ((q) => ({ matches: false, media: q, addListener(){}, removeListener(){}, addEventListener(){}, removeEventListener(){}, dispatchEvent(){ return false; } }));
+        w.scrollTo = () => {}; w.Element.prototype.scrollIntoView = () => {};
+        w.structuredClone = w.structuredClone || structuredClone;
+        w.requestAnimationFrame = w.requestAnimationFrame || ((cb) => setTimeout(cb, 0));
+        w.document.execCommand = () => false; w.document.queryCommandState = () => false; w.document.queryCommandValue = () => '';
+        w.confirm = () => true; w.alert = () => {}; w.prompt = (_m, def) => def || 'X';
+        w.URL.createObjectURL = w.URL.createObjectURL || (() => 'blob:mock');
+        // Nuvem configurada ANTES do boot: initSupabase() precisa das chaves no storage
+        w.localStorage.setItem('cal_sb_url', 'https://falso.supabase.co');
+        w.localStorage.setItem('cal_sb_key', 'sb_publishable_falso');
+        w.__fakeSb = fakeSupabase(nuvem);
+        w.QRCode = function(){}; w.QRCode.CorrectLevel = { M: 0 };
+        w.DOMPurify = { sanitize: (h) => String(h == null ? '' : h) };
+      }
+    });
+    const w = d.window;
+    const t = setTimeout(() => reject(new Error('boot do aparelho travado')), 8000);
+    const pronto = () => { clearTimeout(t); setTimeout(() => resolve({ w, dom: d }), 250); };
+    if (w.document.readyState === 'complete') pronto(); else w.addEventListener('load', pronto);
+  });
+}
+
+/* Leitura/execução TOLERANTE (r74a): erro vira `undefined` e a asserção falha
+   localizada, em vez de matar o harness e imitar um teste que passou. */
+function ler(ap, expr) { try { return ap.w.eval(expr); } catch (e) { return undefined; } }
+const rotinasDe = (ap) => ler(ap, 'JSON.stringify((AppState.routines||[]).map(r=>r.id).sort())') || '[]';
+
+async function cenarioMultiAparelho() {
+  const nuvem = { row: null, escritas: 0, leituras: 0 };
+  const A = await bootAparelho(nuvem);
+  const B = await bootAparelho(nuvem);
+  const sincronizar = async (ap) => { await ler(ap, 'syncFromCloud(true)'); await new Promise(r => setTimeout(r, 80)); };
+
+  /* ── 1. União no PUSH: o aparelho que grava sem ter puxado não pode apagar o
+        que o outro criou (r68a). Com o merge só no pull, B republicava o próprio
+        recorte por cima da nuvem e rA sumia de todos os aparelhos. ── */
+  ler(A, `AppState.routines=[{id:'rA',title:'Rotina A'}];saveRoutines()`);
+  await sincronizar(A);
+  ler(B, `AppState.routines=[{id:'rB',title:'Rotina B'}];saveRoutines()`);
+  await sincronizar(B);
+  await sincronizar(A);
+
+  const naNuvem = () => { try { const p = JSON.parse(nuvem.row.routines); return (p.itens || p).map(r => r.id).sort(); } catch (e) { return ['<ilegível>']; } };
+  check('2 aparelhos: push de B não apaga a rotina que A criou (r68a)',
+    JSON.stringify(naNuvem()) === '["rA","rB"]', 'nuvem: ' + JSON.stringify(naNuvem()));
+  check('2 aparelhos: A recebe a rotina de B (união no pull)', rotinasDe(A) === '["rA","rB"]', 'A: ' + rotinasDe(A));
+  check('2 aparelhos: B ficou com as duas rotinas', rotinasDe(B) === '["rA","rB"]', 'B: ' + rotinasDe(B));
+
+  /* ── 2. Mapa sincronizado: cores de categoria de aparelhos diferentes convivem ── */
+  ler(A, `categoryColors['CorA']='#ff0000';saveCatColors()`);
+  await sincronizar(A);
+  ler(B, `categoryColors['CorB']='#0000ff';saveCatColors()`);
+  await sincronizar(B);
+  await sincronizar(A);
+  const coresDe = (ap) => ler(ap, `JSON.stringify(Object.keys(categoryColors).filter(k=>k.startsWith('Cor')).sort())`) || '[]';
+  check('2 aparelhos: mapa (cores de categoria) une em vez de substituir (r66a)',
+    coresDe(A) === '["CorA","CorB"]' && coresDe(B) === '["CorA","CorB"]',
+    'A: ' + coresDe(A) + ' · B: ' + coresDe(B));
+
+  /* ── 3. Tombstone: exclusão propaga, e a união NÃO ressuscita o item ── */
+  ler(A, `AppState.routines=AppState.routines.filter(r=>r.id!=='rA');saveRoutines()`);
+  await sincronizar(A);
+  await sincronizar(B);
+  await sincronizar(A);
+  check('2 aparelhos: exclusão propaga por tombstone (a união não ressuscita)',
+    rotinasDe(A) === '["rB"]' && rotinasDe(B) === '["rB"]',
+    'A: ' + rotinasDe(A) + ' · B: ' + rotinasDe(B));
+
+  /* ── 4. Gate do r85a, medido como manda o r90(b) ──
+        Identidade de objeto entre a linha da nuvem e o estado dos aparelhos tem
+        de ser toda `false`. Alguma `true` com a suíte verde ⇒ os dois jsdom e a
+        linha do banco são UM objeto só, e nada acima mediu travessia de aparelho.
+        Aqui todas dão `false` por um motivo que vale registrar: este app entrega
+        ao falso um payload de STRINGS (`JSON.stringify` por coluna), como faz um
+        cliente HTTP real — então a fronteira já é cruzada sem depender da cópia.
+        A cópia do falso é defesa correta e NÃO-carregadora: fica, e não se
+        reescreve asserção por causa deste verde ("condição ausente", não
+        "asserção morta"). */
+  const identidades = [
+    nuvem.row === ler(A, 'getLocalPayload()'),
+    nuvem.row.routines === ler(A, 'AppState.routines'),
+    nuvem.row.routines === ler(B, 'AppState.routines'),
+    ler(A, 'AppState.routines') === ler(B, 'AppState.routines'),
+    ler(A, 'categoryColors') === ler(B, 'categoryColors')
+  ];
+  check('duplo falso serializa: nenhuma identidade de objeto entre nuvem e aparelhos (r85a/r90b)',
+    identidades.every(x => x === false) && typeof nuvem.row.routines === 'string',
+    'identidades=' + JSON.stringify(identidades) + ' · coluna é ' + typeof nuvem.row.routines);
+  check('o cenário exercitou a nuvem de verdade (escritas e leituras > 0)',
+    nuvem.escritas > 0 && nuvem.leituras > 0,
+    nuvem.escritas + ' escritas · ' + nuvem.leituras + ' leituras');
+
+  A.dom.window.close(); B.dom.window.close();
+}
+
 function finish() {
   const xc = crossCheck();
   console.log('── Smoke §35 — Calendário MGC ──');
@@ -1184,6 +1407,14 @@ function finish() {
   if (xc.length) { console.log('  cross-check:'); xc.forEach(l => { console.log('  ⚠ ' + l); }); }
   if (errors.length) { console.log('  erros de runtime:'); errors.slice(0,8).forEach(e => console.log('  ✗ ' + e)); }
   const failed = fail + errors.length;
+  /* r74a: falha do HARNESS é veredito PRÓPRIO — INCONCLUSIVA, nunca verde. Sem
+     isso, uma mutação que derruba o harness antes da asserção-alvo é
+     indistinguível de "passou", e o preço do engano é apagar um teste bom. */
+  if (harnessFail) {
+    console.log('  ✗ FALHA DO HARNESS: ' + harnessFail);
+    console.log(`Resultado: INCONCLUSIVA — ${pass} ✓ · ${failed} ✗ (o harness não chegou ao fim)`);
+    process.exit(2);
+  }
   console.log(`Resultado: ${pass} ✓ · ${failed} ✗${xc.length ? ' · ' + xc.length + ' avisos' : ''}`);
   process.exit(failed ? 1 : 0);
 }
