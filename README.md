@@ -1,4 +1,4 @@
-# 🧭 Rumo
+# <img src="icon-192.png" alt="" height="34" align="top"> Rumo
 
 > **Calendário pessoal completo, gratuito e com código-fonte disponível — sem instalação, sem servidor obrigatório.**
 
