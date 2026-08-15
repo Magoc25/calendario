@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self';">
+<title>Rumo — agenda que mora no seu aparelho</title>
+<meta name="description" content="Rumo é uma agenda pessoal de arquivo único: sem cadastro, sem anúncios e com os dados guardados no próprio aparelho. Como funciona, o que sai do dispositivo e o que não sai.">
+<meta name="theme-color" content="#f7f8fc" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0f1116" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="./icon-192.png">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Rumo — agenda que mora no seu aparelho">
+<meta property="og:description" content="Sem cadastro, sem anúncios, sem servidor no meio. Como a agenda funciona por dentro — em linguagem simples ou técnica, você escolhe.">
+<meta property="og:url" content="https://magoc25.github.io/calendario/apresentacao.html">
+<meta property="og:image" content="https://magoc25.github.io/calendario/icon-512.png">
+<meta name="twitter:card" content="summary">
+
+<style>
+/* ─── Tokens: paleta clara COMPLETA no :root puro ─────────────────
+   Nenhuma cor pode ter sua única definição dentro de @media/[data-theme]:
+   no estado "sistema" o navegador não carimba nada e a cor nunca se aplica. */
+:root{
+  --paper:#f7f8fc; --band:#eef0f7; --surface:#ffffff;
+  --ink:#15171d; --muted:#565c6d; --faint:#878da0;
+  --rule:#d7dae5; --rule-soft:#e7e9f1;
+  --accent:#3b5bdb; --accent-dim:#7089e6; --accent-wash:#eaeefc;
+  --warn:#a8520c; --warn-wash:#fdf1e4;
+  --ok:#1c7a53;
+  --shadow:0 1px 2px rgba(21,23,29,.05), 0 8px 24px -16px rgba(21,23,29,.22);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#0f1116; --band:#151922; --surface:#1a1e28;
+    --ink:#e8eaf1; --muted:#a5abbd; --faint:#767d92;
+    --rule:#2b3040; --rule-soft:#222735;
+    --accent:#93a6f7; --accent-dim:#6076cf; --accent-wash:#1b2138;
+    --warn:#e0a366; --warn-wash:#2a2117;
+    --ok:#5cc79b;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px -16px rgba(0,0,0,.7);
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#0f1116; --band:#151922; --surface:#1a1e28;
+  --ink:#e8eaf1; --muted:#a5abbd; --faint:#767d92;
+  --rule:#2b3040; --rule-soft:#222735;
+  --accent:#93a6f7; --accent-dim:#6076cf; --accent-wash:#1b2138;
+  --warn:#e0a366; --warn-wash:#2a2117;
+  --ok:#5cc79b;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px -16px rgba(0,0,0,.7);
+}
+
+/* ─── Papéis tipográficos ─────────────────────────────────────── */
+:root{
+  --display: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, "Times New Roman", serif;
+  --body: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --data: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+}
+
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0; background:var(--paper); color:var(--ink);
+  font-family:var(--body); font-size:17px; line-height:1.65;
+  overflow-x:hidden;
+}
+
+/* ─── Grade: coluna de texto ~66ch + margem com numeração ─────── */
+.wrap{max-width:1180px;margin:0 auto;padding:0 22px}
+section{
+  display:grid; grid-template-columns:1fr; gap:0;
+  padding:44px 0; border-top:1px solid var(--rule-soft);
+}
+section:first-of-type{border-top:0}
+.aside{
+  font-family:var(--data); font-size:12px; letter-spacing:.04em;
+  color:var(--faint); text-transform:uppercase; padding-top:6px;
+  margin-bottom:14px;
+}
+.aside b{display:block;color:var(--accent);font-size:22px;font-family:var(--display);
+  letter-spacing:0;text-transform:none;font-weight:400;line-height:1}
+.col{max-width:66ch}
+@media (min-width:1000px){
+  section{grid-template-columns:150px minmax(0,1fr); gap:38px}
+  .aside{margin-bottom:0;position:sticky;top:22px;align-self:start}
+}
+
+/* ─── Cabeçalho ───────────────────────────────────────────────── */
+header{background:var(--band);border-bottom:1px solid var(--rule);padding:56px 0 40px}
+.brand{display:flex;align-items:center;gap:16px;margin-bottom:26px}
+.brand img{width:60px;height:60px;border-radius:14px;box-shadow:var(--shadow)}
+h1{
+  font-family:var(--display); font-weight:400; font-size:clamp(38px,7vw,60px);
+  line-height:1.02; letter-spacing:-.015em; margin:0;
+}
+.tagline{
+  font-family:var(--display); font-size:clamp(19px,2.6vw,24px); line-height:1.4;
+  color:var(--muted); max-width:34ch; margin:0 0 30px; font-style:italic;
+}
+/* Invariantes: nada aqui muda a cada versão, de propósito. */
+.facts{
+  display:flex;flex-wrap:wrap;gap:8px;margin:0 0 30px;padding:0;list-style:none;
+}
+.facts li{
+  font-family:var(--data);font-size:12.5px;letter-spacing:.02em;
+  background:var(--surface);border:1px solid var(--rule);border-radius:999px;
+  padding:5px 13px;color:var(--muted);
+}
+.facts b{color:var(--ink);font-weight:600}
+
+.actions{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+.cta{
+  display:inline-block;background:var(--accent);color:#fff;text-decoration:none;
+  font-weight:600;font-size:15.5px;padding:12px 24px;border-radius:10px;
+  box-shadow:var(--shadow);
+}
+.cta:hover{background:var(--accent-dim)}
+.cta.ghost{background:transparent;color:var(--accent);border:1px solid var(--rule);box-shadow:none}
+.cta.ghost:hover{background:var(--accent-wash)}
+
+/* ─── O interruptor simples ⇄ técnico ─────────────────────────── */
+.switch{
+  display:inline-flex;background:var(--surface);border:1px solid var(--rule);
+  border-radius:999px;padding:3px;gap:2px;
+}
+.switch button{
+  font:inherit;font-size:13.5px;font-weight:600;border:0;background:transparent;
+  color:var(--muted);padding:7px 16px;border-radius:999px;cursor:pointer;
+}
+.switch button[aria-pressed="true"]{background:var(--accent);color:#fff}
+.switch-note{font-size:13.5px;color:var(--faint);margin-left:2px}
+#page[data-mode="simples"] .tech{display:none}
+
+/* ─── Texto ───────────────────────────────────────────────────── */
+h2{
+  font-family:var(--display);font-weight:400;font-size:clamp(26px,3.6vw,34px);
+  line-height:1.15;letter-spacing:-.01em;margin:0 0 16px;
+}
+h3{font-size:17px;font-weight:650;margin:30px 0 8px;letter-spacing:-.005em}
+p{margin:0 0 16px}
+.lead{font-size:19px;line-height:1.6}
+strong{font-weight:650}
+a{color:var(--accent)}
+ul.plain{margin:0 0 16px;padding-left:20px}
+ul.plain li{margin-bottom:9px}
+.small{font-size:15px;color:var(--muted)}
+
+/* ─── Ficha técnica ───────────────────────────────────────────── */
+.tech-card{
+  background:var(--surface);border:1px solid var(--rule);border-left:3px solid var(--accent);
+  border-radius:0 10px 10px 0;padding:18px 20px;margin:20px 0;box-shadow:var(--shadow);
+}
+.tech-card h4{
+  font-family:var(--data);font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--accent);margin:0 0 10px;font-weight:600;
+}
+.tech-card p:last-child, .tech-card ul:last-child{margin-bottom:0}
+.tech-card ul{margin:0 0 14px;padding-left:19px}
+.tech-card li{margin-bottom:7px}
+code{
+  font-family:var(--data);font-size:.88em;background:var(--band);
+  border:1px solid var(--rule-soft);border-radius:5px;padding:1px 5px;
+}
+
+/* ─── Blocos de destaque ──────────────────────────────────────── */
+.note{
+  border:1px solid var(--rule);background:var(--band);border-radius:10px;
+  padding:16px 18px;margin:20px 0;font-size:16px;
+}
+.note.warn{border-color:var(--warn);background:var(--warn-wash)}
+.note p:last-child{margin-bottom:0}
+
+/* ─── Tabelas (rolam dentro do próprio contêiner) ─────────────── */
+.scroll{overflow-x:auto;margin:20px 0;border:1px solid var(--rule);border-radius:10px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:15px;min-width:460px}
+th,td{text-align:left;padding:11px 15px;border-bottom:1px solid var(--rule-soft);vertical-align:top}
+th{font-size:12px;letter-spacing:.05em;text-transform:uppercase;color:var(--faint);font-weight:600;white-space:nowrap}
+tr:last-child td{border-bottom:0}
+td b{font-weight:650}
+
+/* ─── Diagramas ───────────────────────────────────────────────── */
+figure{margin:24px 0;overflow-x:auto}
+figure svg{display:block;width:100%;height:auto;min-width:440px;color:var(--ink)}
+figcaption{font-size:14px;color:var(--faint);margin-top:10px;line-height:1.5}
+.svg-box{fill:var(--surface);stroke:var(--rule);stroke-width:1.5}
+.svg-box-accent{fill:var(--accent-wash);stroke:var(--accent);stroke-width:1.5}
+.svg-label{font-family:var(--body);font-size:13px;font-weight:600;fill:var(--ink)}
+.svg-sub{font-family:var(--body);font-size:11.5px;fill:var(--muted)}
+.svg-edge{font-family:var(--data);font-size:10.5px;fill:var(--muted);letter-spacing:.02em}
+.svg-line{stroke:var(--accent);stroke-width:1.6;fill:none}
+.svg-line-off{stroke:var(--warn);stroke-width:1.6;fill:none;stroke-dasharray:5 4}
+
+/* ─── Rodapé ──────────────────────────────────────────────────── */
+footer{background:var(--band);border-top:1px solid var(--rule);padding:40px 0;margin-top:20px}
+footer .col{max-width:none}
+footer p{font-size:15px;color:var(--muted)}
+</style>
+</head>
+<body>
+
+<div id="page" data-mode="simples">
+
+<header>
+  <div class="wrap">
+    <div class="brand">
+      <img src="./icon-192.png" alt="">
+      <div>
+        <h1>Rumo</h1>
+      </div>
+    </div>
+    <p class="tagline">Uma agenda pessoal que mora no seu aparelho — não numa conta, não num servidor de outra pessoa.</p>
+
+    <ul class="facts">
+      <li><b>1</b> arquivo</li>
+      <li><b>0</b> cadastros</li>
+      <li><b>0</b> anúncios</li>
+      <li><b>0</b> rastreadores</li>
+      <li>funciona <b>offline</b></li>
+      <li>em desenvolvimento desde <b>2026</b></li>
+    </ul>
+
+    <div class="actions">
+      <a class="cta" href="./calendario-mgc.html">Abrir a agenda</a>
+      <div class="switch" role="group" aria-label="Nível de detalhe do texto">
+        <button type="button" id="btnSimples" aria-pressed="true">Simples</button>
+        <button type="button" id="btnTecnico" aria-pressed="false">Técnico</button>
+      </div>
+      <span class="switch-note">o modo técnico acrescenta fichas de detalhe</span>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <!-- ─────────────────────────────────────────────────────────── -->
+  <section>
+    <div class="aside"><b>01</b>o que é</div>
+    <div class="col">
+      <h2>Uma agenda que não pede nada em troca</h2>
+      <p class="lead">O Rumo é um calendário pessoal com eventos, rotinas, tarefas, listas e notas. Você abre um endereço e ele já está funcionando: não existe tela de cadastro, não existe senha para criar, não existe plano pago.</p>
+      <p>Ele é <strong>um único arquivo</strong>. O que você vê na tela, a lógica que faz as contas e o visual estão todos dentro dele. Não há nada sendo montado num servidor a cada visita — o aparelho recebe o arquivo uma vez e passa a rodar sozinho.</p>
+      <p>Isso tem uma consequência prática que vale mais do que parece: <strong>o que você escreve não precisa sair do aparelho para o app funcionar</strong>. Sincronizar com outro dispositivo e conectar ao Google Agenda existem, mas são escolhas suas, desligadas por padrão.</p>
+
+      <div class="tech-card tech">
+        <h4>Ficha · arquitetura</h4>
+        <p>Aplicação de página única servida como arquivo estático, sem processo de build e sem backend próprio. Todo o estado vive no armazenamento local do navegador; a interface é redesenhada a partir desse estado.</p>
+        <p>Instalável como PWA (Windows, macOS, Android, iOS) através de um manifesto e de um <i>service worker</i> que guarda os arquivos em cache. Depois da primeira visita, abre sem rede.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─────────────────────────────────────────────────────────── -->
+  <section>
+    <div class="aside"><b>02</b>onde os dados moram</div>
+    <div class="col">
+      <h2>Três camadas — e uma ligação que não existe</h2>
+      <p class="lead">A confusão mais comum sobre apps assim é achar que "está na internet" significa "está com o desenvolvedor". Aqui não está, e a razão é estrutural, não uma promessa.</p>
+
+      <figure>
+        <svg viewBox="0 0 640 300" role="img" aria-labelledby="dgm1t">
+          <title id="dgm1t">Diagrama: a agenda fica no aparelho e, opcionalmente, num banco de dados do próprio usuário. Não existe caminho da agenda para o desenvolvedor.</title>
+          <defs>
+            <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="var(--accent)"/>
+            </marker>
+            <marker id="arw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="var(--warn)"/>
+            </marker>
+          </defs>
+
+          <!-- Camada 1: aparelho -->
+          <rect class="svg-box-accent" x="14" y="96" width="176" height="106" rx="10"/>
+          <text class="svg-label" x="34" y="128">Seu aparelho</text>
+          <text class="svg-sub" x="34" y="150">eventos, rotinas, notas,</text>
+          <text class="svg-sub" x="34" y="167">listas, tarefas</text>
+          <text class="svg-sub" x="34" y="188" style="fill:var(--accent)">sempre aqui — 100%</text>
+
+          <!-- Camada 3: banco do usuário -->
+          <rect class="svg-box" x="248" y="26" width="182" height="96" rx="10"/>
+          <text class="svg-label" x="268" y="56">Banco de dados</text>
+          <text class="svg-label" x="268" y="74">seu</text>
+          <text class="svg-sub" x="268" y="96">conta gratuita criada</text>
+          <text class="svg-sub" x="268" y="112">por você · opcional</text>
+
+          <!-- Google -->
+          <rect class="svg-box" x="248" y="176" width="182" height="96" rx="10"/>
+          <text class="svg-label" x="268" y="206">Google Agenda</text>
+          <text class="svg-sub" x="268" y="228">sua conta Google,</text>
+          <text class="svg-sub" x="268" y="244">se você conectar</text>
+          <text class="svg-sub" x="268" y="262">opcional</text>
+
+          <!-- Desenvolvedor -->
+          <rect class="svg-box" x="490" y="96" width="136" height="106" rx="10"/>
+          <text class="svg-label" x="510" y="128">Desenvolvedor</text>
+          <text class="svg-sub" x="510" y="150">avaliações que</text>
+          <text class="svg-sub" x="510" y="166">você escrever +</text>
+          <text class="svg-sub" x="510" y="182">contagem anônima</text>
+
+          <!-- Ligações reais -->
+          <path class="svg-line" d="M190,132 C218,132 220,74 246,74" marker-end="url(#ar)" marker-start="url(#ar)"/>
+          <text class="svg-edge" x="196" y="96">sincroniza</text>
+          <path class="svg-line" d="M190,166 C218,166 220,224 246,224" marker-end="url(#ar)" marker-start="url(#ar)"/>
+          <text class="svg-edge" x="196" y="212">exporta/importa</text>
+
+          <!-- Ligação que NÃO existe -->
+          <path class="svg-line-off" d="M190,149 L488,149" marker-end="url(#arw)"/>
+          <text class="svg-edge" x="300" y="140" style="fill:var(--warn)">sua agenda → desenvolvedor</text>
+          <g stroke="var(--warn)" stroke-width="2.6" stroke-linecap="round">
+            <line x1="329" y1="158" x2="349" y2="178"/><line x1="349" y1="158" x2="329" y2="178"/>
+          </g>
+          <text class="svg-edge" x="358" y="174" style="fill:var(--warn)">não existe</text>
+        </svg>
+        <figcaption>O caminho tracejado e marcado com X não é uma política interna que alguém poderia mudar: ele não está escrito no programa. Não há para onde a sua agenda ir nessa direção.</figcaption>
+      </figure>
+
+      <h3>A camada opcional de sincronização é <em>sua</em></h3>
+      <p>Se você quiser a mesma agenda no computador e no celular, cria uma conta gratuita num serviço de banco de dados, cola dois códigos no app e pronto. Esse banco é seu: a conta está no seu nome, os dados ficam nele, e o desenvolvedor não tem acesso a ele em momento nenhum.</p>
+      <p>É o oposto do modelo habitual, em que você usa o servidor de quem fez o app e precisa confiar na promessa dele.</p>
+
+      <div class="tech-card tech">
+        <h4>Ficha · as três camadas</h4>
+        <ul>
+          <li><b>Camada 1 — aparelho.</b> Armazenamento local do navegador, por origem. É a fonte da verdade: o app funciona inteiro sem as outras duas.</li>
+          <li><b>Camada 2 — infraestrutura compartilhada.</b> Um projeto de banco que atende todos os apps do autor e guarda três coisas: as avaliações públicas escritas voluntariamente, um registro anônimo de uso e a versão publicada de cada app (é o que dispara o aviso de atualização). Nenhum conteúdo de agenda passa por aqui.</li>
+          <li><b>Camada 3 — banco do usuário.</b> Projeto criado pela própria pessoa, com credenciais que ela cola no app e que ficam apenas no aparelho dela. Uma linha por instalação, com o conteúdo em formato JSON.</li>
+        </ul>
+        <p>A chave usada para falar com a camada 2 é <strong>publicável por projeto</strong> — do tipo que se espera encontrar no código de um app de navegador. A proteção real está nas regras de acesso do banco, não em esconder a chave: elas limitam o que essa chave pode ler e escrever.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─────────────────────────────────────────────────────────── -->
+  <section>
+    <div class="aside"><b>03</b>o que sai</div>
+    <div class="col">
+      <h2>O que sai do aparelho — a lista inteira</h2>
+      <p class="lead">Dizer "seus dados não saem daqui" é fácil. O que segue é a lista completa do que o app envia para fora, incluindo o que sai <em>sem</em> você configurar nada.</p>
+
+      <div class="scroll">
+        <table>
+          <thead><tr><th>Sai</th><th>Para onde</th><th>Quando</th></tr></thead>
+          <tbody>
+            <tr><td><b>Um número aleatório e a data</b><br><span class="small">sem nome, sem e-mail, sem conteúdo</span></td><td>Banco compartilhado</td><td>Uma vez por dia, para contar aparelhos ativos</td></tr>
+            <tr><td><b>A avaliação que você escrever</b><br><span class="small">apelido, nota e comentário</span></td><td>Banco compartilhado</td><td>Só quando você envia uma</td></tr>
+            <tr><td><b>Sua agenda</b></td><td>Seu próprio banco</td><td>Só se você configurar a sincronização</td></tr>
+            <tr><td><b>Os eventos que você marcar</b></td><td>Google Agenda</td><td>Só se você conectar sua conta Google</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p><strong>E só.</strong> Não há publicidade, não há medição de comportamento, não há biblioteca de terceiros observando o que você faz. O número aleatório que conta aparelhos ativos é gerado no seu aparelho, não corresponde a nenhuma identidade e não acompanha nada além da data em que o app foi aberto.</p>
+
+      <div class="note">
+        <p><strong>Como conferir por conta própria.</strong> O app é um arquivo de texto que você pode baixar e ler. Todo endereço externo que ele alcança está escrito lá dentro, em texto claro — não há código embaralhado nem carregado depois. Quem quiser verificar não depende desta página.</p>
+      </div>
+
+      <div class="tech-card tech">
+        <h4>Ficha · auditoria de saída</h4>
+        <p>A pergunta correta não é "que requisições o app faz", é <strong>"que endereços ele monta com dado de quem usa"</strong> — um endereço de imagem carrega dados na própria URL sem que nenhuma chamada de rede apareça no código.</p>
+        <ul>
+          <li><b>Chamadas de rede:</b> as únicas do app vão para a API de calendário do Google, e só existem depois de você autorizar.</li>
+          <li><b>Endereços montados com dado do usuário:</b> nenhum. Não há endereço de imagem, de formulário ou de redirecionamento construído a partir do que você digita.</li>
+          <li><b>Código de pagamento (apoio ao projeto):</b> o QR é desenhado <strong>dentro do aparelho</strong>, por uma biblioteca local. Nada do código de pagamento é enviado a um gerador externo — que é o caminho comum, e vazaria os dados na URL.</li>
+          <li><b>Recursos externos:</b> bibliotecas e fontes vêm de redes de distribuição públicas. São downloads de arquivo, sem conteúdo seu no endereço.</li>
+        </ul>
+        <p>A política de segurança de conteúdo declarada no app restringe os destinos permitidos a essa lista curta: um endereço fora dela é bloqueado pelo próprio navegador, mesmo que algum código tentasse alcançá-lo.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─────────────────────────────────────────────────────────── -->
+  <section>
+    <div class="aside"><b>04</b>dois aparelhos</div>
+    <div class="col">
+      <h2>Como dois aparelhos combinam a mesma agenda</h2>
+      <p class="lead">Esta é a parte difícil de qualquer app que sincroniza, e onde quase todos escorregam do mesmo jeito: o aparelho que salva por último apaga o que o outro tinha criado.</p>
+
+      <p>Imagine que você cria uma rotina no computador e, antes de o celular receber a novidade, cria outra rotina nele. Os dois aparelhos agora discordam. O jeito ingênuo de resolver é deixar o último a salvar reescrever tudo — e a rotina do outro aparelho desaparece, sem aviso.</p>
+
+      <figure>
+        <svg viewBox="0 0 640 268" role="img" aria-labelledby="dgm2t">
+          <title id="dgm2t">Diagrama comparando substituição, que perde um item, com união, que preserva os dois.</title>
+          <defs>
+            <marker id="ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="var(--accent)"/>
+            </marker>
+            <marker id="ar2w" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="var(--warn)"/>
+            </marker>
+          </defs>
+
+          <text class="svg-edge" x="14" y="18" style="fill:var(--warn);font-size:11.5px">O JEITO INGÊNUO — SUBSTITUIÇÃO</text>
+          <rect class="svg-box" x="14" y="30" width="120" height="52" rx="8"/>
+          <text class="svg-label" x="30" y="52">Computador</text><text class="svg-sub" x="30" y="70">tem A</text>
+          <rect class="svg-box" x="14" y="94" width="120" height="52" rx="8"/>
+          <text class="svg-label" x="30" y="116">Celular</text><text class="svg-sub" x="30" y="134">tem B</text>
+          <path class="svg-line-off" d="M136,56 C180,56 180,88 218,88" marker-end="url(#ar2w)"/>
+          <path class="svg-line-off" d="M136,120 C180,120 180,88 218,88" marker-end="url(#ar2w)"/>
+          <rect class="svg-box" x="220" y="62" width="112" height="52" rx="8" style="stroke:var(--warn)"/>
+          <text class="svg-label" x="238" y="84" style="fill:var(--warn)">Resultado</text>
+          <text class="svg-sub" x="238" y="102" style="fill:var(--warn)">só B — A sumiu</text>
+
+          <line x1="352" y1="24" x2="352" y2="244" stroke="var(--rule)" stroke-width="1"/>
+
+          <text class="svg-edge" x="378" y="18" style="fill:var(--ok);font-size:11.5px">COMO O RUMO FAZ — UNIÃO</text>
+          <rect class="svg-box" x="378" y="30" width="120" height="52" rx="8"/>
+          <text class="svg-label" x="394" y="52">Computador</text><text class="svg-sub" x="394" y="70">tem A</text>
+          <rect class="svg-box" x="378" y="94" width="120" height="52" rx="8"/>
+          <text class="svg-label" x="394" y="116">Celular</text><text class="svg-sub" x="394" y="134">tem B</text>
+          <path class="svg-line" d="M500,56 C540,56 540,88 578,88" marker-end="url(#ar2)"/>
+          <path class="svg-line" d="M500,120 C540,120 540,88 578,88" marker-end="url(#ar2)"/>
+          <rect class="svg-box-accent" x="580" y="62" width="52" height="52" rx="8"/>
+          <text class="svg-label" x="594" y="84">A + B</text>
+          <text class="svg-sub" x="588" y="102">os dois</text>
+
+          <text class="svg-edge" x="14" y="180" style="font-size:11.5px">E QUANDO VOCÊ APAGA DE PROPÓSITO?</text>
+          <rect class="svg-box" x="14" y="192" width="150" height="52" rx="8"/>
+          <text class="svg-label" x="30" y="214">Você apaga A</text>
+          <text class="svg-sub" x="30" y="232">num aparelho</text>
+          <path class="svg-line" d="M166,218 L246,218" marker-end="url(#ar2)"/>
+          <text class="svg-edge" x="172" y="210">registra a exclusão</text>
+          <rect class="svg-box" x="248" y="192" width="180" height="52" rx="8"/>
+          <text class="svg-label" x="266" y="214">O outro aparelho</text>
+          <text class="svg-sub" x="266" y="232">também apaga — não "volta"</text>
+        </svg>
+        <figcaption>A união resolve o desaparecimento, mas cria um problema novo: se a ausência nunca apaga, apagar deixaria de funcionar. Por isso a exclusão é registrada como um fato, com hora — e não como um simples sumiço.</figcaption>
+      </figure>
+
+      <p>Cada item carrega a hora da última alteração. Quando os aparelhos se encontram, o app <strong>soma</strong> o que existe nos dois e, para os itens que ambos têm, mantém a versão mais recente. Uma exclusão é registrada com hora: ela vence uma edição anterior e perde para uma edição posterior — o que faz "apagar" e "editar de novo" se comportarem como você espera, sem depender de qual aparelho falou por último.</p>
+
+      <div class="note warn">
+        <p><strong>Uma limitação honesta.</strong> Correção de sincronização só vale com <strong>todos os aparelhos atualizados</strong>. Um dispositivo rodando uma versão antiga continua gravando do jeito antigo, e pode atrasar a convergência até ser atualizado. Depois de uma atualização que mexa em sincronização, vale abrir o app em cada aparelho antes de voltar a editar.</p>
+      </div>
+
+      <div class="tech-card tech">
+        <h4>Ficha · o mecanismo de convergência</h4>
+        <ul>
+          <li><b>União por chave, nunca substituição.</b> Cada coleção sincronizada funde por identificador; a ausência de um item no que chegou nunca significa exclusão.</li>
+          <li><b>Marca de tempo por item</b> resolve conflito de conteúdo no mesmo identificador: vence a alteração mais recente.</li>
+          <li><b>Registro de exclusão com hora</b> (a lápide) propaga o apagamento de verdade. A remoção só acontece se o registro for posterior à última alteração do item — uma edição depois dele "revive" o item, de propósito.</li>
+          <li><b>Toda gravação lê antes de escrever.</b> O envio não republica o recorte local por cima do que está na nuvem: ele lê, funde e só então grava — e envio e recebimento usam o mesmo caminho, para não envelhecerem em desacordo.</li>
+          <li><b>As marcas são derivadas por comparação com o último estado salvo</b>, não espalhadas por quem edita. Consequência prática: funcionalidades novas entram no sistema sem precisar se inscrever nele, e importar um backup gera os registros corretos sem código próprio.</li>
+        </ul>
+        <p>Vínculo com um sistema externo (a identidade de um evento no Google, por exemplo) é tratado como <strong>identidade, não como conteúdo</strong>: ele se une em vez de disputar. Tratá-lo como conteúdo produzia eventos duplicados no calendário externo.</p>
+        <p>O comportamento é verificado por um teste automatizado que sobe <strong>dois ambientes independentes contra um banco simulado</strong> — o único arranjo capaz de reproduzir esse tipo de falha, que é invisível com um aparelho só.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─────────────────────────────────────────────────────────── -->
+  <section>
+    <div class="aside"><b>05</b>segurança</div>
+    <div class="col">
+      <h2>O que protege, e o que não protege</h2>
+      <p class="lead">Um app sem cadastro tem menos superfície de ataque — não há senha para vazar nem banco central para invadir. Mas isso não o torna imune, e a diferença importa.</p>
+
+      <h3>O que está protegido</h3>
+      <ul class="plain">
+        <li><strong>Texto que você digita nunca vira comando.</strong> Títulos, notas e nomes são tratados como texto puro ao serem exibidos — inclusive quando vêm de um convite feito por outra pessoa.</li>
+        <li><strong>O navegador só deixa o app falar com uma lista curta de endereços.</strong> É uma trava do próprio navegador, não uma regra interna que um erro de programação poderia contornar.</li>
+        <li><strong>A autorização do Google expira quando você fecha o navegador.</strong> Ela não fica gravada no aparelho.</li>
+        <li><strong>Nenhuma senha sua é guardada</strong>, porque nenhuma é pedida.</li>
+      </ul>
+
+      <h3>O que não está — e é bom saber</h3>
+      <ul class="plain">
+        <li><strong>Quem usa o aparelho, usa a agenda.</strong> Não existe bloqueio por senha dentro do app. Se o dispositivo é compartilhado, a proteção é a do próprio sistema (bloqueio de tela, perfil separado).</li>
+        <li><strong>Os dados no aparelho não são criptografados pelo app.</strong> Ficam no armazenamento do navegador, acessível a quem tiver acesso ao dispositivo desbloqueado.</li>
+        <li><strong>Limpar os dados do navegador apaga a agenda</strong> se você não tiver a sincronização ligada nem um backup exportado.</li>
+        <li><strong>As avaliações públicas são de quem as escreve.</strong> Qualquer pessoa pode escrever uma, com o apelido que quiser — leia-as como se lê comentário na internet.</li>
+      </ul>
+
+      <div class="note">
+        <p><strong>Faça backup.</strong> O app exporta tudo num arquivo que você guarda onde quiser e reimporta depois. É a rede de proteção mais simples e a que mais gente esquece.</p>
+      </div>
+
+      <div class="tech-card tech">
+        <h4>Ficha · superfície e defesas</h4>
+        <ul>
+          <li><b>Política de segurança de conteúdo</b> declarada no documento, com origens explícitas para script, estilo, fonte, imagem e conexão; objetos e URL base bloqueados.</li>
+          <li><b>Escape na saída</b> aplicado a todo valor de origem externa ou do usuário inserido no documento; sanitização de HTML rico no editor de notas.</li>
+          <li><b>Autorização OAuth</b> guardada apenas na sessão do navegador, com validade verificada a cada uso e revogação explícita ao desconectar.</li>
+          <li><b>Regras de acesso no banco</b> — a chave publicável não substitui autorização: o que ela pode fazer é limitado no servidor, por tabela.</li>
+          <li><b>Sem autenticação, portanto sem privilégio.</b> O app não tem área restrita nem recurso pago; num app estático, uma trava desse tipo existiria só na interface e seria contornável em segundos.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─────────────────────────────────────────────────────────── -->
+  <section>
+    <div class="aside"><b>06</b>acessibilidade</div>
+    <div class="col">
+      <h2>Acessibilidade e limitações conhecidas</h2>
+      <p class="lead">O app segue as diretrizes internacionais de acessibilidade em nível A por completo, e em nível AA parcialmente. As lacunas estão listadas abaixo em vez de escondidas.</p>
+
+      <ul class="plain">
+        <li>Navegação por teclado nas telas e formulários principais, com foco visível.</li>
+        <li>Contraste conferido nos temas claro e escuro; três tamanhos de densidade para quem precisa de texto maior.</li>
+        <li>Respeito à preferência do sistema por movimento reduzido.</li>
+        <li>Alvos de toque dimensionados para uso no celular.</li>
+      </ul>
+
+      <div class="scroll">
+        <table>
+          <thead><tr><th>Limitação</th><th>Alternativa</th></tr></thead>
+          <tbody>
+            <tr><td>Arrastar e soltar entre dias não funciona só com teclado</td><td>Menu de contexto do evento → mover</td></tr>
+            <tr><td>Arrastar para as prioridades do dia não funciona só com teclado</td><td>Definir pelo botão do próprio item</td></tr>
+            <tr><td>Redimensionar evento na vista de semana exige mouse</td><td>Editar o horário pelo formulário</td></tr>
+            <tr><td>Seletor de hora no celular pode ser difícil com limitação motora</td><td>Digitar o horário no campo</td></tr>
+            <tr><td>O mapa de calor de rotinas é essencialmente visual</td><td>Versão em tabela está no roadmap</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="small">Sugestões de acessibilidade são bem-vindas e costumam entrar rápido — são as melhorias com melhor relação entre esforço e benefício.</p>
+    </div>
+  </section>
+
+  <!-- ─────────────────────────────────────────────────────────── -->
+  <section>
+    <div class="aside"><b>07</b>usar</div>
+    <div class="col">
+      <h2>Como começar</h2>
+      <p class="lead">Não há etapa de instalação obrigatória. Abrir o endereço já é usar.</p>
+      <ul class="plain">
+        <li><strong>Só usar:</strong> abra a agenda e comece. Tudo fica no aparelho.</li>
+        <li><strong>Instalar como app:</strong> no celular, "Adicionar à tela de início"; no computador, o ícone de instalar na barra de endereço. Passa a abrir como aplicativo e funciona sem internet.</li>
+        <li><strong>Sincronizar entre aparelhos:</strong> crie uma conta gratuita no serviço de banco de dados indicado no guia, cole dois códigos no app e repita nos outros dispositivos.</li>
+        <li><strong>Conectar ao Google Agenda:</strong> autorize pela própria tela do Google; os eventos passam a ir e vir. Dá para desconectar quando quiser.</li>
+      </ul>
+      <div class="note">
+        <p>Os alertas de evento aparecem como notificação do sistema, mesmo com o app fechado, onde a plataforma permite. No iPhone e no iPad, o app precisa estar instalado na tela de início para notificar.</p>
+      </div>
+      <p style="margin-top:26px"><a class="cta" href="./calendario-mgc.html">Abrir a agenda</a> <a class="cta ghost" href="./README.md">Ler a documentação</a></p>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="wrap col">
+    <p><strong>Rumo</strong> — projeto pessoal de Marlon Gomes da Costa (MGC Dev). Uso não comercial livre; o código-fonte é o próprio arquivo do app, aberto para leitura.</p>
+    <p class="small">Esta página não usa cookies, não carrega nada de fora e não faz nenhuma requisição de rede.</p>
+  </div>
+</footer>
+
+</div>
+
+<script>
+(function(){
+  var page = document.getElementById('page');
+  var bS = document.getElementById('btnSimples');
+  var bT = document.getElementById('btnTecnico');
+  function set(modo){
+    page.setAttribute('data-mode', modo);
+    var tecnico = modo === 'tecnico';
+    bT.setAttribute('aria-pressed', tecnico ? 'true' : 'false');
+    bS.setAttribute('aria-pressed', tecnico ? 'false' : 'true');
+  }
+  bS.addEventListener('click', function(){ set('simples'); });
+  bT.addEventListener('click', function(){ set('tecnico'); });
+})();
+</script>
+
+</body>
+</html>

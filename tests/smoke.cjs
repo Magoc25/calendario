@@ -203,9 +203,78 @@ function runAsync() {
   ev(`AppState.standaloneNotes=AppState.standaloneNotes.filter(n=>n.title!=='Nota Smoke');saveStandaloneNotes();_editingNoteId=null`);
 }
 
+/* ══════ Página pública de apresentação — §37, travada por teste (r84c) ══════
+   Nenhum passo do release toca este arquivo: ele não é recompilado, não entra no
+   boot do app e ninguém o reabre. Sem teste, ele apodrece em público. A lista de
+   internals é DERIVADA do app (r84c) e passa por um filtro de FORMA (r90c) —
+   sem ele, metade dos internals de um app em português é palavra comum
+   (`categories`, `reviews`, `notes`) e a varredura proibiria o idioma. */
+function checkApresentacao() {
+  const P = path.join(path.dirname(HTML_PATH), 'apresentacao.html');
+  if (!fs.existsSync(P)) {
+    check('§37: apresentacao.html existe', false, P + ' não encontrado');
+    return;
+  }
+  const pag = fs.readFileSync(P, 'utf8');
+  const swSrc = (() => { try { return fs.readFileSync(path.join(path.dirname(HTML_PATH), 'sw.js'), 'utf8'); } catch (e) { return ''; } })();
+  // Texto que o leitor vê: sem <script>, sem <style>, sem tags.
+  const visivel = pag
+    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<[^>]+>/g, ' ');
+
+  /* Fontes de internals, todas derivadas do fonte do app. */
+  const payload = (SRC.match(/function getLocalPayload\(\)\{[\s\S]*?\n\}/) || [''])[0];
+  const syncCols = (SRC.match(/const SYNC_COLS=\{[\s\S]*?\n\};/) || [''])[0];
+  const fontes = {
+    armazenamento: [...SRC.matchAll(/(?:local|session)Storage\.(?:get|set|remove)Item\(\s*'([^']+)'/g)].map(m => m[1]),
+    tabelas:       [...SRC.matchAll(/\.from\(\s*'([^']+)'\s*\)/g)].map(m => m[1]),
+    colunas:       [...payload.matchAll(/^\s{4}(\w+):/gm)].map(m => m[1]),
+    sincronizadas: [...syncCols.matchAll(/^\s{2}(\w+):\s*\{/gm)].map(m => m[1]),
+    cacheSW:       [...swSrc.matchAll(/'([\w-]+-v\d+)'/g)].map(m => m[1])
+  };
+  /* Guarda do r72a/r90c: derivação que SECA em silêncio deixa a regra passar de
+     graça — "nenhum dos zero internals apareceu" é sempre verdade. Cada fonte
+     tem de devolver pelo menos um item; fonte morta some dentro do total. */
+  const secas = Object.keys(fontes).filter(k => fontes[k].length === 0);
+  check('§37: nenhuma fonte de internals secou (guarda da derivação)',
+    secas.length === 0, 'fontes vazias: ' + JSON.stringify(secas));
+
+  const formaDeIdentificador = (s) => /[_\-.]/.test(s) || /\d/.test(s) || /[a-z][A-Z]/.test(s);
+  const internos = [...new Set(Object.values(fontes).flat())].filter(formaDeIdentificador);
+  const vazados = internos.filter(n => new RegExp('\\b' + n.replace(/[.*+?^${}()|[\]\\-]/g, '\\$&') + '\\b', 'i').test(visivel));
+  check('§37 regra 2: nenhum nome de internal no texto visível',
+    internos.length >= 10 && vazados.length === 0,
+    internos.length + ' internals derivados; vazados: ' + JSON.stringify(vazados));
+
+  const versoes = visivel.match(/\bv?\d+\.\d+\.\d+\b/g) || [];
+  check('§37 regra 3: nenhum número versionado no texto visível',
+    versoes.length === 0, JSON.stringify(versoes));
+
+  const externos = [
+    ...[...pag.matchAll(/<(?:img|script|link|iframe|source)\b[^>]*?\b(?:src|href)="([^"]+)"/gi)].map(m => m[1]),
+    ...[...pag.matchAll(/url\(\s*['"]?([^'")]+)/gi)].map(m => m[1])
+  ].filter(u => /^(https?:)?\/\//i.test(u));
+  check('§37 regra: zero recurso externo (abre offline e passa na própria CSP)',
+    externos.length === 0, JSON.stringify(externos));
+
+  const csp = (pag.match(/<meta http-equiv="Content-Security-Policy" content="([^"]+)"/i) || [])[1] || '';
+  check('§37: CSP própria, restritiva e SEM frame-ancestors (ignorado em meta)',
+    /default-src 'self'/.test(csp) && /connect-src 'none'/.test(csp) && !/frame-ancestors/i.test(csp),
+    csp ? 'frame-ancestors presente ou diretiva faltando' : 'sem CSP');
+
+  const temaOk = /:root\s*\{[^}]*--paper\s*:/.test(pag)
+    && /@media\s*\(prefers-color-scheme:\s*dark\)\s*\{\s*:root:not\(\[data-theme="light"\]\)/.test(pag)
+    && /:root\[data-theme="dark"\]\s*\{/.test(pag);
+  check('§37: tema nas DUAS formas + fundo de token no body',
+    temaOk && /body\s*\{[^}]*background\s*:\s*var\(--/.test(pag),
+    'tokens no :root puro / bloco @media / [data-theme] / background do body');
+}
+
 function run() {
   /* Boot */
   check('boot sem erro de runtime', errors.length === 0, errors[0]);
+  checkApresentacao();
   check('render inicial rodou (today view visível)', $('todayCard') && !$('todayCard').hidden);
   check('AppState existe e expõe events[]', ev('Array.isArray(AppState.events)'));
   /* ── Versão exibida (r38a · r72a · r74b) ──

@@ -21,6 +21,8 @@ O app já está publicado online. Clique e use:
 
 Funciona em qualquer navegador moderno (Chrome, Edge, Firefox, Safari) — no celular, tablet ou computador. **Não precisa de cadastro, login nem download.** Após o primeiro acesso, o app funciona **offline**, e seus dados ficam **somente no seu dispositivo** (no armazenamento do próprio navegador).
 
+> 📖 **[Como o app funciona por dentro](https://Magoc25.github.io/calendario/apresentacao.html)** — onde seus dados moram, o que sai do aparelho (a lista inteira) e como dois aparelhos combinam a mesma agenda. Tem um interruptor **simples ⇄ técnico**: escolha a profundidade que você quer.
+
 ### 📱 Instalar como app no seu dispositivo
 
 Depois de abrir a URL acima, dá para instalar como aplicativo, com ícone na tela inicial / área de trabalho:
@@ -547,6 +549,7 @@ Na primeira sincronização, eventos recorrentes podem gerar cópias. Para remov
 | `sw.js` | Service Worker — cache offline, alertas e notificações em segundo plano | Todos |
 | `manifest.json` | Define o app como PWA: nome, ícones e modo de exibição ao instalar no celular, Windows e macOS | Cenários 2, 3 e 4 |
 | `icon-192.png` / `icon-512.png` | Ícones do app usados na tela inicial do celular e em notificações | Cenários 2, 3 e 4 |
+| `apresentacao.html` | Página de apresentação — explica como o app funciona por dentro, em linguagem simples ou técnica. Não é necessária para usar o app | Todos |
 | `CHANGELOG.md` | Histórico de todas as versões e mudanças | Todos |
 | `tests/smoke.cjs` | Teste automatizado do app (uso do desenvolvedor — não requer ação do usuário) | — |
 | `.github/workflows/keep-alive.yml` | Mantém o banco de avaliações compartilhadas ativo — configurado pelo desenvolvedor, não requer ação do usuário | Cenários 2, 3 e 4 |
