@@ -1,18 +1,32 @@
 #!/usr/bin/env bash
 # ── Calendário MGC — pre-commit hook ──────────────────────────────
 # Mantém as versões sincronizadas automaticamente antes de cada commit:
-#   1) semver (fonte: 1ª "## [x.y.z]" do CHANGELOG.md) nos 3 pontos do HTML
-#      (rodapé "© MGC · v…", const LOCAL_VERSION e o ping de telemetria) e no
-#      badge de versão do README.md.
+#   1) semver (fonte: 1ª "## [x.y.z]" do CHANGELOG.md) na ÚNICA cópia embutida no
+#      HTML (const APP_VERSION — o rodapé, o LOCAL_VERSION do banner e o ping de
+#      telemetria leem dela) e no badge de versão do README.md.
 #   2) CACHE_NAME do sw.js (cal-mgc-vNNN) — auto-incrementado quando o app
 #      (HTML ou sw.js) entra no commit, forçando o PWA a baixar a versão nova.
 #      (o cache usa numeração própria de build, não a semver — por isso +1.)
 # Portável macOS/Linux: sem "grep -P" e sem "sed -i" (usa arquivo temporário).
 # Nunca bloqueia o commit (sai 0 mesmo que algo falhe).
+#
+# ⚠️ O hook SÓ estagia arquivo que ele mesmo alterou, ou que já estava estagiado.
+# Antes ele fazia `git add` incondicional no HTML e no README: bastava commitar
+# qualquer coisa para o working tree inteiro desses dois ser varrido para dentro
+# do commit. O efeito é silencioso e caro — sabota qualquer commit pequeno e
+# revisável, e pode publicar uma edição do app pela metade dentro de um commit
+# de documentação.
 # ------------------------------------------------------------------
 CHANGELOG="CHANGELOG.md"
 HTML="calendario-mgc.html"
 SW="sw.js"
+
+# Estagia $1 apenas se o hook o alterou ($2 = "mudou") ou se já estava no índice.
+add_se_pertinente() {
+  if [ "$2" = "mudou" ] || git diff --cached --name-only | grep -qxF "$1"; then
+    git add "$1"
+  fi
+}
 
 # ── 1) Versão semver mais recente do CHANGELOG (ex.: "## [2.3.1] — …" → 2.3.1) ──
 VERSION=$(sed -nE 's/^## \[([0-9]+\.[0-9]+\.[0-9]+)\].*/\1/p' "$CHANGELOG" 2>/dev/null | head -1)
@@ -21,16 +35,20 @@ if [ -z "$VERSION" ]; then
   echo "[pre-commit] Aviso: versão não encontrada no CHANGELOG.md — HTML não sincronizado."
 else
   tmp=$(mktemp)
-  sed -E \
-    -e "s/© MGC · v[0-9]+\.[0-9]+\.[0-9]+/© MGC · v$VERSION/" \
-    -e "s/(const LOCAL_VERSION=')[0-9]+\.[0-9]+\.[0-9]+(')/\1$VERSION\2/" \
-    -e "s/(version:')[0-9]+\.[0-9]+\.[0-9]+(',device_id)/\1$VERSION\2/" \
-    "$HTML" > "$tmp" && mv "$tmp" "$HTML" && git add "$HTML"
+  sed -E "s/(const APP_VERSION=')[0-9]+\.[0-9]+\.[0-9]+(')/\1$VERSION\2/" "$HTML" > "$tmp"
+  if cmp -s "$tmp" "$HTML"; then rm -f "$tmp"; add_se_pertinente "$HTML"
+  else mv "$tmp" "$HTML"; add_se_pertinente "$HTML" mudou; fi
+  # Guia r71a/r83: sed que não casa NADA não produz erro — ficaria "sincronizando"
+  # uma versão que não existe mais no arquivo. Confirme lendo de volta.
+  if ! grep -q "const APP_VERSION='$VERSION'" "$HTML"; then
+    echo "[pre-commit] ERRO: APP_VERSION não ficou em $VERSION no $HTML — a âncora do sed mudou?"
+  fi
   # Badge de versão do README (ficava para trás quando atualizado à mão)
   if [ -f "README.md" ]; then
     tmp=$(mktemp)
-    sed -E "s/(badge\/vers%C3%A3o|badge\/versão)-[0-9]+\.[0-9]+\.[0-9]+-/\1-$VERSION-/" \
-      README.md > "$tmp" && mv "$tmp" README.md && git add README.md
+    sed -E "s/(badge\/vers%C3%A3o|badge\/versão)-[0-9]+\.[0-9]+\.[0-9]+-/\1-$VERSION-/" README.md > "$tmp"
+    if cmp -s "$tmp" README.md; then rm -f "$tmp"; add_se_pertinente "README.md"
+    else mv "$tmp" README.md; add_se_pertinente "README.md" mudou; fi
   fi
   echo "[pre-commit] Versão semver sincronizada (HTML + badge README): v$VERSION"
 fi
