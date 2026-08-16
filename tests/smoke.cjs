@@ -1513,6 +1513,25 @@ async function cenarioMultiAparelho() {
   check('a aba Hoje renderiza no aparelho curado (era a tela em branco)',
     !!ler(C, `document.getElementById('todayContent').innerHTML.trim().length`));
 
+  /* ── 7. A união NUNCA duplica por id — e a triagem que isso permite (r95) ──
+     Adotar união num app com dados vivos torna visíveis as identidades duplicadas
+     que o LWW escondia (item que "sumiu" e foi recriado ⇒ duas entidades, mesmo
+     conteúdo, ids diferentes). O relato chega como "a correção duplicou meus
+     dados", logo depois de uma correção de PERDA de dados. Estas asserções são o
+     que permite responder com evidência em minutos: se dois itens com o MESMO id
+     sobrevivessem, aí sim o bug seria do merge. */
+  const idsFundidos = (remoto, local) => ler(A,
+    `JSON.stringify(fundirColecao('routines',${JSON.stringify(JSON.stringify(remoto))},${JSON.stringify(local)}).map(r=>r.id).sort())`);
+  check('união: mesmo id nos dois aparelhos → mantém UM (não duplica)',
+    idsFundidos([{ id: 'x1', title: 'Academia', time: '07:00' }],
+                [{ id: 'x1', title: 'Academia', time: '08:00' }]) === '["x1"]',
+    idsFundidos([{ id: 'x1' }], [{ id: 'x1' }]));
+  check('união: lista local com id repetido é DEDUPLICADA',
+    idsFundidos([], [{ id: 'd1', title: 'A' }, { id: 'd1', title: 'A' }]) === '["d1"]');
+  check('união: ids diferentes com o mesmo conteúdo ficam os DOIS (é identidade, não conteúdo)',
+    idsFundidos([{ id: 'p1', title: 'Academia', time: '07:00' }],
+                [{ id: 'c1', title: 'Academia', time: '07:00' }]) === '["c1","p1"]');
+
   A.dom.window.close(); B.dom.window.close(); C.dom.window.close();
 }
 
