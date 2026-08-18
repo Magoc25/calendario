@@ -1,0 +1,49 @@
+# Roda o smoke-test §35 (tests/smoke.cjs) a cada push — guia r100/r103.
+#
+# Antes deste arquivo o teste EXISTIA e estava versionado, e mesmo assim nenhum
+# CI o executava: as 229 asserções rodavam só à mão, a cada sessão, e passavam —
+# então nada acusava. É o "nada testa, nada avisa" um nível acima: o problema não
+# é a falta de teste, é a falta de GATILHO, e a falha dele é silêncio, não erro.
+#
+# O filtro é pela NEGATIVA (paths-ignore), nunca por `paths:` (r103d). Allowlist
+# é a lista do que está protegido e ela ENCOLHE CALADA a cada arquivo novo que
+# ninguém lembrou de acrescentar; a negativa nomeia só o ruído conhecido — o
+# commit automático diário do stats.json (r31) — e não tem como omitir o que
+# nasceu depois. Assim "todo arquivo que ganha asserção entra no gatilho no mesmo
+# commit" (r100c) passa a valer por construção, sem manutenção.
+name: Verificação (smoke §35)
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - 'stats.json'
+  pull_request:
+    paths-ignore:
+      - 'stats.json'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # O jsdom NÃO fica no repositório: node_modules trava o sync do OneDrive
+      # (guia §2b/r33), então ele é instalado aqui e na pasta local de quem roda
+      # à mão. `require('jsdom')` do tests/ resolve subindo até esta raiz.
+      - name: Instalar jsdom
+        run: npm install jsdom@^29 --no-audit --no-fund
+
+      # O harness sai 1 com qualquer ✗ e 2 quando ele próprio não chega ao fim
+      # (veredito INCONCLUSIVA do r74a) — os dois reprovam o job, de propósito:
+      # "não rodou" nunca pode passar por "passou".
+      - name: Smoke §35
+        run: node tests/smoke.cjs
