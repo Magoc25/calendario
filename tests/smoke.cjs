@@ -26,6 +26,16 @@ let html = fs.readFileSync(HTML_PATH, 'utf8');
    estática enxerga; o runtime já apagou a evidência). */
 const SRC = html;
 
+/* Arquivo COMPANHEIRO do repositório (apresentacao.html, sw.js): ao lado do HTML
+   quando existir, senão ao lado deste teste. Sem o fallback, toda rodada de
+   mutação — que aponta o harness para uma cópia do app noutra pasta — acende um
+   ✗ FIXO do §37; e ruído permanente na saída é exatamente como uma mutação verde
+   passa por confirmada, que é o erro que o r72b existe para impedir. */
+const arqRepo = (nome) => {
+  const aoLado = path.join(path.dirname(HTML_PATH), nome);
+  return fs.existsSync(aoLado) ? aoLado : path.join(__dirname, '..', nome);
+};
+
 /* ── 1. Neutraliza <script src> de CDN e injeta stubs ─────────── */
 html = html.replace(/<script src="https:\/\/[^"]+"[^>]*><\/script>/g, '');
 const STUBS = `<script>
@@ -210,13 +220,13 @@ function runAsync() {
    sem ele, metade dos internals de um app em português é palavra comum
    (`categories`, `reviews`, `notes`) e a varredura proibiria o idioma. */
 function checkApresentacao() {
-  const P = path.join(path.dirname(HTML_PATH), 'apresentacao.html');
+  const P = arqRepo('apresentacao.html');
   if (!fs.existsSync(P)) {
     check('§37: apresentacao.html existe', false, P + ' não encontrado');
     return;
   }
   const pag = fs.readFileSync(P, 'utf8');
-  const swSrc = (() => { try { return fs.readFileSync(path.join(path.dirname(HTML_PATH), 'sw.js'), 'utf8'); } catch (e) { return ''; } })();
+  const swSrc = (() => { try { return fs.readFileSync(arqRepo('sw.js'), 'utf8'); } catch (e) { return ''; } })();
   // Texto que o leitor vê: sem <script>, sem <style>, sem tags.
   const visivel = pag
     .replace(/<script[\s\S]*?<\/script>/gi, ' ')
@@ -308,7 +318,12 @@ function run() {
   [...(_scBloco.matchAll(/^\s{2}(\w+):\s*\{/gm))].forEach(m => _genericas.add(m[1]));
   const _proprias = new Set([...(SRC.matchAll(/row\.(\w+)\)?return false;|if\(!row\|\|!row\.(\w+)\)/g))]
     .map(m => m[1] || m[2]).filter(Boolean));
-  ['events','notes','standalone_notes','lists','routine_checks'].forEach(c => _proprias.add(c));
+  /* r98(e): `routine_checks` SAIU desta lista. Ele é detectado pela regra
+     derivada acima (`if(!row||!row.routine_checks)return false;`), e mantê-lo na
+     allowlist tornava a asserção permanentemente cega justo para a coluna cujo
+     "merge" era uma substituição — o bug do check de rotina da v2.13.1. Exceção
+     escrita à mão não verifica nada; corrija o call-site, não abra exceção. */
+  ['events','notes','standalone_notes','lists'].forEach(c => _proprias.add(c));
   const _escalares = new Set(['theme','updated_at','id','sync_meta']);
   const _orfas = _colunas.filter(c => !_genericas.has(c) && !_proprias.has(c) && !_escalares.has(c));
   check('toda coleção do blob cal_sync está inscrita num merge (r66a/r68b)',
@@ -1531,6 +1546,73 @@ async function cenarioMultiAparelho() {
   check('união: ids diferentes com o mesmo conteúdo ficam os DOIS (é identidade, não conteúdo)',
     idsFundidos([{ id: 'p1', title: 'Academia', time: '07:00' }],
                 [{ id: 'c1', title: 'Academia', time: '07:00' }]) === '["c1","p1"]');
+
+  /* ── 8. CHECK-IN DE ROTINA: merge por CÉLULA (data|rotina), não por lista ──
+     Bug de produção da v2.13.1, e o mais enganoso da série porque o sintoma é
+     LOCAL, imediato e num aparelho só: marca-se a rotina e o check se desmarca
+     sozinho ~1,5 s depois. `applyRemoteRoutineChecks` dizia "união" no comentário
+     e fazia `setItem(chave, lista remota)` — substituição pura. O ramo de PUSH
+     funde o remoto ANTES de subir (ler-fundir-gravar, r68a) e ali o remoto é mais
+     VELHO por definição: a lista antiga apagava o check recém-marcado e o push
+     devolvia a antiga à nuvem. A lista da nuvem CONGELAVA no primeiro check do
+     dia — só ele ficava marcado (e nem desmarcava) e todos os outros reverteriam
+     para sempre. Sequência, %, heatmap e o card de rotinas leem
+     `getRoutineChecks`: o painel inteiro subcontava, em silêncio.
+     Por que a suíte não pegou, e é a lição do r98 noutra forma: a asserção "toda
+     coleção do blob está inscrita num merge" tratava `routine_checks` por uma
+     ALLOWLIST escrita à mão — ela atestava que existe uma função de merge, não
+     que ela funde. Allowlist é exceção, e exceção não verifica nada. Só
+     comportamento pega isto, e é o que vai abaixo. */
+  const hojeDs = ler(A, 'todayDs()');
+  const chk = (ap) => ler(ap, `JSON.stringify(getRoutineChecks(todayDs()).slice().sort())`) || '<erro>';
+  ler(A, `AppState.routines=[{id:'k1',title:'K1',freq:'daily',days:[]},{id:'k2',title:'K2',freq:'daily',days:[]},
+          {id:'k3',title:'K3',freq:'daily',days:[]},{id:'k4',title:'K4',freq:'daily',days:[]}];saveRoutines()`);
+  await sincronizar(A);
+  for (const id of ['k1', 'k2', 'k3', 'k4']) {
+    ler(A, `setRoutineCheck(todayDs(),'${id}',true)`);
+    await sincronizar(A);
+  }
+  check('check-in: as 4 rotinas marcadas em sequência PERMANECEM (não só a 1ª)',
+    chk(A) === '["k1","k2","k3","k4"]', 'A: ' + chk(A));
+
+  ler(A, `setRoutineCheck(todayDs(),'k1',false)`);
+  await sincronizar(A);
+  check('check-in: DESMARCAR persiste (união sozinha ressuscitaria o check)',
+    chk(A) === '["k2","k3","k4"]', 'A: ' + chk(A));
+
+  await sincronizar(B);
+  ler(B, `setRoutineCheck(todayDs(),'k1',true)`);
+  await sincronizar(B);
+  await sincronizar(A);
+  check('check-in: 2 aparelhos marcam rotinas diferentes no mesmo dia e as duas ficam',
+    chk(A) === '["k1","k2","k3","k4"]' && chk(B) === '["k1","k2","k3","k4"]',
+    'A: ' + chk(A) + ' · B: ' + chk(B));
+
+  /* r94 aplicado a esta coluna: o build antigo copia `routine_checks[data]` CRU
+     para o localStorage (sem `Array.isArray`), e `checks.includes` sobre um
+     objeto estoura na aba Hoje. A metadata tem de ficar fora da coluna. */
+  const rcNuvem = (f) => { try { return f(JSON.parse(nuvem.row.routine_checks)); } catch (e) { return undefined; } };
+  check('check-in: a coluna routine_checks viaja como mapa data→ARRAY cru (r94)',
+    rcNuvem(m => m && typeof m === 'object' && !Array.isArray(m) && Array.isArray(m[hojeDs])) === true,
+    'routine_checks[' + hojeDs + '] = ' + JSON.stringify(rcNuvem(m => m[hojeDs])));
+  check('check-in: o carimbo por célula viaja no sync_meta, fora da coluna',
+    (() => { try { const m = JSON.parse(nuvem.row.sync_meta);
+      return !!(m && m.routine_checks && m.routine_checks.ts && m.routine_checks.ts[hojeDs + '|k2']); }
+      catch (e) { return false; } })() === true,
+    'sync_meta.routine_checks.ts[' + hojeDs + '|k2]');
+
+  /* Interop com aparelho AINDA na v2.13.1: ele não manda carimbo nenhum e ainda
+     substitui a lista no próprio merge. Do NOSSO lado, célula sem carimbo dos
+     DOIS lados decide por UNIÃO — enquanto a frota não terminou de atualizar,
+     nunca perder um check é o padrão seguro. Sem este caso a mutação
+     "if(!tl&&!tr) return la" fica verde por CONDIÇÃO AUSENTE (r90b), não por
+     asserção morta: o cenário acima carimba tudo e nunca entra neste ramo. */
+  ler(B, `localStorage.removeItem('cal_rchecks_ts');localStorage.setItem('cal_rchecks_'+todayDs(),JSON.stringify(['k9']))`);
+  try { const _m = JSON.parse(nuvem.row.sync_meta); delete _m.routine_checks; nuvem.row.sync_meta = JSON.stringify(_m); }
+  catch (e) { harnessFail = 'não consegui simular o aparelho sem carimbo: ' + e.message; }
+  await sincronizar(B);
+  check('check-in: sem carimbo dos dois lados (par na v2.13.1) a decisão é UNIÃO',
+    chk(B) === '["k1","k2","k3","k4","k9"]', 'B: ' + chk(B));
 
   A.dom.window.close(); B.dom.window.close(); C.dom.window.close();
 }

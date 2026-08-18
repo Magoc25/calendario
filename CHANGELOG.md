@@ -5,6 +5,26 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 
 ---
 
+## [2.13.2] — Agosto 2026
+
+### 🐛 Correção — o check das rotinas se desmarcava sozinho na aba Hoje
+
+Em **Hoje → Rotinas de hoje**, marcar uma rotina como feita só funcionava na **primeira** rotina marcada em cada dia. Todas as outras voltavam a desmarcar sozinhas cerca de um segundo e meio depois — e a primeira, uma vez marcada, também não desmarcava mais.
+
+A causa estava na sincronização. Antes de enviar para a nuvem, o app junta o que já está lá para não apagar o que outro aparelho criou — só que, no caso dos check-ins de rotina, esse "juntar" era na verdade um **substituir**: a lista do dia guardada na nuvem, mais antiga, apagava o check recém-marcado, e em seguida era ela que voltava a ser enviada. A lista do dia **congelava** no primeiro check e nunca mais crescia.
+
+- **Cada rotina do dia passou a ser decidida separadamente**, em vez da lista inteira de uma vez. Marcar, desmarcar e marcar de novo funcionam em qualquer ordem, e dois aparelhos podem marcar rotinas diferentes no mesmo dia sem que um apague o do outro.
+- **Os números do painel de Rotinas voltam ao lugar.** Sequência, melhor sequência, porcentagem e mapa de calor leem esses mesmos check-ins: como cada dia congelava no primeiro, tudo vinha subcontado. Os dias já passados mantêm o que ficou registrado; daqui em diante a contagem é fiel.
+- **Restaurar um backup** passa a prevalecer sobre a nuvem também nos check-ins de rotina — antes a sincronização seguinte podia desfazer parte do que tinha acabado de ser restaurado.
+
+> ℹ️ **Nada a fazer no banco de dados.** O controle novo viaja na coluna de sincronização que já existe desde a v2.13.1. A correção vale mesmo se você nunca criou essa coluna. Aparelhos ainda na v2.13.1 continuam funcionando normalmente: enquanto um deles não atualizar, nenhum check se perde, mas o *desmarcar* feito nele pode não chegar ao outro. Atualize os dois para o comportamento completo.
+
+### 🔧 Interno
+
+- **As verificações automáticas passaram a rodar no GitHub a cada envio.** Elas existiam e estavam no repositório, mas nenhuma rotina do GitHub as executava — só passavam quando rodadas à mão, então uma quebra podia chegar ao ar sem nada acusar. Seis verificações novas cobrem exatamente o check de rotina descrito acima.
+
+---
+
 ## [2.13.1] — Agosto 2026
 
 ### 🐛 Correção urgente — tela em branco em aparelho que ainda não tinha atualizado

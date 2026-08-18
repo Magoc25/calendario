@@ -5465,7 +5465,15 @@ document.getElementById('importFile').addEventListener('change',function(){
         if(Array.isArray(data.calendars)&&data.calendars.length){calendars=data.calendars;saveCalendars();renderCalendarList();populateCalendarSelect();}
         if(Array.isArray(data.categories)&&data.categories.length){AppState.categories=data.categories;saveCategories();}
         if(data.routineChecks&&typeof data.routineChecks==='object'){
-          Object.entries(data.routineChecks).forEach(([date,ids])=>{if(Array.isArray(ids))localStorage.setItem('cal_rchecks_'+date,JSON.stringify(ids));});
+          // Restaurar é ação explícita e tem de vencer a nuvem: carimba o que
+          // entrou E o que saiu, senão o merge devolve o estado antigo (r69a).
+          const _agora=new Date().toISOString(),_rcTs=_rcTsLer();
+          Object.entries(data.routineChecks).forEach(([date,ids])=>{if(Array.isArray(ids)){
+            const antes=getRoutineChecks(date);
+            localStorage.setItem('cal_rchecks_'+date,JSON.stringify(ids));
+            [...new Set([...antes,...ids])].forEach(id=>{_rcTs[date+'|'+id]=_agora;});
+          }});
+          _rcTsGravar(_rcTs);
         }
         save();saveCatColors();if(data.theme)applyTheme(data.theme);render();rescheduleAlerts();
         toast(`${imp.length} eventos importados!`);
@@ -6715,13 +6723,33 @@ function getRoutinesForToday(){
 
 // Routine check-ins: stored per date
 function getRoutineChecks(dateStr){
-  try{return JSON.parse(localStorage.getItem('cal_rchecks_'+dateStr)||'[]');}catch(e){return [];}
+  try{const v=JSON.parse(localStorage.getItem('cal_rchecks_'+dateStr)||'[]');return Array.isArray(v)?v:[];}catch(e){return [];}
+}
+/* Carimbo por CÉLULA (data|rotina) — guia r66a/r69a. O valor de um check-in é
+   booleano ("está na lista do dia ou não"), então quem precisa de carimbo é a
+   CÉLULA, não a lista da data: sem ele o merge só sabe comparar listas inteiras
+   e o lado mais velho apaga o check que o outro acabou de marcar. Espelho local
+   próprio; no fio a metadata viaja em `sync_meta` (r94 — a coluna
+   `routine_checks` continua array CRU, que é o que o build antigo copia direto
+   para o localStorage, sem olhar o formato). */
+const RCHECK_TS_KEY='cal_rchecks_ts',RCHECK_TS_DIAS=120;
+const _rcTsLer=()=>{try{const m=JSON.parse(localStorage.getItem(RCHECK_TS_KEY)||'{}');return (m&&typeof m==='object'&&!Array.isArray(m))?m:{};}catch(e){return {};}};
+/* Poda: há uma célula por (dia × rotina) e o mapa cresceria sem teto. Célula
+   podada volta a valer pela UNIÃO (nunca perde um check) — só deixa de propagar
+   o DESmarcar de um dia antigo, que ninguém faz. */
+function _rcTsGravar(m){
+  const c=new Date();c.setDate(c.getDate()-RCHECK_TS_DIAS);
+  const lim=`${c.getFullYear()}-${String(c.getMonth()+1).padStart(2,'0')}-${String(c.getDate()).padStart(2,'0')}`;
+  const out={};for(const k in m){if(k.slice(0,10)>=lim)out[k]=m[k];}
+  localStorage.setItem(RCHECK_TS_KEY,JSON.stringify(out));
 }
 function setRoutineCheck(dateStr,routineId,done){
   let checks=getRoutineChecks(dateStr);
   if(done){if(!checks.includes(routineId))checks.push(routineId);}
   else checks=checks.filter(x=>x!==routineId);
   localStorage.setItem('cal_rchecks_'+dateStr,JSON.stringify(checks));
+  // Marcar E desmarcar carimbam — é o desmarcar que a união sozinha não propaga.
+  const _ts=_rcTsLer();_ts[dateStr+'|'+routineId]=new Date().toISOString();_rcTsGravar(_ts);
   localStorage.setItem('cal_local_ts',new Date().toISOString());
   scheduleCloudPush();
 }
@@ -9120,6 +9148,7 @@ function carimbarColecao(col,valorNovo){
 function metaColecoes(){
   const m={v:2};
   for(const col in SYNC_COLS)m[col]={ts:_scGet(col,'_ts'),del:_scGet(col,'_del')};
+  m.routine_checks={ts:_rcTsLer()}; // carimbo por célula dos check-ins (a coluna vai crua — r94)
   return JSON.stringify(m);
 }
 
@@ -9213,18 +9242,48 @@ function applyRemoteColecoes(row){
   return mudou;
 }
 
-/* Checks de rotina: mapa data→ids. União por data (a ausência de uma data no
-   remoto nunca apaga a local); cada data é independente. */
-function applyRemoteRoutineChecks(row){
+/* Checks de rotina: mapa data→ids, decidido por CÉLULA (data|rotina) com o
+   carimbo que vem no `sync_meta`. A ausência de uma data no remoto continua não
+   apagando a local; o que mudou é DENTRO da data.
+
+   Era aqui o bug (v2.13.1 e anteriores): o comentário dizia "união" e o código
+   fazia `setItem(chave, lista remota)` — substituição pura, remoto sempre vence.
+   O ramo de PUSH funde o remoto antes de subir (ler-fundir-gravar, r68a) e ali o
+   remoto é mais VELHO por definição: a lista antiga apagava o check recém-marcado
+   e o push devolvia a antiga à nuvem. A lista da nuvem CONGELAVA no primeiro
+   check do dia — só ele ficava marcado, os outros desmarcavam sozinhos ~1,5 s
+   depois (e o congelado também não desmarcava). Como sequência, %, heatmap e o
+   card de rotinas leem `getRoutineChecks`, o painel inteiro subcontava. */
+function applyRemoteRoutineChecks(row,preferRemote){
   if(!row||!row.routine_checks)return false;
   try{
     const rc=JSON.parse(row.routine_checks);
-    if(!rc||typeof rc!=='object')return false;
+    if(!rc||typeof rc!=='object'||Array.isArray(rc))return false;
+    let tsRem={};
+    try{const m=JSON.parse(row.sync_meta||'null');
+        if(m&&m.routine_checks&&m.routine_checks.ts&&typeof m.routine_checks.ts==='object')tsRem=m.routine_checks.ts;}catch(e){}
+    const tsLoc=_rcTsLer();
     let mudou=false;
-    Object.entries(rc).forEach(([date,ids])=>{
-      const k='cal_rchecks_'+date,novo=JSON.stringify(ids);
+    Object.keys(rc).forEach(date=>{
+      if(!Array.isArray(rc[date]))return; // forma impossível: ignora a data, nunca grava lixo no espelho (r94)
+      const rem=rc[date],loc=getRoutineChecks(date);
+      const final=[...new Set([...loc,...rem])].filter(id=>{
+        const aqui=loc.includes(id),la=rem.includes(id);
+        if(aqui===la)return aqui;                 // os dois lados concordam
+        const cel=date+'|'+id,tl=tsLoc[cel]||'',tr=tsRem[cel]||'';
+        if(!tl&&!tr)return true;                  // ninguém carimbou (aparelho antigo) → união: nunca perde um check
+        if(tr>tl)return la;
+        if(tl>tr)return aqui;
+        return preferRemote?la:aqui;              // empate: quem manda é o ramo (pull=remoto, push=local)
+      });
+      const k='cal_rchecks_'+date,novo=JSON.stringify(final);
       if(localStorage.getItem(k)!==novo){localStorage.setItem(k,novo);mudou=true;}
     });
+    // Carimbo remoto mais novo entra no espelho; sem isso o próximo push devolve
+    // a célula sem carimbo e o outro aparelho volta a decidir pela união.
+    let mudouTs=false;
+    for(const cel in tsRem){if(!tsLoc[cel]||tsRem[cel]>tsLoc[cel]){tsLoc[cel]=tsRem[cel];mudouTs=true;}}
+    if(mudouTs)_rcTsGravar(tsLoc);
     return mudou;
   }catch(e){return false;}
 }
@@ -9247,7 +9306,7 @@ function mergeRemoteIntoLocal(row,preferRemote){
       applyRemoteListTemplates(row),
       applyRemoteParticipantGroups(row),
       applyRemoteColecoes(row),               // as 7 genéricas (SYNC_COLS)
-      applyRemoteRoutineChecks(row)
+      applyRemoteRoutineChecks(row,!!preferRemote)
     ].some(Boolean);
   }catch(e){console.warn('[MGC] Falha ao fundir payload remoto:',e);return false;}
 }
@@ -10642,7 +10701,7 @@ setInterval(()=>getActiveSW()?.postMessage({type:'PING'}),25000);
    mecanismo desligado — além de envelhecer sozinho se o hook não rodar.
    A detecção de "existe versão nova no servidor" continua no banner do Supabase
    (app_config) logo abaixo. */
-const APP_VERSION='2.13.1';
+const APP_VERSION='2.13.2';
 {const _vSpan=document.getElementById('appVersion');if(_vSpan)_vSpan.textContent='© MGC · v'+APP_VERSION;}
 try{localStorage.removeItem('mgc_app_version');}catch(e){} // remove o cache de versão antigo (não é mais usado)
 
