@@ -1,6 +1,6 @@
 # Inventário de Tratamento de Dados Pessoais — Rumo
 
-**Versão:** 1.0 · **Última atualização:** 2026-05-16
+**Versão:** 1.1 · **Última atualização:** 2026-10-03
 
 > Este documento atende ao **Art. 37 da LGPD** em formato **simplificado para Agentes de Tratamento de Pequeno Porte (ATPP)**, conforme **Resolução CD/ANPD nº 2/2022 Art. 7º**.
 
@@ -104,7 +104,11 @@ Estas operações **não constam neste inventário** porque o desenvolvedor **n�
 | Alertas armazenados em IndexedDB do Service Worker | 2 — Dispositivo | Usuário final |
 | Sincronização via Supabase próprio do usuário (`cal_sync`) | 3 — Infra usuário | Usuário final |
 | Sincronização via Google Calendar (OAuth) | 3 — Infra usuário | Usuário final + Google |
+| E-mails de terceiros guardados pelo usuário: participantes de eventos e grupos de participantes salvos (no `localStorage` e, com a sincronização ligada, no Supabase do próprio usuário) | 2 e 3 | Usuário final |
+| Envio dos e-mails de participantes ao Google Agenda, como convidados do evento, quando o evento é sincronizado com o Google | 3 — Infra usuário | Usuário final + Google |
 | Hospedagem em GitHub Pages forkado pelo usuário | 3 — Infra usuário | Usuário final + GitHub |
+
+> 📌 **E-mails de participantes:** o desenvolvedor não recebe esses e-mails. O app não os coloca em nenhum endereço que ele monta: eles vão só no corpo da requisição ao Google Agenda (convidados do evento). Em convites recebidos de outras pessoas, o app não guarda a lista de convidados.
 
 > 📌 **Esclarecimento legal:** o desenvolvedor distribui o código-fonte como software open-source. Cada usuário, ao operar o software em sua infraestrutura, **torna-se controlador dos próprios dados** conforme LGPD Art. 5º, VI.
 
@@ -183,6 +187,7 @@ Conforme [`PRIVACY.md`](./PRIVACY.md) Seção 8, todos os direitos do **Art. 18 
 
 | Versão | Data | Mudanças | Responsável |
 |---|---|---|---|
+| 1.1 | 2026-10-03 | Incluídos os e-mails de participantes e os grupos de participantes (Camadas 2 e 3), que existiam no app desde a v2.8.0 e a v2.10.0 sem constar aqui | Marlon Gomes da Costa |
 | 1.0 | 2026-05-16 | Versão inicial — formato simplificado ATPP, modelo de 3 camadas | Marlon Gomes da Costa |
 
 ---

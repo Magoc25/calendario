@@ -29,7 +29,8 @@ Depois de abrir a URL acima, dá para instalar como aplicativo, com ícone na te
 
 | Plataforma | Como instalar |
 |---|---|
-| **Chrome / Edge no PC** | Ícone de instalação (☐ com seta) na barra de endereços → **Instalar** |
+| **Chrome / Edge no computador** (Windows, Mac, Linux) | Ícone de instalação (☐ com seta) na barra de endereços → **Instalar** |
+| **Mac (Safari 17 ou mais novo)** | Menu **Arquivo → Adicionar ao Dock** |
 | **Android (Chrome)** | Menu (⋮) → **Instalar app** / **Adicionar à tela inicial** |
 | **iPhone / iPad (Safari)** | Compartilhar (□↑) → **Adicionar à Tela de Início** |
 
@@ -306,6 +307,11 @@ O Rumo também pode ser instalado como aplicativo no computador, sem precisar do
 4. O app abre em janela própria, sem abas ou barra de endereços, como um programa instalado
 
 > 💡 Se o ícone não aparecer na barra de endereços, acesse pelo menu: **⋮ → Converter site em app** (Edge) ou **⋮ → Salvar e compartilhar → Instalar página como app** (Chrome).
+
+**macOS — Safari (17 ou mais novo):**
+1. Abra a URL do app no Safari
+2. Menu **Arquivo → Adicionar ao Dock**
+3. Confirme o nome — o app ganha ícone no Dock e abre em janela própria, como um programa instalado
 
 > 💡 Após instalar, o app aparece no menu Iniciar (Windows) ou no Launchpad (macOS) e pode ser aberto como qualquer outro programa.
 

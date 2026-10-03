@@ -62,6 +62,16 @@ html = html.replace('</head>', STUBS + '</head>');
 
 /* ── 2. JSDOM com stubs de plataforma no beforeParse ──────────── */
 const errors = [];
+/* r126b: o jsdom NÃO dispara 'unhandledrejection' na janela — medido no jsdom 29:
+   o listener da janela (mais abaixo) recebe 0 eventos e a rejeição vai direto para
+   o processo Node, que morre com código 1 — o mesmo de "asserções falharam" — e
+   tudo o que vinha depois nem roda. Registrada aqui, a rejeição vira ✗ localizado.
+   Ela é cobrada por cenário (os checks de "sem erro de runtime") E na conta final
+   (`failed = fail + errors.length`); só por cenário deixaria os demais cenários
+   MENOS sensíveis do que antes do handler, porque a queda deixaria de acusar. */
+process.on('unhandledRejection', (r) => {
+  errors.push('[unhandledRejection] ' + (r && r.message || r));
+});
 const vc = new VirtualConsole();
 vc.on('jsdomError', (e) => {
   const msg = String(e && e.message || e);
@@ -103,6 +113,7 @@ const dom = new JSDOM(html, {
     window.onerror = (msg, src, line, col, err) => {
       errors.push('[onerror] ' + msg + ' @' + line + ':' + col + (err && err.stack ? '\n' + err.stack.split('\n').slice(0,3).join('\n') : ''));
     };
+    // Mantido para um jsdom futuro que implemente o evento; hoje quem pega é o process.on acima.
     window.addEventListener('unhandledrejection', (e) => {
       errors.push('[unhandledrejection] ' + (e.reason && e.reason.message || e.reason));
     });

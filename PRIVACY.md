@@ -1,6 +1,6 @@
 # Aviso de Privacidade — Rumo
 
-**Versão:** 1.0 · **Última atualização:** 2026-05-16
+**Versão:** 1.1 · **Última atualização:** 2026-10-03
 **Vigência:** a partir desta data até nova versão publicada
 
 > ⚠️ Este é um documento exigido pela **Lei nº 13.709/2018 (LGPD)**, redigido conforme orientações da Autoridade Nacional de Proteção de Dados (ANPD) e considerando o regime simplificado aplicável a **Agentes de Tratamento de Pequeno Porte (ATPP)** — Resolução CD/ANPD nº 2/2022.
@@ -145,7 +145,7 @@ Ao preencher o campo **Participantes (e-mail)** de um evento e sincronizar com o
 - Quem controla esse tratamento é **você** (é a sua conta Google que emite o convite); o desenvolvedor **não** recebe cópia dos e-mails nem do evento.
 - Remover um participante e sincronizar de novo retira a pessoa do evento no Google; o convite já entregue no e-mail dela, porém, não pode ser "desenviado".
 
-> ⚠️ **Os e-mails de terceiros que você guarda no app são de sua responsabilidade.** É **você** quem decide coletá-los e mantê-los (nos participantes de um evento e, futuramente, em grupos salvos), e portanto é **você** o controlador desses dados: cabe a você ter base legal para tratá-los, informar os titulares e atender pedidos de exclusão. O desenvolvedor **não recebe cópia** — os e-mails ficam no seu dispositivo e, se você ligar a sincronização, no **seu** Supabase e nos **seus** backups. Para apagar, remova o participante (ou o grupo) e sincronize; para apagar tudo, use "Remover configuração" do painel ☁️ e limpe os dados do app.
+> ⚠️ **Os e-mails de terceiros que você guarda no app são de sua responsabilidade.** É **você** quem decide coletá-los e mantê-los (nos participantes de um evento e nos grupos de participantes que você salva), e portanto é **você** o controlador desses dados: cabe a você ter base legal para tratá-los, informar os titulares e atender pedidos de exclusão. O desenvolvedor **não recebe cópia** — os e-mails ficam no seu dispositivo e, se você ligar a sincronização, no **seu** Supabase e nos **seus** backups. Para apagar, remova o participante (ou o grupo) e sincronize; para apagar tudo, use "Remover configuração" do painel ☁️ e limpe os dados do app.
 
 ### Aviso por e-mail e a configuração do convidado
 
@@ -324,6 +324,7 @@ Você tem direito de apresentar reclamação à **Autoridade Nacional de Proteç
 
 | Versão | Data | Mudanças |
 |---|---|---|
+| 1.1 | 2026-10-03 | Grupos de participantes descritos como recurso existente (o texto ainda os tratava como futuros, embora existam desde a v2.10.0 do app) |
 | 1.0 | 2026-05-16 | Versão inicial — adequação à LGPD, ANPD Res. 2/2022 (ATPP), ANPD Res. 15/2024, Guia de Cookies ANPD 2025, ECA Digital (Lei 15.211/2025) |
 
 ---

@@ -1,8 +1,12 @@
 # Declaração de Acessibilidade — Rumo
 
-**Versão:** 1.0 · **Última atualização:** 2026-05-16
+**Versão:** 1.1 · **Última atualização:** 2026-10-03
 
 > Este documento atende ao **Art. 63 da Lei nº 13.146/2015** (Lei Brasileira de Inclusão — Estatuto da Pessoa com Deficiência) e segue as **Diretrizes de Acessibilidade para Conteúdo Web (WCAG) 2.2** do W3C e a norma **ABNT NBR 17225:2025**.
+
+> ⚠️ **Nota de correção (2026-10-03).** A versão 1.0 marcava como cumpridos vários itens que nunca tinham sido medidos — entre eles "contraste mínimo 4,5:1 em todos os temas", "modais com `role="dialog"`", "rótulos associados aos campos" e "fontes em unidades relativas". Ao medir o app (v2.13.2) esses itens não se confirmaram. Esta versão traz o que foi **medido**, com o número ao lado, e marca como "não verificado" o que ainda não foi conferido. A correção dos problemas encontrados está planejada para o novo design de interface do app, em desenvolvimento.
+>
+> **Como foi medido:** app aberto no Chrome (1440×900 e 390×844), com dados de demonstração; contraste calculado pela fórmula da WCAG entre a cor do texto e o fundo efetivo (transparências compostas); contagens feitas no `calendario-mgc.html`.
 
 ---
 
@@ -37,55 +41,64 @@ O Rumo é desenvolvido com o compromisso de **inclusão e usabilidade para todas
   - `Esc` — fechar modal
   - `?` — exibir lista de atalhos
 - ✅ Atalhos desativados quando foco está em campo de texto (evita conflito)
-- ✅ Foco visível ao navegar (outline padrão do navegador preservado)
+- ⚠️ Foco visível: 15 regras do CSS removem o contorno de foco (`outline:none`) sem um estilo de foco substituto (`:focus-visible`); nesses controles o foco do teclado não aparece
 
 ### 3.2 Contraste de cor (WCAG 1.4.3)
 
-- ✅ Tema **Oceano** (padrão): contraste mínimo 4.5:1 para texto
-- ✅ Tema **Aurora** (escuro): contraste mínimo 4.5:1
-- ✅ Tema **Ardósia** (escuro): contraste mínimo 4.5:1
-- ✅ Tema **Marfim** (claro): contraste mínimo 4.5:1
-- ✅ Tema **Sereno** (claro): contraste mínimo 4.5:1
+Medido em 2026-10-03 (v2.13.2):
+
+| Onde | Temas | Contraste medido | Mínimo WCAG |
+|---|---|---|---|
+| Título e hora dos eventos na vista **Mês** | todos | 1,9 a 4,7 : 1 | 4,5 : 1 |
+| Eventos na vista **Semana** | Oceano | 6,3 a 7,6 : 1 ✅ | 4,5 : 1 |
+| Eventos na vista **Semana** | Aurora | 1,8 a 2,2 : 1 ❌ | 4,5 : 1 |
+| Eventos na vista **Semana** | Ardósia | 1,5 a 1,8 : 1 ❌ | 4,5 : 1 |
+| Número dos dias de outro mês | Oceano | 1,9 : 1 ❌ | 4,5 : 1 |
+
+- ❌ Nos temas escuros (Aurora, Ardósia), os dias de outro mês na vista Mês ficam com fundo claro fixo, que não acompanha o tema
 - ✅ 3 níveis de densidade (Compacto/Normal/Grande) — usuário escolhe
 - ⚠️ Cor personalizada: usuário pode criar combinações com baixo contraste (sua responsabilidade)
 
 ### 3.3 Idioma e semântica (WCAG 3.1.1)
 
 - ✅ `<html lang="pt-BR">` declarado
-- ✅ HTML semântico (`<header>`, `<main>`, `<aside>`, `<button>`, `<dialog>`)
-- ✅ Labels associados a inputs via `<label for="">` ou `aria-label`
-- ✅ Botões com texto descritivo ou `aria-label`
+- ⚠️ HTML semântico parcial: há `<aside>` (barra lateral) e `<nav>` (navegação inferior no celular); não há `<header>`, `<main>` nem `<dialog>`
+- ❌ Rótulos dos campos: no formulário de evento, 13 de 14 campos não têm rótulo associado — o texto do rótulo aparece na tela, mas não está ligado ao campo por `for`, `aria-label` ou `title`
+- ⚠️ Botões só com ícone dependem de `title`; apenas 2 elementos do app têm `aria-label`
 
 ### 3.4 Estrutura e hierarquia (WCAG 1.3.1)
 
-- ✅ Hierarquia de cabeçalhos respeitada (`<h1>` único, sequência lógica)
-- ✅ Regiões nomeadas com landmarks ARIA quando aplicável
-- ✅ Listas marcadas semanticamente (`<ul>`, `<ol>`)
+- ❌ Não há `<h1>`; os títulos das telas são elementos de texto estilizados, sem marcação de cabeçalho
+- ⚠️ Regiões nomeadas: só `<aside>` e `<nav>`
+- ⚠️ Listas de eventos, tarefas e rotinas são `div`; o app tem 1 `<ol>` e nenhum `<ul>` no HTML base
 
 ### 3.5 Texto alternativo e ícones (WCAG 1.1.1)
 
-- ✅ Ícones decorativos: emojis com função visual, `aria-hidden="true"` quando puramente decorativo
-- ✅ Ícones funcionais: acompanhados de texto ou `title`/`aria-label`
+- ⚠️ Ícones da interface são emojis e só 1 elemento usa `aria-hidden="true"`; leitores de tela anunciam os emojis junto com o texto dos botões
+- ✅ Ícones funcionais: acompanhados de texto ou `title`
 - ⚠️ Algumas imagens decorativas podem não ter `alt` explícito
 
 ### 3.6 Redimensionamento de texto (WCAG 1.4.4)
 
-- ✅ Layout responsivo a `zoom` do navegador até 200%
+- ℹ️ Zoom do navegador até 200%: não verificado
 - ✅ 3 níveis de densidade ajustam tamanho de fonte e espaçamento
-- ✅ Fontes em unidades relativas (`em`, `rem`)
+- ⚠️ Tamanhos de fonte em `px` (453 declarações, nenhuma em `rem`/`em`): o zoom do navegador funciona, mas a preferência de tamanho de fonte do sistema não é respeitada
 
 ### 3.7 Tempo e movimento (WCAG 2.2.1, 2.3.1)
 
 - ✅ Sem conteúdo piscante (>3x/segundo)
 - ✅ Sem animações automáticas longas
-- ✅ Animações curtas (≤0.3s) — não causam desconforto
+- ✅ Animações curtas (≤0.3s)
+- ⚠️ O app não respeita a preferência "reduzir movimento" do sistema (`prefers-reduced-motion`)
 - ✅ Alertas/notificações sem limite de tempo para leitura
 
 ### 3.8 Alvos de toque (WCAG 2.5.8 — nível AA do 2.2)
 
-- ✅ Botões mobile com tamanho mínimo de 44×44px (acima do mínimo 24×24)
+Medido no celular (390 px de largura), vista Mês:
+
+- ⚠️ 18 de 26 controles visíveis têm menos de 44 px em alguma dimensão (o recomendado para toque)
+- ⚠️ 4 de 26 têm menos de 24 px de altura (botões do rodapé, com 19 px); o mínimo da WCAG é 24 × 24 px, salvo espaçamento suficiente entre eles
 - ✅ FAB (botão flutuante) com tamanho generoso
-- ✅ Botões do header com padding adequado
 
 ### 3.9 Identificação de erros (WCAG 3.3.1)
 
@@ -95,9 +108,9 @@ O Rumo é desenvolvido com o compromisso de **inclusão e usabilidade para todas
 
 ### 3.10 Compatibilidade com leitores de tela (WCAG 4.1.2)
 
-- ✅ HTML válido e semântico
-- ✅ ARIA usado quando HTML semântico não basta
-- ✅ Modais com `role="dialog"` e foco gerenciado
+- ⚠️ ARIA quase ausente (2 `aria-label`, 1 `aria-hidden`)
+- ❌ Nenhum dos 14 modais declara `role="dialog"` ou `aria-modal`; o leitor de tela não anuncia que uma janela abriu
+- ℹ️ Gerenciamento de foco ao abrir e fechar modais: não verificado
 - ⚠️ Algumas interações dinâmicas (drag & drop) podem ter limitações
 
 ---
@@ -121,10 +134,12 @@ Mesmo com o compromisso de acessibilidade, algumas funcionalidades têm limitaç
 
 ## 5. Tecnologias assistivas testadas
 
-- ✅ **NVDA** (Windows) — leitor de tela
-- ✅ **VoiceOver** (macOS/iOS) — leitor de tela
-- ⚠️ **TalkBack** (Android) — testes parciais
+- ℹ️ **NVDA** (Windows) — sem registro de teste
+- ℹ️ **VoiceOver** (macOS/iOS) — sem registro de teste
+- ℹ️ **TalkBack** (Android) — sem registro de teste
 - ⚠️ **JAWS** (Windows) — não testado (sem licença disponível)
+
+> A versão 1.0 marcava NVDA e VoiceOver como testados, mas não há registro desses testes no histórico do projeto. Ficam como pendentes até serem feitos e anotados.
 
 ---
 
@@ -166,7 +181,7 @@ Sua participação é fundamental para melhorar a acessibilidade do projeto.
 - 📋 Issues marcadas com `accessibility` têm prioridade no roadmap
 - 📋 Atualização desta declaração quando houver mudança material
 
-**Próxima revisão prevista:** 2027-05-16
+**Próxima revisão prevista:** no lançamento do novo design de interface, e no máximo em 2027-05-16
 
 ---
 
@@ -174,12 +189,12 @@ Sua participação é fundamental para melhorar a acessibilidade do projeto.
 
 | Princípio | Status |
 |---|---|
-| 1. Perceptível | 🟡 Parcialmente conforme (limitações em heatmaps) |
-| 2. Operável | 🟡 Parcialmente conforme (limitações em drag & drop) |
-| 3. Compreensível | ✅ Conforme |
-| 4. Robusto | ✅ Conforme |
+| 1. Perceptível | 🟡 Parcialmente conforme (contraste dos eventos, temas escuros, cabeçalhos e rótulos — §3.2 a §3.5) |
+| 2. Operável | 🟡 Parcialmente conforme (foco visível, alvos de toque, drag & drop — §3.1, §3.8, §4) |
+| 3. Compreensível | 🟡 Parcialmente conforme (campos sem rótulo associado — §3.3) |
+| 4. Robusto | 🟡 Parcialmente conforme (modais sem `role="dialog"`, pouco ARIA — §3.10) |
 
-**Nível geral:** **WCAG 2.2 nível A** conformidade completa, **nível AA** parcial.
+**Nível geral:** **WCAG 2.2 níveis A e AA parciais.** A versão 1.0 declarava o nível A completo; a medição de 2026-10-03 não confirmou (ver nota no topo).
 
 ---
 
@@ -204,6 +219,7 @@ Sua participação é fundamental para melhorar a acessibilidade do projeto.
 
 | Versão | Data | Mudanças |
 |---|---|---|
+| 1.1 | 2026-10-03 | Correção: os itens da 1.0 foram medidos no app (v2.13.2) e vários não se confirmaram — contraste (eventos no Mês e na Semana dos temas escuros), rótulos dos campos, `role="dialog"`, cabeçalhos, foco visível, fontes em `px`, alvos de toque e testes com leitor de tela sem registro. Cada item traz agora o valor medido ou "não verificado" |
 | 1.0 | 2026-05-16 | Versão inicial — WCAG 2.2 nível AA parcial, ABNT NBR 17225:2025, LBI Art. 63 |
 
 ---
