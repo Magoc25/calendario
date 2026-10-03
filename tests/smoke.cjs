@@ -677,6 +677,64 @@ function run() {
       AppState.events=AppState.events.filter(e=>e.id!=='dpp2');
       return ok;
     })()`) === true);
+  /* ── v2.13.3: texto de evento nunca vira marcação (guia r68b: a regra vira teste) ──
+     Seis pontos montavam texto no HTML sem esc(). O local e a categoria chegam de fora
+     (.ics e Google Agenda) e o Top 3 copia o título do evento arrastado — e sincroniza.
+     Carga INERTE (<img data-xss>): a prova é a marcação não existir no DOM; esperar o
+     onerror seria teste cego, porque o jsdom não carrega imagem (r90c). Cada check também
+     exige o texto ESCRITO na tela — sem isso passaria de graça com o evento fora dela (r113). */
+  check('v2.13.3: folha do dia (celular) escreve local e categoria como texto, sem virar marcação',
+    ev(`(function(){
+      const P=n=>'<img data-xss="'+n+'">',d='2026-08-20';
+      AppState.events.push({id:'xss1',title:'Evento xss',date:d,dateEnd:d,start:'09:00',end:'10:00',location:P(2),category:P(3),calendarId:'default'});
+      invalidateEvMapCache();openMobileDaySheet(d);
+      const b=document.getElementById('mdsBody');
+      const ok=b.querySelectorAll('img[data-xss]').length===0&&b.textContent.includes(P(2))&&b.textContent.includes(P(3));
+      AppState.events=AppState.events.filter(e=>e.id!=='xss1');invalidateEvMapCache();
+      document.getElementById('mdsSheet').classList.remove('open');document.getElementById('mdsOverlay').classList.remove('open');
+      return ok;
+    })()`) === true);
+  check('v2.13.3: Top 3 escreve o título arrastado como texto (ele sincroniza entre aparelhos)',
+    ev(`(function(){
+      const P=n=>'<img data-xss="'+n+'">',td=todayDs(),antes=AppState.top3Data[td];
+      AppState.top3Data[td]=[{text:P(5),done:false,srcType:'event',srcId:'x'},{text:'',done:false},{text:'',done:false}];
+      renderToday();
+      const t=document.querySelector('.top3-text');
+      const ok=!!t&&document.querySelectorAll('.top3-text img[data-xss]').length===0&&t.textContent.includes(P(5));
+      if(antes===undefined)delete AppState.top3Data[td];else AppState.top3Data[td]=antes;
+      renderToday();
+      return ok;
+    })()`) === true);
+  check('v2.13.3: Estatísticas escrevem o nome da categoria como texto (vem do CATEGORIES do .ics)',
+    ev(`(function(){
+      const P=n=>'<img data-xss="'+n+'">',d=ds(AppState.cur.getFullYear(),AppState.cur.getMonth(),10);
+      AppState.events.push({id:'xss3',title:'Evento xss',date:d,dateEnd:d,start:'09:00',end:'10:00',category:P(3),calendarId:'default'});
+      invalidateEvMapCache();openStats('month');
+      const c=document.getElementById('statsContent');
+      const ok=c.querySelectorAll('img[data-xss]').length===0&&c.textContent.includes(P(3));
+      AppState.events=AppState.events.filter(e=>e.id!=='xss3');invalidateEvMapCache();
+      document.getElementById('statsOverlay').classList.remove('open');
+      return ok;
+    })()`) === true);
+  check('v2.13.3: painel do dia escreve as tags como texto',
+    ev(`(function(){
+      const P=n=>'<img data-xss="'+n+'">',d='2026-08-21';
+      AppState.events.push({id:'xss4',title:'Evento xss',date:d,dateEnd:d,start:'09:00',end:'10:00',tags:[P(4)],calendarId:'default'});
+      invalidateEvMapCache();renderDayPanel(d);
+      const b=document.getElementById('dpBody');
+      const ok=b.querySelectorAll('img[data-xss]').length===0&&b.textContent.includes(P(4));
+      AppState.events=AppState.events.filter(e=>e.id!=='xss4');invalidateEvMapCache();
+      return ok;
+    })()`) === true);
+  check('v2.13.3: formulário de evento escreve as tags digitadas como texto',
+    ev(`(function(){
+      const P=n=>'<img data-xss="'+n+'">',antes=currentTags;
+      currentTags=[P(6)];renderTagPills();
+      const w=document.getElementById('tagsInputWrap');
+      const ok=w.querySelectorAll('img[data-xss]').length===0&&w.textContent.includes(P(6));
+      currentTags=antes;renderTagPills();
+      return ok;
+    })()`) === true);
   check('gcalToMgc: evento próprio (organizer.self) → gcalIsGuest false',
     ev(`gcalToMgc({id:'gp2',start:{date:'2026-08-01'},end:{date:'2026-08-02'},organizer:{email:'eu@y.com',self:true}}).gcalIsGuest`) === false);
   check('gcalToMgc: sem organizer → gcalIsGuest false (evento solo não vira convite)',

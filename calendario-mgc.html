@@ -3770,7 +3770,7 @@ function renderDayPanel(dateStr){
       const hasNote=_dpHasNote(ev.id,dateStr);
       const cd=countdownDays(dateStr);
       const cdHtml=cd&&cd!=='hoje'?`<span class="countdown-badge">${cd}</span>`:'';
-      const tagsHtml=(ev.tags||[]).length?`<div class="dp-ev-tags">${ev.tags.map(t=>`<span class="dp-tag">${t}</span>`).join('')}</div>`:'';
+      const tagsHtml=(ev.tags||[]).length?`<div class="dp-ev-tags">${ev.tags.map(t=>`<span class="dp-tag">${esc(t)}</span>`).join('')}</div>`:'';
       const noteBtn=hasNote?`<span class="dp-note-btn" data-notes-id="${ev.id}" data-notes-date="${dateStr}" title="Ver notas" style="font-size:15px;flex-shrink:0;cursor:pointer;line-height:1">📝</span>`:'';
       html+=`<div class="dp-ev${done?' done-dp':''}" data-id="${ev.id}" data-date="${dateStr}" style="border-left-color:${ev.color||'var(--accent)'}">
         <div class="dp-ev-time">
@@ -4204,7 +4204,7 @@ function renderStatsContent(data){
         <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:7px">Por categoria</div>
         <div class="chart-bar-wrap">${Object.entries(byCat).sort((a,b)=>b[1]-a[1]).slice(0,7).map(([cat,n])=>`
           <div class="chart-row">
-            <span class="chart-label">${CAT_ICONS[cat]||''} ${cat}</span>
+            <span class="chart-label">${CAT_ICONS[cat]||''} ${esc(cat)}</span>
             <div class="chart-track"><div class="chart-fill" style="width:${Math.round(n/maxCat*100)}%"></div></div>
             <span class="chart-val">${n}</span>
           </div>`).join('')}</div>
@@ -4231,7 +4231,7 @@ function renderStatsContent(data){
     <div style="margin-top:14px;border-top:1px solid var(--border);padding-top:12px">
       <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">⏱ Horas por categoria</div>
       ${Object.keys(byCatMins).length
-        ? `<div class="chart-bar-wrap">${Object.entries(byCatMins).sort((a,b)=>b[1]-a[1]).map(([cat,mins])=>{const h=Math.floor(mins/60),m=mins%60;return`<div class="chart-row"><span class="chart-label">${CAT_ICONS[cat]||''} ${cat}</span><div class="chart-track"><div class="chart-fill" style="width:${Math.round(mins/maxCatMins*100)}%"></div></div><span class="chart-val">${h}h${m?m+'m':''}&thinsp;<span style="color:var(--muted);font-size:9px">(${byCat[cat]}ev)</span></span></div>`;}).join('')}</div>`
+        ? `<div class="chart-bar-wrap">${Object.entries(byCatMins).sort((a,b)=>b[1]-a[1]).map(([cat,mins])=>{const h=Math.floor(mins/60),m=mins%60;return`<div class="chart-row"><span class="chart-label">${CAT_ICONS[cat]||''} ${esc(cat)}</span><div class="chart-track"><div class="chart-fill" style="width:${Math.round(mins/maxCatMins*100)}%"></div></div><span class="chart-val">${h}h${m?m+'m':''}&thinsp;<span style="color:var(--muted);font-size:9px">(${byCat[cat]}ev)</span></span></div>`;}).join('')}</div>`
         : `<div style="font-size:11px;color:var(--muted);padding:4px 0">Nenhum evento com horário definido neste período.</div>`}
     </div>`;
 }
@@ -4754,7 +4754,7 @@ function renderTagPills(){
   wrap.querySelectorAll('.tag-pill').forEach(p=>p.remove());
   currentTags.forEach((t,i)=>{
     const pill=document.createElement('span');pill.className='tag-pill';
-    pill.innerHTML=`${t}<button class="tag-pill-remove" data-i="${i}">✕</button>`;
+    pill.innerHTML=`${esc(t)}<button class="tag-pill-remove" data-i="${i}">✕</button>`;
     wrap.insertBefore(pill,input);
   });
   wrap.querySelectorAll('.tag-pill-remove').forEach(btn=>{btn.addEventListener('click',()=>{currentTags.splice(parseInt(btn.dataset.i),1);renderTagPills();});});
@@ -6589,7 +6589,7 @@ function openMobileDaySheet(dateStr){
             ${noteIcon}
             <div class="mds-event-title${done?' done':''}" style="flex:1;min-width:0">${esc(ev.title)}${done?' ✓':''}</div>
           </div>
-          ${ev.category||ev.location?`<div class="mds-event-sub">${icon?icon+' ':''}${ev.category||''}${ev.location?' · 📍'+ev.location:''}</div>`:''}
+          ${ev.category||ev.location?`<div class="mds-event-sub">${icon?icon+' ':''}${esc(ev.category||'')}${ev.location?' · 📍'+esc(ev.location):''}</div>`:''}
         </div>
       </div>`;
     }).join('');
@@ -7966,7 +7966,7 @@ function renderToday(){
         <div class="top3-item${realDone?' done':''} drop-zone" data-top3slot="${i}">
           <div class="top3-num">${i+1}</div>
           ${item.text
-            ?`<span class="top3-text">${srcIcon[item.srcType]||''} ${item.text}</span>
+            ?`<span class="top3-text">${srcIcon[item.srcType]||''} ${esc(item.text)}</span>
                <span class="top3-source">${item.srcType==='event'?'evento':item.srcType==='routine'?'rotina':item.srcType==='task'?'tarefa':''}</span>
                <div class="top3-check${realDone?' checked':''}" data-top3check="${i}" data-top3type="${item.srcType||''}" data-top3src="${item.srcId||''}">${realDone?'✓':''}</div>
                <button class="top3-clear" data-top3clear="${i}" title="Remover">✕</button>`
@@ -10701,7 +10701,7 @@ setInterval(()=>getActiveSW()?.postMessage({type:'PING'}),25000);
    mecanismo desligado — além de envelhecer sozinho se o hook não rodar.
    A detecção de "existe versão nova no servidor" continua no banner do Supabase
    (app_config) logo abaixo. */
-const APP_VERSION='2.13.2';
+const APP_VERSION='2.13.3';
 {const _vSpan=document.getElementById('appVersion');if(_vSpan)_vSpan.textContent='© MGC · v'+APP_VERSION;}
 try{localStorage.removeItem('mgc_app_version');}catch(e){} // remove o cache de versão antigo (não é mais usado)
 

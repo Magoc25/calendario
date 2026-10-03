@@ -5,6 +5,29 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 
 ---
 
+## [2.13.3] — Outubro 2026
+
+### 🔒 Segurança — texto de evento passa a aparecer sempre como texto
+
+Em seis pontos do app, o texto de um evento era colocado na tela como **código da página**, e não como texto. Um evento vindo de fora — um convite do Google Agenda ou um arquivo `.ics` importado — com local, categoria ou título preparados de propósito podia executar código dentro do app quando você abria o dia no celular, olhava as Estatísticas ou arrastava o evento para o Top 3. Como o Top 3 sincroniza, o efeito podia se repetir nos seus outros aparelhos.
+
+Agora esse texto aparece sempre como texto, nos seis pontos:
+
+- **Lista do dia no celular:** o local e a categoria do evento.
+- **Top 3 do dia:** o título do evento arrastado para lá.
+- **Estatísticas:** o nome da categoria nos dois gráficos.
+- **Painel do dia e formulário do evento:** as tags.
+
+Nada muda para quem usa o app normalmente: o que você escreve continua aparecendo igual, inclusive com símbolos como `&` ou `<`.
+
+> ℹ️ **Nada a fazer**, nem no banco de dados: basta o app atualizar.
+
+### 🔧 Interno
+
+- **Cinco verificações novas** colocam um texto com marcação em cada um desses pontos e reprovam se ele virar elemento da página; cada uma também exige que o texto apareça escrito na tela, para não passar de graça. Todas foram conferidas desfazendo a correção, ponto a ponto (7 de 7).
+
+---
+
 ## [2.13.2] — Agosto 2026
 
 ### 🐛 Correção — o check das rotinas se desmarcava sozinho na aba Hoje
