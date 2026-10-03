@@ -152,6 +152,7 @@ setTimeout(() => {
     // síncrona — precisa de dois boots completos e de idas e vindas à nuvem.
     cenarioMultiAparelho()
       .catch((e) => { harnessFail = 'cenário multi-aparelho: ' + (e && e.message || e); })
+      .then(() => cenarioMeridiano().catch((e) => { harnessFail = 'cenário Meridiano: ' + (e && e.message || e); }))
       .then(finish);
   }, 1300);
 }, 600);
@@ -1426,6 +1427,122 @@ function bootAparelho(nuvem, seed) {
 /* Leitura/execução TOLERANTE (r74a): erro vira `undefined` e a asserção falha
    localizada, em vez de matar o harness e imitar um teste que passou. */
 function ler(ap, expr) { try { return ap.w.eval(expr); } catch (e) { return undefined; } }
+
+/* ── Design Meridiano (v2.14.0) ────────────────────────────────────────────
+   O Meridiano é um 4º design que convive com Classic/Lumina/Crystal. As regras
+   que ele promete viram teste (r68b): (1) a CSP aceita a fonte embutida; (2) todo
+   ícone usado tem definição (r123: as duas metades amarradas); (3) NENHUMA regra
+   do bloco do Meridiano vale fora dele — é o que mantém o Classic idêntico; e (4)
+   um cenário que ANDA pelo caminho do usuário a partir do estado inicial (r113):
+   abrir com ?design=meridiano, ligar o escuro, navegar pela barra lateral nova,
+   voltar ao Classic. */
+function bootMeridiano(query) {
+  return new Promise((resolve, reject) => {
+    const vcM = new VirtualConsole();
+    vcM.on('jsdomError', () => {}); vcM.on('error', () => {});
+    const d = new JSDOM(html, {
+      runScripts: 'dangerously', pretendToBeVisual: true,
+      url: 'https://localhost/calendario-mgc.html' + (query || ''), virtualConsole: vcM,
+      beforeParse(w) {
+        w.HTMLCanvasElement.prototype.getContext = () => ({ fillRect(){}, clearRect(){}, beginPath(){}, arc(){}, fill(){}, stroke(){}, moveTo(){}, lineTo(){}, save(){}, restore(){}, measureText: () => ({ width: 0 }), fillText(){}, translate(){}, scale(){}, setTransform(){}, drawImage(){} });
+        w.matchMedia = (q) => ({ matches: false, media: q, addListener(){}, removeListener(){}, addEventListener(){}, removeEventListener(){}, dispatchEvent(){ return false; } });
+        w.scrollTo = () => {}; w.Element.prototype.scrollIntoView = () => {};
+        w.structuredClone = w.structuredClone || structuredClone;
+        w.requestAnimationFrame = w.requestAnimationFrame || ((cb) => setTimeout(cb, 0));
+        w.document.execCommand = () => false; w.document.queryCommandState = () => false; w.document.queryCommandValue = () => '';
+        w.confirm = () => true; w.alert = () => {}; w.prompt = (_m, def) => def || 'X';
+        w.URL.createObjectURL = w.URL.createObjectURL || (() => 'blob:mock');
+        w.QRCode = function(){}; w.QRCode.CorrectLevel = { M: 0 };
+        w.DOMPurify = { sanitize: (h) => String(h == null ? '' : h) };
+      }
+    });
+    const w = d.window;
+    const t = setTimeout(() => reject(new Error('boot do Meridiano travado')), 8000);
+    const pronto = () => { clearTimeout(t); setTimeout(() => resolve({ w, dom: d }), 250); };
+    if (w.document.readyState === 'complete') pronto(); else w.addEventListener('load', pronto);
+  });
+}
+
+/* Seletores de topo de um CSS (entra em @media/@supports), com a lista separada por
+   vírgula de TOPO — a de dentro de :is()/:not() não conta. */
+function seletoresCss(css) {
+  css = css.replace(/\/\*[\s\S]*?\*\//g, '');
+  const out = [], pilha = []; let buf = '';
+  for (const ch of css) {
+    if (ch === '{') { const sel = buf.trim(); if (sel.startsWith('@')) pilha.push('@'); else { out.push(sel); pilha.push('r'); } buf = ''; }
+    else if (ch === '}') { pilha.pop(); buf = ''; }
+    else buf += ch;
+  }
+  const partes = [];
+  out.forEach(sel => { let nivel = 0, cur = ''; for (const c of sel) { if (c === '(') nivel++; if (c === ')') nivel--; if (c === ',' && nivel === 0) { partes.push(cur.trim()); cur = ''; } else cur += c; } if (cur.trim()) partes.push(cur.trim()); });
+  return partes;
+}
+
+async function cenarioMeridiano() {
+  // (1) CSP — captura delimitada pelas aspas do próprio atributo (r98)
+  const csp = (SRC.match(/http-equiv="Content-Security-Policy"\s+content="([^"]*)"/) || [])[1] || '';
+  check('Meridiano: a CSP aceita a fonte embutida (font-src com data:)', /font-src[^;]*\sdata:/.test(csp), 'font-src: ' + ((csp.match(/font-src[^;]*/) || [''])[0]));
+
+  // (2) r123 — todo ícone usado (data-i, var(--i-*), icoOr) tem definição no bloco de assets
+  const assets = (SRC.match(/<style id="mrd-assets">([\s\S]*?)<\/style>/) || [])[1] || '';
+  const definidos = new Set([...assets.matchAll(/--i-([a-z0-9-]+):url\(/g)].map(m => m[1]));
+  // o próprio bloco de assets mapeia data-i → var(--i-*) para todos: fora da varredura de USO,
+  // senão "usado" seria sempre igual a "definido" e a fonte seca passaria de graça (r90c)
+  const fonteUso = SRC.replace(assets, '');
+  const usados = new Set([
+    ...[...fonteUso.matchAll(/data-i="([a-z0-9-]+)"/g)].map(m => m[1]),
+    ...[...fonteUso.matchAll(/var\(--i-([a-z0-9-]+)\)/g)].map(m => m[1]),
+    ...[...fonteUso.matchAll(/icoOr\('([a-z0-9-]+)'/g)].map(m => m[1])
+  ]);
+  const semDef = [...usados].filter(n => !definidos.has(n));
+  check('Meridiano: fonte embutida e todo ícone usado tem definição (r123)',
+    /@font-face\{font-family:"Inter Meridiano";src:url\("data:font\/woff2;base64,/.test(assets) && definidos.size >= 20 && usados.size >= 20 && semDef.length === 0,
+    'definidos=' + definidos.size + ' usados=' + usados.size + ' sem definição: ' + semDef.join(', '));
+
+  // (3) Classic intocado por construção: toda regra do Meridiano é escopada no design
+  const blocoCss = (SRC.match(/<style id="mrd-css">([\s\S]*?)<\/style>/) || [])[1] || '';
+  const sels = seletoresCss(blocoCss);
+  const fora = sels.filter(s => !/^body\.design-meridiano\b/.test(s) && !/^body:not\(\.design-meridiano\)/.test(s));
+  check('Meridiano: nenhuma regra do design vale fora dele (Classic intocado)',
+    sels.length >= 100 && fora.length === 0, 'seletores=' + sels.length + ' fora do escopo: ' + fora.slice(0, 4).join(' | '));
+
+  // (4) No Classic a opção fica escondida (o app principal deste smoke abriu sem parâmetro)
+  check('Meridiano: no Classic a opção fica escondida e o design não liga sozinho',
+    $('btnDesignMeridiano') && $('btnDesignMeridiano').hidden === true && !window.document.body.classList.contains('design-meridiano'),
+    'hidden=' + ($('btnDesignMeridiano') && $('btnDesignMeridiano').hidden));
+
+  // (5) r113 — o caminho do usuário, a partir do estado inicial
+  const M = await bootMeridiano('?design=meridiano');
+  const doc = M.w.document, body = doc.body, q = (s) => doc.querySelector(s);
+  const clicar = (sel) => { const el = q(sel); if (el) el.click(); return !!el; };
+  check('Meridiano: ?design=meridiano liga o design e revela a opção no Tema & Design',
+    body.classList.contains('design-meridiano') && q('#btnDesignMeridiano') && q('#btnDesignMeridiano').hidden === false &&
+    M.w.localStorage.getItem('cal_design') === 'meridiano',
+    'classes=' + body.className + ' cal_design=' + M.w.localStorage.getItem('cal_design'));
+  clicar('#btnModeDark');
+  check('Meridiano: o botão Escuro liga o modo escuro e grava a escolha',
+    body.classList.contains('mrd-dark') && M.w.localStorage.getItem('cal_mode') === 'dark' &&
+    q('meta[name="theme-color"]').getAttribute('content') === '#0e1014', 'classes=' + body.className);
+  clicar('.mrd-nav [data-go="btnLists"]');
+  await new Promise(r => setTimeout(r, 60));
+  check('Meridiano: a barra lateral nova abre a aba Listas e marca o item',
+    body.dataset.view === 'lists' && q('.mrd-nav [data-go="btnLists"]').classList.contains('on') &&
+    ler(M, 'AppState.viewMode') === 'lists', 'view=' + body.dataset.view + ' viewMode=' + ler(M, 'AppState.viewMode'));
+  clicar('.mrd-nav [data-go="agenda"]');
+  await new Promise(r => setTimeout(r, 60));
+  clicar('.mrd-seg [data-go="btnWeek"]');
+  await new Promise(r => setTimeout(r, 60));
+  check('Meridiano: Agenda abre o Mês e o seletor do topo troca para a Semana',
+    body.dataset.view === 'week' && q('.mrd-seg [data-go="btnWeek"]').classList.contains('on') &&
+    q('.mrd-nav [data-go="agenda"]').classList.contains('on'), 'view=' + body.dataset.view);
+  clicar('.theme-item[data-theme="aurora"]');
+  check('Meridiano: o tema escolhido vira o acento (data-acc)', body.getAttribute('data-acc') === 'aurora', 'data-acc=' + body.getAttribute('data-acc'));
+  clicar('#btnDesignDefault');
+  check('Meridiano: voltar ao Classic desliga o design e o modo escuro',
+    !body.classList.contains('design-meridiano') && !body.classList.contains('mrd-dark') && M.w.localStorage.getItem('cal_design') === 'default',
+    'classes=' + body.className);
+  M.dom.window.close();
+}
 const rotinasDe = (ap) => ler(ap, 'JSON.stringify((AppState.routines||[]).map(r=>r.id).sort())') || '[]';
 
 async function cenarioMultiAparelho() {
