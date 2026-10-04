@@ -5,6 +5,57 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 
 ---
 
+## [2.14.0] — Outubro 2026
+
+### 🆕 Novo design Meridiano, em teste — claro, escuro ou automático
+
+Um quarto design, ao lado de Classic, Lumina e Crystal, pensado para uso diário: interface neutra, em que a cor fica com os seus eventos. Tem **modo claro, escuro ou automático** (segue o sistema e muda a cor da barra de status do celular). Enquanto está em teste, ele aparece só para quem abre o app com `?design=meridiano` no fim do endereço; depois disso fica guardado no aparelho, e dá para voltar ao Classic em **Tema & Design**. Os 5 temas continuam: no Meridiano, o tema escolhido vira a cor de destaque.
+
+- **Navegação nova.** No computador, uma barra lateral com Novo evento, as abas, o mês e os calendários. No celular, cinco abas — **Hoje · Agenda · Listas · Notas · Mais** — e o **"+" flutuante** para novo evento; Rotinas, Estatísticas, Calendários, Alertas, Sincronizar e Aparência ficam no "Mais".
+- **Leitura.** O título dos eventos fica sempre em cor neutra; a cor do evento vira ponto, barra e fundo suave. Contraste medido de **10:1 a 18:1** nos títulos e de **6:1 a 9:1** nos horários, nos dois modos e com qualquer cor de destaque — no Classic, o texto dos eventos chega a 1,3:1 nos temas escuros. Horários alinhados, linha do "agora" na Semana.
+- **Mais agenda na tela do celular.** O topo virou uma linha só, o evento rápido fica logo acima das abas, onde o polegar alcança, e o aviso de sincronização ocupa uma linha. A área fixa cai de 303 px para 209 px (cerca de 164 px sem o aviso).
+- **Ícones de traço** no lugar dos emojis da interface e **fonte Inter embutida**, que funciona sem internet. O emoji que você escolhe para uma categoria continua aparecendo nos detalhes do evento.
+- **Formulário de evento** com datas e horas em duas colunas — o campo "Fim" deixa de sair cortado.
+- **PDF e impressão sempre claros**, mesmo com o modo escuro ligado.
+- Acessibilidade própria do design: foco do teclado visível em todos os controles, preferência "reduzir movimento" respeitada, nenhum botão do celular abaixo de 24 px e campos com 16 px (o iPhone não dá zoom ao tocar).
+
+### 📊 Estatísticas — rotinas e tarefas do período
+
+A janela de Estatísticas (Mês ou Semana) passa a mostrar quantos check-ins de rotina e quantas tarefas do dia foram feitos no período, com a porcentagem. As rotinas contam só até hoje — dia que ainda não chegou não pode ter check-in —, com a mesma regra da aba Rotinas.
+
+### 🗑️ Aba Revisão removida
+
+A revisão diária (humor, "o que foi bem", "o que melhorar") saiu do app, em todos os designs: na prática, ela virava uma obrigação difícil de manter. Saem a aba do topo, o item da barra de baixo do celular e a tela.
+
+- **Os seus dados ficam.** As revisões já feitas continuam guardadas no aparelho, na nuvem e no backup; nada é apagado, e um aparelho que ainda não atualizou continua sincronizando normalmente.
+- As medidas do dia que ela mostrava foram para as Estatísticas (item acima).
+
+### 🐛 Correção — caixas cortadas na aba Hoje do celular
+
+Com um compromisso de título longo, os painéis da aba Hoje ficavam mais largos que a tela e o excesso era cortado na direita — o título do dia, o Top 3, os compromissos e as tarefas. Agora as colunas acompanham a largura da tela e o título longo termina em reticências. Conferido em telas de 360 a 430 px, nos dois designs.
+
+### ♿ Acessibilidade, em todos os designs
+
+- As **17 janelas** (modais e folhas) passam a se anunciar como diálogo para leitores de tela, com nome.
+- **86 botões e controles** que só tinham ícone ou símbolo ganharam nome — antes o leitor de tela lia "✕", "sino", "›".
+- Os **rótulos do formulário de evento** ficam ligados aos campos: tocar no rótulo leva ao campo.
+- Nada disso muda a aparência do Classic, do Lumina ou do Crystal.
+
+### 📄 Documentação
+
+- **Declaração de Acessibilidade v1.2**, com o que esta versão corrigiu e o contraste medido de novo, texto por texto. A página de apresentação acompanha.
+- Já no ar desde 03/10: a declaração v1.1 (itens medidos no lugar de afirmações), o aviso de privacidade e o inventário de dados com os e-mails e grupos de participantes, e o README com a instalação no Mac pelo Safari.
+
+### 🔧 Interno
+
+- **21 verificações novas** — entre elas: nenhum controle que o Classic mostra numa janela pode sumir no Meridiano, toda janela é diálogo com nome, nenhum botão só com ícone fica sem nome, a Revisão sai da tela e os dados continuam gravando, e a grade da aba Hoje encolhe com a tela. Todas foram conferidas plantando o defeito de propósito (42 de 42 pegos).
+- O teste de troca de abas nunca trocava de aba — chamava uma função que não existe e passava de graça. Agora clica nos botões e confere a aba aberta.
+- Os designs Classic, Lumina e Crystal foram comparados pixel a pixel com a versão anterior (sem a aba Revisão): 22 telas e 11 janelas idênticas; a 12ª é a de Estatísticas, que ganhou a seção nova.
+
+> ℹ️ **Nada a fazer no banco de dados.** Nenhum dado nem sincronização mudou.
+
+---
+
 ## [2.13.3] — Outubro 2026
 
 ### 🔒 Segurança — texto de evento passa a aparecer sempre como texto

@@ -1,12 +1,14 @@
 # Declaração de Acessibilidade — Rumo
 
-**Versão:** 1.1 · **Última atualização:** 2026-10-03
+**Versão:** 1.2 · **Última atualização:** 2026-10-04 · **App:** v2.14.0
 
 > Este documento atende ao **Art. 63 da Lei nº 13.146/2015** (Lei Brasileira de Inclusão — Estatuto da Pessoa com Deficiência) e segue as **Diretrizes de Acessibilidade para Conteúdo Web (WCAG) 2.2** do W3C e a norma **ABNT NBR 17225:2025**.
 
-> ⚠️ **Nota de correção (2026-10-03).** A versão 1.0 marcava como cumpridos vários itens que nunca tinham sido medidos — entre eles "contraste mínimo 4,5:1 em todos os temas", "modais com `role="dialog"`", "rótulos associados aos campos" e "fontes em unidades relativas". Ao medir o app (v2.13.2) esses itens não se confirmaram. Esta versão traz o que foi **medido**, com o número ao lado, e marca como "não verificado" o que ainda não foi conferido. A correção dos problemas encontrados está planejada para o novo design de interface do app, em desenvolvimento.
+> ✅ **O que mudou na versão 2.14.0 do app (2026-10-04).** Em **todos os designs**: as 17 janelas (modais e folhas) se anunciam como diálogo, com nome; os 14 rótulos do formulário de evento estão ligados aos campos; 86 botões e controles que só tinham ícone ou símbolo ganharam nome para leitores de tela. No novo design **Meridiano**, em teste: todo texto de evento passa do contraste mínimo nos modos claro e escuro, o foco do teclado aparece em todos os controles, a preferência "reduzir movimento" do sistema é respeitada e nenhum controle do celular fica abaixo de 24 px. Os problemas de contraste, foco e toque continuam no design Classic — estão descritos abaixo, com os números.
+
+> ⚠️ **Nota de correção (2026-10-03, versão 1.1).** A versão 1.0 marcava como cumpridos vários itens que nunca tinham sido medidos — entre eles "contraste mínimo 4,5:1 em todos os temas", "modais com `role="dialog"`", "rótulos associados aos campos" e "fontes em unidades relativas". Desde a 1.1, este documento traz o que foi **medido**, com o número ao lado, e marca como "não verificado" o que ainda não foi conferido.
 >
-> **Como foi medido:** app aberto no Chrome (1440×900 e 390×844), com dados de demonstração; contraste calculado pela fórmula da WCAG entre a cor do texto e o fundo efetivo (transparências compostas); contagens feitas no `calendario-mgc.html`.
+> **Como foi medido:** app aberto no Chrome (1440×900 e 390×844; para alvos de toque e cortes, também 360, 375 e 430 px de largura), com dados de demonstração; contraste calculado pela fórmula da WCAG entre a cor de **cada texto** e o fundo efetivo atrás dele (transparências compostas); contagens feitas no `calendario-mgc.html`. Medições da v2.14.0 em 2026-10-04; as do Classic que não mudaram vêm da medição de 2026-10-03.
 
 ---
 
@@ -31,7 +33,7 @@ O Rumo é desenvolvido com o compromisso de **inclusão e usabilidade para todas
 
 ## 3. Recursos de acessibilidade implementados
 
-### 3.1 Navegação por teclado (WCAG 2.1.1)
+### 3.1 Navegação por teclado (WCAG 2.1.1, 2.4.7)
 
 - ✅ Navegação completa via `Tab`, `Shift+Tab`, `Enter`, `Esc`
 - ✅ Atalhos globais:
@@ -41,30 +43,36 @@ O Rumo é desenvolvido com o compromisso de **inclusão e usabilidade para todas
   - `Esc` — fechar modal
   - `?` — exibir lista de atalhos
 - ✅ Atalhos desativados quando foco está em campo de texto (evita conflito)
-- ⚠️ Foco visível: 15 regras do CSS removem o contorno de foco (`outline:none`) sem um estilo de foco substituto (`:focus-visible`); nesses controles o foco do teclado não aparece
+- ✅ **Meridiano:** foco visível em todos os controles (`:focus-visible` com contorno na cor de destaque; campos com anel de foco)
+- ⚠️ **Classic, Lumina e Crystal:** 14 regras do CSS removem o contorno de foco (`outline:none`) sem um estilo substituto; nesses controles o foco do teclado não aparece
 
 ### 3.2 Contraste de cor (WCAG 1.4.3)
 
-Medido em 2026-10-03 (v2.13.2):
+Medido em 2026-10-04 (v2.14.0), cada texto contra o fundo efetivo:
 
-| Onde | Temas | Contraste medido | Mínimo WCAG |
+| Onde | Design e tema | Contraste medido | Mínimo WCAG |
 |---|---|---|---|
-| Título e hora dos eventos na vista **Mês** | todos | 1,9 a 4,7 : 1 | 4,5 : 1 |
-| Eventos na vista **Semana** | Oceano | 6,3 a 7,6 : 1 ✅ | 4,5 : 1 |
-| Eventos na vista **Semana** | Aurora | 1,8 a 2,2 : 1 ❌ | 4,5 : 1 |
-| Eventos na vista **Semana** | Ardósia | 1,5 a 1,8 : 1 ❌ | 4,5 : 1 |
-| Número dos dias de outro mês | Oceano | 1,9 : 1 ❌ | 4,5 : 1 |
+| Título dos eventos, vistas **Mês** e **Semana** | Meridiano, claro e escuro, qualquer cor de destaque | 10,1 a 18,1 : 1 ✅ | 4,5 : 1 |
+| Horário e "faltam N dias" dos eventos | Meridiano, claro e escuro | 6,2 a 9,1 : 1 ✅ | 4,5 : 1 |
+| Número dos dias de outro mês | Meridiano | 4,7 : 1 (claro) e 6,1 : 1 (escuro) ✅ | 4,5 : 1 |
+| Texto dos eventos na vista **Mês** | Classic — Oceano, Aurora, Ardósia | mínimo de 1,7 a 2,1 : 1 ❌ (máximo 5,9 a 6,7) | 4,5 : 1 |
+| Eventos na vista **Semana** | Classic — Oceano | 6,3 a 8,1 : 1 ✅ | 4,5 : 1 |
+| Eventos na vista **Semana** | Classic — Aurora | 1,6 a 2,2 : 1 ❌ | 4,5 : 1 |
+| Eventos na vista **Semana** | Classic — Ardósia | 1,3 a 1,8 : 1 ❌ | 4,5 : 1 |
+| Número dos dias de outro mês | Classic — Oceano | 1,9 : 1 ❌ | 4,5 : 1 |
 
-- ❌ Nos temas escuros (Aurora, Ardósia), os dias de outro mês na vista Mês ficam com fundo claro fixo, que não acompanha o tema
+- ❌ Classic nos temas escuros (Aurora, Ardósia): os dias de outro mês na vista Mês ficam com fundo claro fixo, que não acompanha o tema
+- ℹ️ Lumina e Crystal não foram medidos separadamente
+- ✅ No Meridiano, o título do evento fica sempre em cor neutra; a cor do evento vira ponto, barra e fundo suave — por isso o contraste não depende da cor escolhida
 - ✅ 3 níveis de densidade (Compacto/Normal/Grande) — usuário escolhe
 - ⚠️ Cor personalizada: usuário pode criar combinações com baixo contraste (sua responsabilidade)
 
-### 3.3 Idioma e semântica (WCAG 3.1.1)
+### 3.3 Idioma e semântica (WCAG 3.1.1, 1.3.1, 4.1.2)
 
 - ✅ `<html lang="pt-BR">` declarado
-- ⚠️ HTML semântico parcial: há `<aside>` (barra lateral) e `<nav>` (navegação inferior no celular); não há `<header>`, `<main>` nem `<dialog>`
-- ❌ Rótulos dos campos: no formulário de evento, 13 de 14 campos não têm rótulo associado — o texto do rótulo aparece na tela, mas não está ligado ao campo por `for`, `aria-label` ou `title`
-- ⚠️ Botões só com ícone dependem de `title`; apenas 2 elementos do app têm `aria-label`
+- ⚠️ HTML semântico parcial: há `<aside>` (barra lateral) e `<nav>` (navegação inferior no celular); não há `<header>` nem `<main>`; as janelas são `div` com `role="dialog"`
+- ✅ Rótulos dos campos: os 14 rótulos do formulário de evento estão ligados aos campos por `for` — tocar ou clicar no rótulo leva ao campo, e o leitor de tela lê o rótulo
+- ✅ Botões só com ícone ou símbolo têm nome acessível (`aria-label`): 86 controles ganharam nome na v2.14.0; uma verificação automática confere que nenhum botão só com ícone fica sem nome nas telas principais
 
 ### 3.4 Estrutura e hierarquia (WCAG 1.3.1)
 
@@ -74,31 +82,32 @@ Medido em 2026-10-03 (v2.13.2):
 
 ### 3.5 Texto alternativo e ícones (WCAG 1.1.1)
 
-- ⚠️ Ícones da interface são emojis e só 1 elemento usa `aria-hidden="true"`; leitores de tela anunciam os emojis junto com o texto dos botões
-- ✅ Ícones funcionais: acompanhados de texto ou `title`
+- ✅ **Meridiano:** os ícones da interface são desenhos marcados como decorativos (`aria-hidden="true"`); o nome vem do texto ou do `aria-label` do botão
+- ⚠️ **Classic, Lumina e Crystal:** os ícones da interface são emojis; leitores de tela anunciam os emojis junto com o texto dos botões
+- ✅ Ícones funcionais: acompanhados de texto ou de nome acessível
 - ⚠️ Algumas imagens decorativas podem não ter `alt` explícito
 
 ### 3.6 Redimensionamento de texto (WCAG 1.4.4)
 
 - ℹ️ Zoom do navegador até 200%: não verificado
 - ✅ 3 níveis de densidade ajustam tamanho de fonte e espaçamento
-- ⚠️ Tamanhos de fonte em `px` (453 declarações, nenhuma em `rem`/`em`): o zoom do navegador funciona, mas a preferência de tamanho de fonte do sistema não é respeitada
+- ⚠️ Tamanhos de fonte em `px`: o zoom do navegador funciona, mas a preferência de tamanho de fonte do sistema não é respeitada
+- ✅ **Meridiano no celular:** campos de texto com 16 px, para o iPhone não aplicar zoom ao tocar
 
-### 3.7 Tempo e movimento (WCAG 2.2.1, 2.3.1)
+### 3.7 Tempo e movimento (WCAG 2.2.1, 2.3.1, 2.3.3)
 
 - ✅ Sem conteúdo piscante (>3x/segundo)
 - ✅ Sem animações automáticas longas
 - ✅ Animações curtas (≤0.3s)
-- ⚠️ O app não respeita a preferência "reduzir movimento" do sistema (`prefers-reduced-motion`)
+- ✅ **Meridiano:** respeita a preferência "reduzir movimento" do sistema (`prefers-reduced-motion`) — as transições ficam instantâneas (conferido emulando a preferência no Chrome)
+- ⚠️ **Classic, Lumina e Crystal:** não respeitam essa preferência
 - ✅ Alertas/notificações sem limite de tempo para leitura
 
 ### 3.8 Alvos de toque (WCAG 2.5.8 — nível AA do 2.2)
 
-Medido no celular (390 px de largura), vista Mês:
-
-- ⚠️ 18 de 26 controles visíveis têm menos de 44 px em alguma dimensão (o recomendado para toque)
-- ⚠️ 4 de 26 têm menos de 24 px de altura (botões do rodapé, com 19 px); o mínimo da WCAG é 24 × 24 px, salvo espaçamento suficiente entre eles
-- ✅ FAB (botão flutuante) com tamanho generoso
+- ✅ **Meridiano no celular** (medido em 390 px, nas abas e janelas): nenhum controle visível abaixo de 24 px; os de uso frequente têm 34 px ou mais. O quadradinho de concluir da aba Hoje mantém o desenho de 14 px, com área de toque de 25 × 31 px. Na vista Mês, os pontos dos eventos não são alvos separados: o toque vai para o dia inteiro.
+- ⚠️ **Classic** (medido em 2026-10-03, vista Mês, 390 px): 18 de 26 controles visíveis têm menos de 44 px em alguma dimensão; 4 de 26 têm menos de 24 px de altura (botões do rodapé, com 19 px)
+- ✅ FAB (botão flutuante de novo evento) com tamanho generoso nos dois designs
 
 ### 3.9 Identificação de erros (WCAG 3.3.1)
 
@@ -108,8 +117,8 @@ Medido no celular (390 px de largura), vista Mês:
 
 ### 3.10 Compatibilidade com leitores de tela (WCAG 4.1.2)
 
-- ⚠️ ARIA quase ausente (2 `aria-label`, 1 `aria-hidden`)
-- ❌ Nenhum dos 14 modais declara `role="dialog"` ou `aria-modal`; o leitor de tela não anuncia que uma janela abriu
+- ✅ As 17 janelas (modais e folhas, no computador e no celular) declaram `role="dialog"`, `aria-modal="true"` e um nome (o título da janela ou um rótulo)
+- ✅ ARIA nos controles: 91 `aria-label` no código (eram 2 na v2.13.2)
 - ℹ️ Gerenciamento de foco ao abrir e fechar modais: não verificado
 - ⚠️ Algumas interações dinâmicas (drag & drop) podem ter limitações
 
@@ -139,7 +148,7 @@ Mesmo com o compromisso de acessibilidade, algumas funcionalidades têm limitaç
 - ℹ️ **TalkBack** (Android) — sem registro de teste
 - ⚠️ **JAWS** (Windows) — não testado (sem licença disponível)
 
-> A versão 1.0 marcava NVDA e VoiceOver como testados, mas não há registro desses testes no histórico do projeto. Ficam como pendentes até serem feitos e anotados.
+> A versão 1.0 marcava NVDA e VoiceOver como testados, mas não há registro desses testes no histórico do projeto. As melhorias da v2.14.0 foram conferidas no código e por testes automáticos, não com leitor de tela; ficam como pendentes até serem feitas e anotadas.
 
 ---
 
@@ -181,7 +190,7 @@ Sua participação é fundamental para melhorar a acessibilidade do projeto.
 - 📋 Issues marcadas com `accessibility` têm prioridade no roadmap
 - 📋 Atualização desta declaração quando houver mudança material
 
-**Próxima revisão prevista:** no lançamento do novo design de interface, e no máximo em 2027-05-16
+**Próxima revisão prevista:** quando o Meridiano deixar de ser teste (passar a ser oferecido a todos), e no máximo em 2027-05-16
 
 ---
 
@@ -189,12 +198,12 @@ Sua participação é fundamental para melhorar a acessibilidade do projeto.
 
 | Princípio | Status |
 |---|---|
-| 1. Perceptível | 🟡 Parcialmente conforme (contraste dos eventos, temas escuros, cabeçalhos e rótulos — §3.2 a §3.5) |
-| 2. Operável | 🟡 Parcialmente conforme (foco visível, alvos de toque, drag & drop — §3.1, §3.8, §4) |
-| 3. Compreensível | 🟡 Parcialmente conforme (campos sem rótulo associado — §3.3) |
-| 4. Robusto | 🟡 Parcialmente conforme (modais sem `role="dialog"`, pouco ARIA — §3.10) |
+| 1. Perceptível | 🟡 Parcialmente conforme (no Classic: contraste dos eventos e temas escuros — §3.2; em todos: cabeçalhos e estrutura — §3.4) |
+| 2. Operável | 🟡 Parcialmente conforme (no Classic: foco visível e alvos de toque — §3.1, §3.8; em todos: drag & drop — §4) |
+| 3. Compreensível | 🟢 Rótulos associados aos campos desde a v2.14.0 (§3.3); sem pendência medida |
+| 4. Robusto | 🟡 Parcialmente conforme (janelas e botões com nome desde a v2.14.0; foco ao abrir janelas e teste com leitor de tela pendentes — §3.10, §5) |
 
-**Nível geral:** **WCAG 2.2 níveis A e AA parciais.** A versão 1.0 declarava o nível A completo; a medição de 2026-10-03 não confirmou (ver nota no topo).
+**Nível geral:** **WCAG 2.2 níveis A e AA parciais.** O design Meridiano, em teste, atende aos itens de contraste, foco visível, movimento reduzido e alvos de toque medidos acima; o Classic ainda não.
 
 ---
 
@@ -219,6 +228,7 @@ Sua participação é fundamental para melhorar a acessibilidade do projeto.
 
 | Versão | Data | Mudanças |
 |---|---|---|
+| 1.2 | 2026-10-04 | App v2.14.0. Em todos os designs: janelas como diálogo com nome (17), rótulos do formulário ligados aos campos (14), nome acessível nos botões só com ícone (86). Contraste medido de novo, texto por texto: no Meridiano todo texto de evento passa do mínimo nos dois modos; o Classic segue abaixo no Mês e na Semana dos temas escuros. Meridiano com foco visível, movimento reduzido, campos de 16 px e alvos de toque ≥24 px no celular |
 | 1.1 | 2026-10-03 | Correção: os itens da 1.0 foram medidos no app (v2.13.2) e vários não se confirmaram — contraste (eventos no Mês e na Semana dos temas escuros), rótulos dos campos, `role="dialog"`, cabeçalhos, foco visível, fontes em `px`, alvos de toque e testes com leitor de tela sem registro. Cada item traz agora o valor medido ou "não verificado" |
 | 1.0 | 2026-05-16 | Versão inicial — WCAG 2.2 nível AA parcial, ABNT NBR 17225:2025, LBI Art. 63 |
 
