@@ -104,8 +104,7 @@ Quando quiser sincronizar entre computadores ou acessar pelo celular, basta conf
 - **Top 3 prioridades do dia** — arraste eventos, rotinas ou tarefas para definir o foco
 - **Tarefas do dia** — lista leve de afazeres com adição rápida e histórico (90 dias)
 - **⚡ Criação rápida** — campo no header (desktop) e barra mobile; cria evento direto ao pressionar Enter; parser detecta hora, data relativa, dia da semana, categoria e calendário pelo nome
-- **Revisão diária** — avaliação por emoji, "o que foi bem", "o que melhorar", histórico
-- **Estatísticas** Mês e Semana — taxa de conclusão, horas por categoria, por dia da semana e turno
+- **Estatísticas** Mês e Semana — taxa de conclusão, rotinas e tarefas feitas no período, horas por categoria, por dia da semana e turno
 - **Anel de progresso** diário em tempo real
 - **Atalhos de teclado** — `N` novo evento, `T` hoje, `←→` navegar, `Esc` fechar, `?` lista de atalhos
 
@@ -136,7 +135,7 @@ Quando quiser sincronizar entre computadores ou acessar pelo celular, basta conf
 - Feriados nacionais brasileiros automáticos (fixos + móveis via algoritmo da Páscoa)
 
 ### Mobile
-- **Bottom Navigation Bar** — 6 abas fixas na base (Hoje, Mês, Semana, Lista, Rotinas, Revisão)
+- **Bottom Navigation Bar** — 6 abas fixas na base (Hoje, Mês, Semana, Listas, Rotinas, Notas)
 - **FAB flutuante (＋)** — novo evento com um toque, sempre visível
 - **Vista Mês** — eventos como dots coloridos; toque no dia abre painel de eventos abaixo
 - **Vista Semana** — 1 dia por vez com chips de navegação e swipe lateral

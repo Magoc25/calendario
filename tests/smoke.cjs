@@ -678,6 +678,64 @@ function run() {
       AppState.events=AppState.events.filter(e=>e.id!=='dpp2');
       return ok;
     })()`) === true);
+  /* ── v2.13.3: texto de evento nunca vira marcação (guia r68b: a regra vira teste) ──
+     Seis pontos montavam texto no HTML sem esc(). O local e a categoria chegam de fora
+     (.ics e Google Agenda) e o Top 3 copia o título do evento arrastado — e sincroniza.
+     Carga INERTE (<img data-xss>): a prova é a marcação não existir no DOM; esperar o
+     onerror seria teste cego, porque o jsdom não carrega imagem (r90c). Cada check também
+     exige o texto ESCRITO na tela — sem isso passaria de graça com o evento fora dela (r113). */
+  check('v2.13.3: folha do dia (celular) escreve local e categoria como texto, sem virar marcação',
+    ev(`(function(){
+      const P=n=>'<img data-xss="'+n+'">',d='2026-08-20';
+      AppState.events.push({id:'xss1',title:'Evento xss',date:d,dateEnd:d,start:'09:00',end:'10:00',location:P(2),category:P(3),calendarId:'default'});
+      invalidateEvMapCache();openMobileDaySheet(d);
+      const b=document.getElementById('mdsBody');
+      const ok=b.querySelectorAll('img[data-xss]').length===0&&b.textContent.includes(P(2))&&b.textContent.includes(P(3));
+      AppState.events=AppState.events.filter(e=>e.id!=='xss1');invalidateEvMapCache();
+      document.getElementById('mdsSheet').classList.remove('open');document.getElementById('mdsOverlay').classList.remove('open');
+      return ok;
+    })()`) === true);
+  check('v2.13.3: Top 3 escreve o título arrastado como texto (ele sincroniza entre aparelhos)',
+    ev(`(function(){
+      const P=n=>'<img data-xss="'+n+'">',td=todayDs(),antes=AppState.top3Data[td];
+      AppState.top3Data[td]=[{text:P(5),done:false,srcType:'event',srcId:'x'},{text:'',done:false},{text:'',done:false}];
+      renderToday();
+      const t=document.querySelector('.top3-text');
+      const ok=!!t&&document.querySelectorAll('.top3-text img[data-xss]').length===0&&t.textContent.includes(P(5));
+      if(antes===undefined)delete AppState.top3Data[td];else AppState.top3Data[td]=antes;
+      renderToday();
+      return ok;
+    })()`) === true);
+  check('v2.13.3: Estatísticas escrevem o nome da categoria como texto (vem do CATEGORIES do .ics)',
+    ev(`(function(){
+      const P=n=>'<img data-xss="'+n+'">',d=ds(AppState.cur.getFullYear(),AppState.cur.getMonth(),10);
+      AppState.events.push({id:'xss3',title:'Evento xss',date:d,dateEnd:d,start:'09:00',end:'10:00',category:P(3),calendarId:'default'});
+      invalidateEvMapCache();openStats('month');
+      const c=document.getElementById('statsContent');
+      const ok=c.querySelectorAll('img[data-xss]').length===0&&c.textContent.includes(P(3));
+      AppState.events=AppState.events.filter(e=>e.id!=='xss3');invalidateEvMapCache();
+      document.getElementById('statsOverlay').classList.remove('open');
+      return ok;
+    })()`) === true);
+  check('v2.13.3: painel do dia escreve as tags como texto',
+    ev(`(function(){
+      const P=n=>'<img data-xss="'+n+'">',d='2026-08-21';
+      AppState.events.push({id:'xss4',title:'Evento xss',date:d,dateEnd:d,start:'09:00',end:'10:00',tags:[P(4)],calendarId:'default'});
+      invalidateEvMapCache();renderDayPanel(d);
+      const b=document.getElementById('dpBody');
+      const ok=b.querySelectorAll('img[data-xss]').length===0&&b.textContent.includes(P(4));
+      AppState.events=AppState.events.filter(e=>e.id!=='xss4');invalidateEvMapCache();
+      return ok;
+    })()`) === true);
+  check('v2.13.3: formulário de evento escreve as tags digitadas como texto',
+    ev(`(function(){
+      const P=n=>'<img data-xss="'+n+'">',antes=currentTags;
+      currentTags=[P(6)];renderTagPills();
+      const w=document.getElementById('tagsInputWrap');
+      const ok=w.querySelectorAll('img[data-xss]').length===0&&w.textContent.includes(P(6));
+      currentTags=antes;renderTagPills();
+      return ok;
+    })()`) === true);
   check('gcalToMgc: evento próprio (organizer.self) → gcalIsGuest false',
     ev(`gcalToMgc({id:'gp2',start:{date:'2026-08-01'},end:{date:'2026-08-02'},organizer:{email:'eu@y.com',self:true}}).gcalIsGuest`) === false);
   check('gcalToMgc: sem organizer → gcalIsGuest false (evento solo não vira convite)',
@@ -1239,11 +1297,57 @@ function run() {
     ev(`(AppState.events.find(e=>e.title==='Smoke Clamp')||{}).dateEnd`) === '2026-07-20');
   ev(`AppState.events=AppState.events.filter(e=>e.title!=='Smoke Clamp');save()`);
 
-  /* ── Navegação de views ── */
-  ['month','week','lists','routines','review','notes','today'].forEach(v => {
-    try { ev(`switchView && switchView('${v}')`); } catch (e) {}
-  });
-  check('troca de views não gera erro', errors.length === 0, errors[errors.length-1]);
+  /* ── Navegação de views ── antes chamava switchView(), que nunca existiu: o erro era engolido
+     e o teste passava sem trocar de vista nenhuma (r90c). Agora clica nos botões de verdade,
+     confere a vista que abriu e devolve a vista em que estava. */
+  const _vAntes = ev('AppState.viewMode');
+  const _vistas = ['Month', 'Week', 'Lists', 'Routines', 'Notes', 'Today'];
+  const _abriu = _vistas.filter(v => { const b = $('btn' + v); if (!b) return false; b.click(); return ev('AppState.viewMode') === v.toLowerCase(); });
+  const _bVolta = $('btn' + String(_vAntes || 'today').replace(/^./, c => c.toUpperCase())); if (_bVolta) _bVolta.click();
+  check('troca de views: cada botão abre a sua vista, sem erro', _abriu.length === _vistas.length && errors.length === 0,
+    'abriu: ' + _abriu.join(',') + (errors.length ? ' · erro: ' + errors[errors.length - 1] : ''));
+  /* A aba Revisão saiu na v2.14.0 (decisão do usuário): some da interface, mas os dados
+     ficam — continuam no sync e no backup, e um aparelho em versão antiga segue gravando. */
+  check('Revisão: saiu do topo, da barra inferior e da tela; os dados continuam gravando',
+    !$('btnReview') && !$('bnReview') && !$('reviewCard') && ev('typeof renderReviewView') === 'undefined' &&
+    ev(`(function(){
+      const k='2026-01-02',antes=AppState.reviews[k];
+      AppState.reviews[k]={rating:3,wentWell:'smoke'};saveReviews();
+      const ok=(JSON.parse(localStorage.getItem('cal_reviews')||'{}')[k]||{}).wentWell==='smoke';
+      if(antes===undefined)delete AppState.reviews[k];else AppState.reviews[k]=antes;saveReviews();
+      return ok;
+    })()`) === true,
+    'btnReview=' + !!$('btnReview') + ' bnReview=' + !!$('bnReview') + ' reviewCard=' + !!$('reviewCard') + ' render=' + ev('typeof renderReviewView'));
+  /* Aba Hoje: a coluna da grade pode encolher (minmax(0,1fr)). Com 1fr a largura mínima é o
+     conteúdo, e um título de compromisso (uma linha só, com reticências) alargava o painel para
+     além da tela — caixas cortadas na direita no celular, nos dois designs (relatado no teste do
+     usuário, 2026-10-03). O jsdom não faz layout: a regra é conferida no CSS; a medida em 360–430 px
+     fica com o harness de capturas. */
+  check('aba Hoje: a grade encolhe com a tela (título longo não corta as caixas)',
+    /\.tv-wrap\{[^}]*grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/.test(SRC) && /\.tv-wrap\{grid-template-columns:minmax\(0,1fr\)/.test(SRC) &&
+    !/\.tv-wrap\{[^}]*grid-template-columns:1fr/.test(SRC));
+  /* As medidas da Revisão que valem sem ela foram para as Estatísticas, somadas no período.
+     Rotina diária num período de 6 dias que termina 3 dias à frente: só os 3 dias até hoje
+     contam (dia futuro não pode ter check-in), 1 marcado → 1 de 3; tarefas: 2 no período,
+     1 feita (a de 1999 fica de fora) → 1 de 2. Também confere o que a janela escreve. */
+  check('Estatísticas: rotinas e tarefas do período (vieram da Revisão), contadas só até hoje',
+    ev(`(function(){
+      const rAntes=AppState.routines,qAntes=AppState.quickTasks,td=todayDs();
+      const dia=n=>{const d=new Date(td+'T12:00:00');d.setDate(d.getDate()+n);return ds(d.getFullYear(),d.getMonth(),d.getDate());};
+      const k0=dia(-2),k1=dia(-1),k2=dia(3),ck0=localStorage.getItem('cal_rchecks_'+k0),ck1=localStorage.getItem('cal_rchecks_'+k1);
+      try{
+        AppState.routines=[{id:'srt1',title:'R',freq:'daily'}];
+        localStorage.setItem('cal_rchecks_'+k0,JSON.stringify(['srt1']));localStorage.setItem('cal_rchecks_'+k1,'[]');
+        AppState.quickTasks=[{id:'q1',title:'a',date:k1,done:true},{id:'q2',title:'b',date:k1,done:false},{id:'q3',title:'c',date:'1999-01-01',done:true}];
+        const st=buildStatsData(k0,k2,'teste');renderStatsContent(st);
+        const txt=document.getElementById('statsContent').textContent;
+        return [st.rotDue,st.rotDone,st.taskTotal,st.taskDone].join(',')+'|'+(txt.includes('1 de 3 · 33%')&&txt.includes('1 de 2 · 50%'));
+      }finally{
+        AppState.routines=rAntes;AppState.quickTasks=qAntes;
+        if(ck0===null)localStorage.removeItem('cal_rchecks_'+k0);else localStorage.setItem('cal_rchecks_'+k0,ck0);
+        if(ck1===null)localStorage.removeItem('cal_rchecks_'+k1);else localStorage.setItem('cal_rchecks_'+k1,ck1);
+      }
+    })()`) === '3,1,2,1|true');
 
   /* ── Editor de notas (N0): utilitários e criação de nota ── */
   check('helpers do editor existem (_caretInsideWord/_selInList/updateNeToolbarState)',
@@ -1483,21 +1587,31 @@ async function cenarioMeridiano() {
   const csp = (SRC.match(/http-equiv="Content-Security-Policy"\s+content="([^"]*)"/) || [])[1] || '';
   check('Meridiano: a CSP aceita a fonte embutida (font-src com data:)', /font-src[^;]*\sdata:/.test(csp), 'font-src: ' + ((csp.match(/font-src[^;]*/) || [''])[0]));
 
-  // (2) r123 — todo ícone usado (data-i, var(--i-*), icoOr) tem definição no bloco de assets
+  // (2) r123 — todo ícone usado tem definição no bloco de assets. Formas de uso: data-i="…",
+  // var(--i-…), icoOr('…'), a tabela do HTML estático (MRD_ICONES), a dos avisos (_MRD_TOAST)
+  // e o ico:'…' das boas-vindas. Cada forma precisa achar ao menos um nome: se uma tabela mudar
+  // de formato, a varredura acusa em vez de ficar cega (r90c)
   const assets = (SRC.match(/<style id="mrd-assets">([\s\S]*?)<\/style>/) || [])[1] || '';
   const definidos = new Set([...assets.matchAll(/--i-([a-z0-9-]+):url\(/g)].map(m => m[1]));
   // o próprio bloco de assets mapeia data-i → var(--i-*) para todos: fora da varredura de USO,
   // senão "usado" seria sempre igual a "definido" e a fonte seca passaria de graça (r90c)
   const fonteUso = SRC.replace(assets, '');
-  const usados = new Set([
-    ...[...fonteUso.matchAll(/data-i="([a-z0-9-]+)"/g)].map(m => m[1]),
-    ...[...fonteUso.matchAll(/var\(--i-([a-z0-9-]+)\)/g)].map(m => m[1]),
-    ...[...fonteUso.matchAll(/icoOr\('([a-z0-9-]+)'/g)].map(m => m[1])
-  ]);
+  const tabIcones = (fonteUso.match(/const MRD_ICONES=\[([\s\S]*?)\];/) || [])[1] || '';
+  const tabAvisos = (fonteUso.match(/const _MRD_TOAST=\{([\s\S]*?)\};/) || [])[1] || '';
+  const formas = {
+    'data-i': [...fonteUso.matchAll(/data-i="([a-z0-9-]+)"/g)].map(m => m[1]),
+    'var(--i-*)': [...fonteUso.matchAll(/var\(--i-([a-z0-9-]+)\)/g)].map(m => m[1]),
+    'icoOr': [...fonteUso.matchAll(/icoOr\('([a-z0-9-]+)'/g)].map(m => m[1]),
+    'MRD_ICONES': [...tabIcones.matchAll(/\['[^']*','([a-z0-9-]+)'\]/g)].map(m => m[1]),
+    '_MRD_TOAST': [...tabAvisos.matchAll(/:'([a-z0-9-]+)'/g)].map(m => m[1]),
+    'ico:': [...fonteUso.matchAll(/\bico:'([a-z0-9-]+)'/g)].map(m => m[1])
+  };
+  const formasVazias = Object.keys(formas).filter(k => !formas[k].length);
+  const usados = new Set(Object.values(formas).flat());
   const semDef = [...usados].filter(n => !definidos.has(n));
   check('Meridiano: fonte embutida e todo ícone usado tem definição (r123)',
-    /@font-face\{font-family:"Inter Meridiano";src:url\("data:font\/woff2;base64,/.test(assets) && definidos.size >= 20 && usados.size >= 20 && semDef.length === 0,
-    'definidos=' + definidos.size + ' usados=' + usados.size + ' sem definição: ' + semDef.join(', '));
+    /@font-face\{font-family:"Inter Meridiano";src:url\("data:font\/woff2;base64,/.test(assets) && definidos.size >= 20 && usados.size >= 20 && semDef.length === 0 && formasVazias.length === 0,
+    'definidos=' + definidos.size + ' usados=' + usados.size + ' sem definição: ' + semDef.join(', ') + ' formas sem nenhum nome: ' + formasVazias.join(', '));
 
   // (3) Classic intocado por construção: toda regra do Meridiano é escopada no design
   const blocoCss = (SRC.match(/<style id="mrd-css">([\s\S]*?)<\/style>/) || [])[1] || '';
@@ -1535,13 +1649,102 @@ async function cenarioMeridiano() {
   check('Meridiano: Agenda abre o Mês e o seletor do topo troca para a Semana',
     body.dataset.view === 'week' && q('.mrd-seg [data-go="btnWeek"]').classList.contains('on') &&
     q('.mrd-nav [data-go="agenda"]').classList.contains('on'), 'view=' + body.dataset.view);
+  // Celular (pedido de 2026-10-03): abas Hoje · Agenda · Listas · Notas · Mais e o "+" flutuante,
+  // como no Classic. O jsdom não avalia @media, então a regra é conferida no CSS do bloco e o
+  // caminho do usuário, no clique (o desenho fica com o harness de capturas).
+  clicar('#bnNotes');
+  await new Promise(r => setTimeout(r, 60));
+  check('Meridiano celular: abas Hoje · Agenda · Listas · Notas · Mais, e o "+" flutua fora da barra',
+    !q('#bnMrdAdd') && !!q('#bnToday') && !!q('#bnMrdAgenda') && !!q('#bnLists') && !!q('#bnNotes[data-bnview="notes"]') && !!q('#bnMrdMore') &&
+    !!q('#mobileFab') && !q('.mms-grid [data-go="btnNotes"]') && body.dataset.view === 'notes' &&
+    /:is\(#bnMonth,#bnWeek,#bnRoutines\)\{display:none!important\}/.test(blocoCss) && /#bnNotes\{order:4\}/.test(blocoCss) &&
+    !/\.mobile-fab\{display:none/.test(blocoCss),
+    'view=' + body.dataset.view + ' bnMrdAdd=' + !!q('#bnMrdAdd') + ' fab=' + !!q('#mobileFab'));
   clicar('.theme-item[data-theme="aurora"]');
   check('Meridiano: o tema escolhido vira o acento (data-acc)', body.getAttribute('data-acc') === 'aurora', 'data-acc=' + body.getAttribute('data-acc'));
+  // HTML estático: o emoji vira ícone (banner) ou só sai (nome do design); o texto fica
+  const temEmoji = (el) => /\p{Extended_Pictographic}/u.test(el ? el.textContent : '');
+  const lumina = () => JSON.stringify(q('#btnDesignExtra') && q('#btnDesignExtra').textContent);
+  check('Meridiano: emoji do HTML estático vira ícone ou sai, e o texto fica',
+    !temEmoji(q('#btnDesignExtra')) && /Lumina/.test(q('#btnDesignExtra').textContent) &&
+    !!q('#syncConfigBanner > .ico[data-i="triangle-alert"]') && !temEmoji(q('#syncConfigBanner')) && /Supabase/.test(q('#syncConfigBanner').textContent),
+    'Lumina=' + lumina() + ' banner=' + JSON.stringify(q('#syncConfigBanner').textContent.trim().slice(0, 30)));
   clicar('#btnDesignDefault');
   check('Meridiano: voltar ao Classic desliga o design e o modo escuro',
     !body.classList.contains('design-meridiano') && !body.classList.contains('mrd-dark') && M.w.localStorage.getItem('cal_design') === 'default',
     'classes=' + body.className);
+  check('Meridiano: voltar ao Classic devolve o texto original do HTML estático',
+    q('#btnDesignExtra').textContent === '✨ Lumina' && !q('#syncConfigBanner [data-mrd]') && temEmoji(q('#syncConfigBanner')),
+    'Lumina=' + lumina() + ' marcadores=' + doc.querySelectorAll('[data-mrd]').length);
   M.dom.window.close();
+
+  // (6) Mesmas funções nas janelas: nenhum controle que o Classic mostra numa janela pode
+  // sumir no Meridiano. Pegou a regra que escondia o seletor Mês/Semana do cabeçalho e
+  // levava junto o das Estatísticas (mesma classe). Os dois recém-abertos, mesmo estado.
+  const C = await bootMeridiano(''), M2 = await bootMeridiano('?design=meridiano');
+  const ocultos = (w) => {
+    const out = {}, cache = new Map();
+    const esc = (el) => { if (!cache.has(el)) cache.set(el, el.hidden || w.getComputedStyle(el).display === 'none'); return cache.get(el); };
+    // .overlay pega pela classe: o modal do evento é #overlay (minúsculo) e escapava de [id$="Overlay"]
+    w.document.querySelectorAll('.overlay,.mds-sheet,.mms-panel,#ctxMenu,#themePopup').forEach(raiz =>
+      raiz.querySelectorAll('button[id],input[id],select[id],textarea[id],a[id],label[id],.field[id]').forEach(el => {
+        let e = el, oc = false; while (e && e !== raiz) { if (esc(e)) { oc = true; break; } e = e.parentElement; }
+        out[el.id] = oc;
+      }));
+    return out;
+  };
+  const vc = ocultos(C.w), vm = ocultos(M2.w);
+  const sumiram = Object.keys(vc).filter(k => vc[k] === false && vm[k] === true);
+  check('Meridiano: nenhum controle de janela visível no Classic some no Meridiano',
+    M2.w.document.body.classList.contains('design-meridiano') && Object.keys(vc).length >= 100 && 'saveBtn' in vc && sumiram.length === 0,
+    'controles=' + Object.keys(vc).length + ' sumiram: ' + sumiram.join(', '));
+  // (8) Acessibilidade (os dois designs): janela = role=dialog + aria-modal + nome; botão só com
+  // ícone/símbolo precisa de nome (o title não vira nome quando há conteúdo: lia-se "✕", "bell")
+  const dC = C.w.document, semNomeJanela = [];
+  dC.querySelectorAll('.overlay').forEach(ov => {
+    const dlg = ov.querySelector(':scope > .modal, :scope > .cal-modal, :scope > .ob-wrap');
+    const rot = dlg && (dlg.getAttribute('aria-label') || (dlg.getAttribute('aria-labelledby') && dC.getElementById(dlg.getAttribute('aria-labelledby'))));
+    if (!dlg || dlg.getAttribute('role') !== 'dialog' || dlg.getAttribute('aria-modal') !== 'true' || !rot) semNomeJanela.push(ov.id || '?');
+  });
+  ['mdsSheet', 'mmsPanel'].forEach(id => {
+    const f = dC.getElementById(id);
+    if (!f || f.getAttribute('role') !== 'dialog' || !dC.getElementById(f.getAttribute('aria-labelledby') || '-')) semNomeJanela.push(id);
+  });
+  const nJanelas = dC.querySelectorAll('.overlay').length;
+  check('A11y: toda janela é role=dialog, aria-modal e tem nome',
+    nJanelas >= 14 && semNomeJanela.length === 0 && /sh\.id='srpSheet';\s*sh\.setAttribute\('role','dialog'\)/.test(SRC),
+    'janelas=' + nJanelas + ' sem: ' + semNomeJanela.join(', '));
+  const semNomeBotao = new Set();
+  const varrer = () => dC.querySelectorAll('button, input[type=color]').forEach(el => {
+    if (el.getAttribute('aria-label') || el.getAttribute('aria-labelledby') || el.closest('label') || (el.id && dC.querySelector('label[for="' + el.id + '"]'))) return;
+    if (el.tagName === 'INPUT' || !/[\p{L}\p{N}]/u.test(el.textContent || ''))
+      semNomeBotao.add((el.id ? '#' + el.id : '') + '.' + String(el.className).split(' ')[0] + '«' + (el.textContent || '').trim().slice(0, 4) + '»');
+  });
+  varrer();
+  for (const b of ['btnMonth', 'btnWeek', 'btnLists', 'btnRoutines', 'btnNotes', 'btnToday']) {
+    const el = dC.getElementById(b); if (el) el.click(); await new Promise(r => setTimeout(r, 40)); varrer();
+  }
+  check('A11y: nenhum botão só com ícone/símbolo fica sem nome acessível', semNomeBotao.size === 0,
+    semNomeBotao.size + ' sem nome: ' + [...semNomeBotao].slice(0, 6).join(' '));
+  C.dom.window.close();
+
+  // (7) PDF no Meridiano: o html2canvas 1.4.1 lança erro com color() (o color-mix calculado) e
+  // desenha mal o inset. O jsdom não roda html2canvas, então: a conversão por unidade (documento
+  // de mentira com os valores que o Chrome devolve) e a ligação no botão PDF (r123: as duas metades)
+  const el = { style: { p: {}, setProperty(k, v) { this.p[k] = v; } } };
+  const cs = { boxShadow: 'color(srgb 0 0 1) 3px 0px 0px 0px inset', fontVariantNumeric: 'tabular-nums',
+    getPropertyValue: (k) => k === 'background-color' ? 'color(srgb 1 0.5 0)' : k === 'color' ? 'color(srgb 0 0 0 / 0.5)' : '' };
+  let erroPdf = '';
+  try { M2.w.mrdPdfCopia({ defaultView: { getComputedStyle: () => cs }, querySelectorAll: () => [el] }); } catch (e) { erroPdf = String(e && e.message || e); }
+  const pp = el.style.p;
+  check('Meridiano: PDF — na cópia, color() vira rgb, a faixa inset vira borda e os números ficam normais',
+    !erroPdf && pp['background-color'] === 'rgb(255,128,0)' && pp['color'] === 'rgba(0,0,0,0.5)' && pp['box-shadow'] === 'none' &&
+    pp['border-left'] === '3px solid rgb(0,0,255)' && pp['font-variant-numeric'] === 'normal',
+    (erroPdf ? 'erro: ' + erroPdf : '') + ' ' + JSON.stringify(pp));
+  check('Meridiano: o botão PDF passa a cópia pela conversão e tira o modo escuro dela',
+    /html2canvas\(card,\{[^\n]*onclone:d=>\{if\(mrdEsc\)d\.body\.classList\.remove\('mrd-dark'\);if\(mrdOn\(\)\)mrdPdfCopia\(d\);\}/.test(SRC),
+    'onclone do pdfBtn não chama mrdPdfCopia / não tira mrd-dark');
+  M2.dom.window.close();
 }
 const rotinasDe = (ap) => ler(ap, 'JSON.stringify((AppState.routines||[]).map(r=>r.id).sort())') || '[]';
 
