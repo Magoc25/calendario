@@ -3061,7 +3061,7 @@ body.design-meridiano #statsOverlay .modal-close + div{padding-right:40px}
    ?design=meridiano na URL liga o design enquanto ele está em teste (opção escondida). */
 (function(){try{
   var d=localStorage.getItem('cal_design');
-  if(new URLSearchParams(location.search).get('design')==='meridiano'){d='meridiano';localStorage.setItem('cal_design','meridiano');}
+  if(new URLSearchParams(location.search).get('design')==='meridiano'){d='meridiano';localStorage.setItem('cal_design','meridiano');localStorage.setItem('cal_mrd_beta','1');}
   if(d!=='meridiano')return;
   var b=document.body,m=localStorage.getItem('cal_mode')||'auto';
   b.classList.add('design-meridiano');
@@ -11236,7 +11236,8 @@ document.getElementById('btnDesignDefault').classList.toggle('density-active',_s
 document.getElementById('btnDesignExtra').classList.toggle('density-active',_savedDesign==='extra');
 document.getElementById('btnDesignCrystal').classList.toggle('density-active',_savedDesign==='crystal');
 document.getElementById('btnDesignMeridiano').classList.toggle('density-active',_savedDesign==='meridiano');
-if(_savedDesign==='meridiano'){document.body.classList.add('design-meridiano');document.getElementById('btnDesignMeridiano').hidden=false;}
+if(_savedDesign==='meridiano')document.body.classList.add('design-meridiano');
+if(_savedDesign==='meridiano'||localStorage.getItem('cal_mrd_beta')==='1')document.getElementById('btnDesignMeridiano').hidden=false;
 mrdSync();
 // Pre-fill Supabase config modal with stored values
 document.getElementById('sbUrl').value=localStorage.getItem(SB_URL_KEY)||'';
@@ -11495,8 +11496,16 @@ setInterval(()=>getActiveSW()?.postMessage({type:'PING'}),25000);
    mecanismo desligado — além de envelhecer sozinho se o hook não rodar.
    A detecção de "existe versão nova no servidor" continua no banner do Supabase
    (app_config) logo abaixo. */
-const APP_VERSION='2.14.0';
+const APP_VERSION='2.14.1';
 {const _vSpan=document.getElementById('appVersion');if(_vSpan)_vSpan.textContent='© MGC · v'+APP_VERSION;}
+/* Meridiano em teste: 5 toques seguidos na versão do rodapé liberam a opção em Tema & Design
+   neste aparelho. O app instalado não tem barra de endereço para o ?design=meridiano (e no
+   iPhone o app da tela de início nem divide dados com o Safari). Pedido do usuário, 2026-10-04. */
+{const _vEl=document.getElementById('appVersion');let _vN=0,_vT=0;
+ if(_vEl)_vEl.addEventListener('click',()=>{const a=Date.now();_vN=a-_vT<1500?_vN+1:1;_vT=a;if(_vN<5)return;_vN=0;
+   try{localStorage.setItem('cal_mrd_beta','1');}catch(e){}
+   const b=document.getElementById('btnDesignMeridiano');if(b)b.hidden=false;
+   toast('Meridiano liberado neste aparelho: escolha em Tema & Design');});}
 try{localStorage.removeItem('mgc_app_version');}catch(e){} // remove o cache de versão antigo (não é mais usado)
 
 /* ── Verificação de nova versão via Supabase ── */

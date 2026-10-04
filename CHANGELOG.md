@@ -5,6 +5,20 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 
 ---
 
+## [2.14.1] — Outubro 2026
+
+### 🆕 Meridiano também no app instalado
+
+O design Meridiano, em teste, só ligava abrindo o app com `?design=meridiano` no fim do endereço — e o app instalado, no computador e no celular, não tem barra de endereço. Agora dá para ligar de dentro do app: na vista **Mês** ou **Semana**, toque **5 vezes seguidas** na versão, no rodapé (*© MGC · v2.14.1*). A opção **Meridiano** aparece em **Tema & Design** e fica disponível neste aparelho; para voltar, escolha **Classic** no mesmo lugar.
+
+- Quem já tinha ligado o Meridiano pelo endereço também continua vendo a opção depois de voltar ao Classic — antes ela sumia na abertura seguinte.
+
+### 🔧 Interno
+
+- Verificação nova: 4 toques não liberam, o 5º libera e grava, e a próxima abertura já vem com a opção, sem ligar o design sozinho. Conferida plantando o defeito de propósito (4 de 4 pegos).
+
+> ℹ️ **Nada a fazer no banco de dados.**
+
 ## [2.14.0] — Outubro 2026
 
 ### 🆕 Novo design Meridiano, em teste — claro, escuro ou automático

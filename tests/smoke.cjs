@@ -1540,7 +1540,7 @@ function ler(ap, expr) { try { return ap.w.eval(expr); } catch (e) { return unde
    um cenário que ANDA pelo caminho do usuário a partir do estado inicial (r113):
    abrir com ?design=meridiano, ligar o escuro, navegar pela barra lateral nova,
    voltar ao Classic. */
-function bootMeridiano(query) {
+function bootMeridiano(query, ls) {
   return new Promise((resolve, reject) => {
     const vcM = new VirtualConsole();
     vcM.on('jsdomError', () => {}); vcM.on('error', () => {});
@@ -1548,6 +1548,7 @@ function bootMeridiano(query) {
       runScripts: 'dangerously', pretendToBeVisual: true,
       url: 'https://localhost/calendario-mgc.html' + (query || ''), virtualConsole: vcM,
       beforeParse(w) {
+        if (ls) for (const k in ls) w.localStorage.setItem(k, ls[k]);   // estado do aparelho antes de abrir
         w.HTMLCanvasElement.prototype.getContext = () => ({ fillRect(){}, clearRect(){}, beginPath(){}, arc(){}, fill(){}, stroke(){}, moveTo(){}, lineTo(){}, save(){}, restore(){}, measureText: () => ({ width: 0 }), fillText(){}, translate(){}, scale(){}, setTransform(){}, drawImage(){} });
         w.matchMedia = (q) => ({ matches: false, media: q, addListener(){}, removeListener(){}, addEventListener(){}, removeEventListener(){}, dispatchEvent(){ return false; } });
         w.scrollTo = () => {}; w.Element.prototype.scrollIntoView = () => {};
@@ -1631,7 +1632,7 @@ async function cenarioMeridiano() {
   const clicar = (sel) => { const el = q(sel); if (el) el.click(); return !!el; };
   check('Meridiano: ?design=meridiano liga o design e revela a opção no Tema & Design',
     body.classList.contains('design-meridiano') && q('#btnDesignMeridiano') && q('#btnDesignMeridiano').hidden === false &&
-    M.w.localStorage.getItem('cal_design') === 'meridiano',
+    M.w.localStorage.getItem('cal_design') === 'meridiano' && M.w.localStorage.getItem('cal_mrd_beta') === '1',
     'classes=' + body.className + ' cal_design=' + M.w.localStorage.getItem('cal_design'));
   clicar('#btnModeDark');
   check('Meridiano: o botão Escuro liga o modo escuro e grava a escolha',
@@ -1698,6 +1699,25 @@ async function cenarioMeridiano() {
   check('Meridiano: nenhum controle de janela visível no Classic some no Meridiano',
     M2.w.document.body.classList.contains('design-meridiano') && Object.keys(vc).length >= 100 && 'saveBtn' in vc && sumiram.length === 0,
     'controles=' + Object.keys(vc).length + ' sumiram: ' + sumiram.join(', '));
+  // (9) App instalado não tem barra de endereço para o ?design=meridiano (e no iPhone o app da tela
+  // de início nem divide dados com o Safari): 5 toques seguidos na versão do rodapé liberam a opção
+  // em Tema & Design no aparelho. 4 não bastam; o 5º revela e grava; a próxima abertura já vem com
+  // a opção visível — sem ligar o design sozinho (pedido do usuário, 2026-10-04).
+  const G = await bootMeridiano('');
+  const gq = (sel) => G.w.document.querySelector(sel);
+  const toques = (n) => { for (let i = 0; i < n; i++) gq('#appVersion').click(); };
+  toques(4);
+  const com4 = gq('#btnDesignMeridiano').hidden;
+  toques(1);
+  const com5 = gq('#btnDesignMeridiano').hidden, gravou = G.w.localStorage.getItem('cal_mrd_beta');
+  G.dom.window.close();
+  const G2 = await bootMeridiano('', { cal_mrd_beta: '1' });
+  const reaberto = G2.w.document.querySelector('#btnDesignMeridiano').hidden, ligouSozinho = G2.w.document.body.classList.contains('design-meridiano');
+  G2.dom.window.close();
+  check('Meridiano: 5 toques na versão do rodapé liberam a opção no aparelho (app instalado sem barra de endereço)',
+    com4 === true && com5 === false && gravou === '1' && reaberto === false && ligouSozinho === false,
+    '4 toques: hidden=' + com4 + ' · 5: hidden=' + com5 + ' gravou=' + gravou + ' · reaberto: hidden=' + reaberto + ' design ligado=' + ligouSozinho);
+
   // (8) Acessibilidade (os dois designs): janela = role=dialog + aria-modal + nome; botão só com
   // ícone/símbolo precisa de nome (o title não vira nome quando há conteúdo: lia-se "✕", "bell")
   const dC = C.w.document, semNomeJanela = [];
