@@ -5,6 +5,23 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 
 ---
 
+## [2.15.1] — Outubro 2026
+
+### 🔧 Meridiano: só Claro e Escuro
+
+O modo **Automático** saiu do Meridiano, no computador e no celular: em **Tema & Design** ficam **Claro** e **Escuro**. O Automático acompanhava o modo do celular ou do computador — e, num aparelho no modo escuro, parecia igual ao Escuro.
+
+- Quem estava no Automático continua vendo o app como antes: ele fica no modo que o aparelho mostrava na hora da atualização, e a escolha é gravada. Daí em diante o modo só muda quando você troca.
+- Quem liga o Meridiano pela primeira vez começa no modo do aparelho naquele momento — e também só muda quando você troca.
+- O convite do Meridiano passa a dizer "Claro ou escuro, com navegação nova".
+
+### 🔧 Interno
+
+- Smoke 261 → 263 ✓ · 0 ✗: o Automático antigo e a falta de escolha viram o modo do aparelho, gravado; no Classic nada de modo é gravado, e ao ligar o Meridiano o modo vem do aparelho. Campanha de mutação: 5 de 5 confirmadas.
+- Conferido no Chrome: Automático com aparelho escuro → Escuro gravado; com aparelho claro → Claro; com Escuro gravado, o aparelho clareando com o app aberto não muda mais o app.
+
+> ℹ️ **Nada a fazer no banco de dados** além do `app_config.version` de sempre.
+
 ## [2.15.0] — Outubro 2026
 
 ### 🆕 Meridiano para todos

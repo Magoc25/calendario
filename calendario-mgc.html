@@ -3068,10 +3068,13 @@ body.design-meridiano #statsOverlay .modal-close + div{padding-right:40px}
 (function(){try{
   var d=localStorage.getItem('cal_design');
   if(d!=='meridiano')return;
-  var b=document.body,m=localStorage.getItem('cal_mode')||'auto';
+  var b=document.body,m=localStorage.getItem('cal_mode');
+  // Modo: Claro ou Escuro (o Automático saiu na v2.15.1). Sem escolha gravada — ou com o 'auto' antigo —
+  // vale o que o aparelho mostra agora; quem grava é o mrdSync, logo depois (um lugar só).
+  if(m!=='light'&&m!=='dark')m=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';
   b.classList.add('design-meridiano');
   b.setAttribute('data-acc',localStorage.getItem('cal_theme')||'oceano');
-  if(m==='dark'||(m==='auto'&&window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches))b.classList.add('mrd-dark');
+  if(m==='dark')b.classList.add('mrd-dark');
 }catch(e){}})();
 </script>
 <div class="app">
@@ -3191,7 +3194,6 @@ body.design-meridiano #statsOverlay .modal-close + div{padding-right:40px}
               <div style="display:flex;gap:4px">
                 <button class="hbtn" id="btnModeLight" style="flex:1;padding:3px 0;font-size:10px">Claro</button>
                 <button class="hbtn" id="btnModeDark" style="flex:1;padding:3px 0;font-size:10px">Escuro</button>
-                <button class="hbtn" id="btnModeAuto" style="flex:1;padding:3px 0;font-size:10px">Automático</button>
               </div>
             </div>
           </div>
@@ -6143,17 +6145,24 @@ document.getElementById('btnDesignExtra').addEventListener('click',()=>_applyDes
 document.getElementById('btnDesignCrystal').addEventListener('click',()=>_applyDesign('crystal'));
 document.getElementById('btnDesignMeridiano').addEventListener('click',()=>_applyDesign('meridiano'));
 
-/* ── Design Meridiano: modo (claro/escuro/automático), acento e espelho da vista ──
+/* ── Design Meridiano: modo (claro/escuro), acento e espelho da vista ──
    Só interface. Os controles novos ACIONAM os botões que já existem (mesmo padrão da
    barra inferior e da folha "Mais"), então a lógica de cada aba continua num lugar só. */
 const _mrdMQ=window.matchMedia?window.matchMedia('(prefers-color-scheme: dark)'):null;
-function mrdMode(){const m=localStorage.getItem('cal_mode');return m==='light'||m==='dark'?m:'auto';}
+// Modo: Claro ou Escuro — o Automático saiu na v2.15.1 (pedido do usuário). Sem escolha gravada (ou com o
+// 'auto' antigo) vale o que o aparelho mostra na hora; com o Meridiano ligado a escolha é gravada, e daí em
+// diante o modo só muda quando a pessoa troca. Quem não usa o Meridiano não ganha nada gravado.
+function mrdMode(gravar){
+  let m=localStorage.getItem('cal_mode');
+  if(m!=='light'&&m!=='dark'){m=_mrdMQ&&_mrdMQ.matches?'dark':'light';if(gravar)try{localStorage.setItem('cal_mode',m);}catch(e){}}
+  return m;
+}
 function mrdSync(){
-  const b=document.body,on=b.classList.contains('design-meridiano'),m=mrdMode();
-  const dark=on&&(m==='dark'||(m==='auto'&&!!(_mrdMQ&&_mrdMQ.matches)));
+  const b=document.body,on=b.classList.contains('design-meridiano'),m=mrdMode(on);
+  const dark=on&&m==='dark';
   b.classList.toggle('mrd-dark',dark);
   b.setAttribute('data-acc',currentTheme);
-  [['light','btnModeLight'],['dark','btnModeDark'],['auto','btnModeAuto']].forEach(([k,id])=>{
+  [['light','btnModeLight'],['dark','btnModeDark']].forEach(([k,id])=>{
     const el=document.getElementById(id);if(el)el.classList.toggle('density-active',m===k);
   });
   // cor da barra de status do celular acompanha o modo
@@ -6166,8 +6175,6 @@ function mrdSync(){
 function mrdSetMode(m){localStorage.setItem('cal_mode',m);mrdSync();}
 document.getElementById('btnModeLight').addEventListener('click',()=>mrdSetMode('light'));
 document.getElementById('btnModeDark').addEventListener('click',()=>mrdSetMode('dark'));
-document.getElementById('btnModeAuto').addEventListener('click',()=>mrdSetMode('auto'));
-if(_mrdMQ){const _f=()=>{if(mrdMode()==='auto')mrdSync();};if(_mrdMQ.addEventListener)_mrdMQ.addEventListener('change',_f);else if(_mrdMQ.addListener)_mrdMQ.addListener(_f);}
 // Botões do Meridiano com data-go acionam o controle existente com aquele id
 document.addEventListener('click',e=>{
   const b=e.target.closest('[data-go]');if(!b)return;
@@ -7291,7 +7298,7 @@ document.addEventListener('keydown',e=>{
       <div class="mrd-cv-tela mrd-cv-escuro"><b>Aa</b><span><i></i><i></i></span></div>
     </div>
     <div class="ob-title" id="mrdConviteTit">Novo design: Meridiano</div>
-    <div class="ob-body" id="mrdConviteTxt">Claro, escuro ou automático, com navegação nova. Para voltar ao design atual, é só escolher em Tema &amp; Design.</div>
+    <div class="ob-body" id="mrdConviteTxt">Claro ou escuro, com navegação nova. Para voltar ao design atual, é só escolher em Tema &amp; Design.</div>
     <div class="ob-nav">
       <button class="ob-skip" id="mrdConviteNao">Agora não</button>
       <button class="ob-btn" id="mrdConviteSim">Experimentar</button>
@@ -11590,7 +11597,7 @@ setInterval(()=>getActiveSW()?.postMessage({type:'PING'}),25000);
    mecanismo desligado — além de envelhecer sozinho se o hook não rodar.
    A detecção de "existe versão nova no servidor" continua no banner do Supabase
    (app_config) logo abaixo. */
-const APP_VERSION='2.15.0';
+const APP_VERSION='2.15.1';
 {const _vSpan=document.getElementById('appVersion');if(_vSpan)_vSpan.textContent='© MGC · v'+APP_VERSION;}
 try{localStorage.removeItem('mgc_app_version');}catch(e){} // remove o cache de versão antigo (não é mais usado)
 try{localStorage.removeItem('cal_mrd_beta');}catch(e){} // marca do gesto que liberava o Meridiano em teste (v2.14.1); sem uso desde a v2.15.0

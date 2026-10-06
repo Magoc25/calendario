@@ -1541,7 +1541,7 @@ function ler(ap, expr) { try { return ap.w.eval(expr); } catch (e) { return unde
    abrir com o design gravado no aparelho, ligar o escuro, navegar pela barra lateral
    nova, voltar ao Classic. Desde a v2.15.0 o Meridiano é oferecido a todos (convite
    depois de atualizar + opção em Tema & Design). */
-function bootMeridiano(query, ls) {
+function bootMeridiano(query, ls, aparelhoEscuro) {
   return new Promise((resolve, reject) => {
     const vcM = new VirtualConsole();
     vcM.on('jsdomError', () => {}); vcM.on('error', () => {});
@@ -1551,7 +1551,7 @@ function bootMeridiano(query, ls) {
       beforeParse(w) {
         if (ls) for (const k in ls) w.localStorage.setItem(k, ls[k]);   // estado do aparelho antes de abrir
         w.HTMLCanvasElement.prototype.getContext = () => ({ fillRect(){}, clearRect(){}, beginPath(){}, arc(){}, fill(){}, stroke(){}, moveTo(){}, lineTo(){}, save(){}, restore(){}, measureText: () => ({ width: 0 }), fillText(){}, translate(){}, scale(){}, setTransform(){}, drawImage(){} });
-        w.matchMedia = (q) => ({ matches: false, media: q, addListener(){}, removeListener(){}, addEventListener(){}, removeEventListener(){}, dispatchEvent(){ return false; } });
+        w.matchMedia = (q) => ({ matches: !!aparelhoEscuro && String(q).includes('prefers-color-scheme: dark'), media: q, addListener(){}, removeListener(){}, addEventListener(){}, removeEventListener(){}, dispatchEvent(){ return false; } });
         w.scrollTo = () => {}; w.Element.prototype.scrollIntoView = () => {};
         w.structuredClone = w.structuredClone || structuredClone;
         w.requestAnimationFrame = w.requestAnimationFrame || ((cb) => setTimeout(cb, 0));
@@ -1782,6 +1782,28 @@ async function cenarioMeridiano() {
   V6.dom.window.close();
   check('Meridiano: sem convite na primeira visita (boas-vindas) nem para quem já está no Meridiano',
     boasVindas && !cv5.existe && !cv6.existe, 'boas-vindas=' + boasVindas + ' 1ª visita=' + JSON.stringify(cv5) + ' meridiano=' + JSON.stringify(cv6));
+
+  // (10) v2.15.1 — o Meridiano tem só Claro e Escuro (pedido do usuário, 2026-10-06: sai o Automático,
+  // que seguia o celular). Quem estava no Automático — ou nunca escolheu — fica no modo que o aparelho
+  // mostra na hora, e a escolha é gravada: daí em diante o modo só muda quando a pessoa troca. Quem não
+  // usa o Meridiano não ganha nada gravado; ao ligá-lo, o modo vem do aparelho naquele momento.
+  const modoDe = (B) => { const d = B.w.document, row = d.getElementById('mrdModeRow');
+    return { escuro: d.body.classList.contains('mrd-dark'), gravado: B.w.localStorage.getItem('cal_mode'),
+      botoes: row ? [...row.querySelectorAll('button')].map(b => b.textContent.trim()).join('|') : '',
+      ativo: row ? [...row.querySelectorAll('button.density-active')].map(b => b.id).join(',') : '' }; };
+  const A1 = await bootMeridiano('', { cal_design: 'meridiano', cal_mode: 'auto' }, true), a1 = modoDe(A1); A1.dom.window.close();
+  const A2 = await bootMeridiano('', { cal_design: 'meridiano' }, false), a2 = modoDe(A2); A2.dom.window.close();
+  check('Meridiano: só Claro e Escuro — o Automático antigo e a falta de escolha viram o modo do aparelho, gravado',
+    a1.botoes === 'Claro|Escuro' && a1.escuro && a1.gravado === 'dark' && a1.ativo === 'btnModeDark' &&
+    !a2.escuro && a2.gravado === 'light' && a2.ativo === 'btnModeLight',
+    'auto+aparelho escuro=' + JSON.stringify(a1) + ' · sem escolha+aparelho claro=' + JSON.stringify(a2));
+  const A3 = await bootMeridiano('', { cal_mrd_convite: 'nao' }, true);
+  const classicGravou = A3.w.localStorage.getItem('cal_mode');
+  A3.w.document.getElementById('btnDesignMeridiano').click();
+  const a3 = modoDe(A3); A3.dom.window.close();
+  check('Meridiano: no Classic nada de modo é gravado; ao ligar o Meridiano, o modo vem do aparelho e fica gravado',
+    classicGravou === null && a3.escuro && a3.gravado === 'dark' && a3.ativo === 'btnModeDark',
+    'Classic gravou=' + classicGravou + ' · depois de ligar=' + JSON.stringify(a3));
 
   // (8) Acessibilidade (os dois designs): janela = role=dialog + aria-modal + nome; botão só com
   // ícone/símbolo precisa de nome (o title não vira nome quando há conteúdo: lia-se "✕", "bell")
