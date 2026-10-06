@@ -137,6 +137,11 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);hei
 .popup{display:none;position:absolute;top:38px;right:0;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-modal);padding:12px;z-index:200;min-width:196px}
 .popup.open{display:block;animation:slideUp .15s ease}
 @keyframes slideUp{from{transform:translateY(8px);opacity:0}to{transform:translateY(0);opacity:1}}
+/* Tema & Design: com o Meridiano oferecido a todos (v2.15.0) são 4 designs — na janela de 225 px do
+   Classic/Lumina/Crystal eles ficam em 2 × 2 (em linha única os nomes encostavam na borda); o Meridiano
+   tem janela mais larga e mantém a linha única */
+body:not(.design-meridiano) #designRow{flex-wrap:wrap}
+body:not(.design-meridiano) #designRow > .hbtn{flex:1 1 calc(50% - 2px)!important;padding:4px 0!important}
 .popup h4{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px}
 .popup-btn{display:flex;align-items:center;gap:7px;padding:7px 10px;border-radius:var(--radius-sm);cursor:pointer;border:1px solid var(--border);background:var(--surface2);font-size:12px;font-weight:600;color:var(--text);width:100%;font-family:'DM Sans',sans-serif;transition:all .15s;margin-bottom:4px}
 .popup-btn:last-child{margin-bottom:0}
@@ -3033,14 +3038,16 @@ body.design-meridiano #statsOverlay .modal-close + div{padding-right:40px}
   body.design-meridiano .tv-panel-title > span:not(.ico){flex-basis:100%;margin-left:0!important;font-size:11px!important}
   /* aviso de sincronização: uma linha só (o link continua tocável) */
   body.design-meridiano .sync-config-banner[style*="flex"]{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:7px 12px;margin:6px 10px 0}
-  /* folha "Mais": navegação primeiro, depois conta/dados, ferramentas por último */
+  /* folha "Mais": navegação primeiro, depois conta/dados, ferramentas por último. Tema & Design abre a
+     2ª linha, ao lado de Alertas e Sincronizar — os vizinhos dele no topo do Classic. Pedido de 2026-10-04:
+     o usuário procurou "Tema & Design" no celular e não achou (o item se chamava "Aparência", na 3ª linha). */
   body.design-meridiano .mms-grid > [data-go="btnRoutines"]{order:1}
   body.design-meridiano .mms-grid > [data-go="hamburgerBtn"]{order:4}
   body.design-meridiano .mms-grid > [data-go="statsBtn"]{order:5}
-  body.design-meridiano .mms-grid > [data-go="notifBtn"]{order:6}
-  body.design-meridiano .mms-grid > [data-go="syncBtn"]{order:7}
-  body.design-meridiano .mms-grid > #mmsGcal{order:8}
-  body.design-meridiano .mms-grid > [data-go="themeBtn"]{order:9}
+  body.design-meridiano .mms-grid > [data-go="themeBtn"]{order:6}
+  body.design-meridiano .mms-grid > [data-go="notifBtn"]{order:7}
+  body.design-meridiano .mms-grid > [data-go="syncBtn"]{order:8}
+  body.design-meridiano .mms-grid > #mmsGcal{order:9}
   body.design-meridiano .mms-grid > #mmsBackup{order:10}
   body.design-meridiano .mms-grid > #mmsDedupe{order:11}
   body.design-meridiano .mms-grid > #mmsPrint{order:12}
@@ -3057,11 +3064,9 @@ body.design-meridiano #statsOverlay .modal-close + div{padding-right:40px}
 <body>
 <script>
 /* Design Meridiano — aplicado ANTES do 1º paint (senão o tema errado pisca no boot).
-   Só interface: lê preferências locais de aparência; não toca em dado nem em sync.
-   ?design=meridiano na URL liga o design enquanto ele está em teste (opção escondida). */
+   Só interface: lê preferências locais de aparência; não toca em dado nem em sync. */
 (function(){try{
   var d=localStorage.getItem('cal_design');
-  if(new URLSearchParams(location.search).get('design')==='meridiano'){d='meridiano';localStorage.setItem('cal_design','meridiano');localStorage.setItem('cal_mrd_beta','1');}
   if(d!=='meridiano')return;
   var b=document.body,m=localStorage.getItem('cal_mode')||'auto';
   b.classList.add('design-meridiano');
@@ -3156,7 +3161,7 @@ body.design-meridiano #statsOverlay .modal-close + div{padding-right:40px}
           </div>
         </div>
         <div id="themeWrap" style="position:relative">
-          <button class="hbtn" id="themeBtn">🎨 Tema & Design</button>
+          <button class="hbtn" id="themeBtn" title="Tema &amp; Design">🎨 Tema & Design</button>
           <div class="popup" id="themePopup" style="width:225px">
             <h4>Tema & Design</h4>
             <div id="themeGrid"></div>
@@ -3174,11 +3179,11 @@ body.design-meridiano #statsOverlay .modal-close + div{padding-right:40px}
             </div>
             <div class="divider"></div>
             <div style="font-size:10px;color:var(--muted);margin-bottom:4px">Design</div>
-            <div style="display:flex;gap:4px">
+            <div id="designRow" style="display:flex;gap:4px">
               <button class="hbtn" id="btnDesignDefault" style="flex:1;padding:3px 0;font-size:10px">Classic</button>
               <button class="hbtn" id="btnDesignExtra" style="flex:1;padding:3px 0;font-size:10px">✨ Lumina</button>
               <button class="hbtn" id="btnDesignCrystal" style="flex:1;padding:3px 0;font-size:10px">💎 Crystal</button>
-              <button class="hbtn" id="btnDesignMeridiano" hidden style="flex:1;padding:3px 0;font-size:10px">Meridiano</button>
+              <button class="hbtn" id="btnDesignMeridiano" style="flex:1;padding:3px 0;font-size:10px">Meridiano</button>
             </div>
             <div class="mrd-only" id="mrdModeRow">
               <div class="divider"></div>
@@ -3667,7 +3672,7 @@ body.design-meridiano #statsOverlay .modal-close + div{padding-right:40px}
       <button class="mms-item mrd-only mrd-mms-mobile" data-go="btnRoutines" data-mms><span class="mms-icon" style="--ico:var(--i-repeat)"></span><span>Rotinas</span></button>
       <button class="mms-item mrd-only mrd-mms-mobile" data-go="statsBtn" data-mms><span class="mms-icon" style="--ico:var(--i-chart-column)"></span><span>Estatísticas</span></button>
       <button class="mms-item mrd-only mrd-mms-mobile" data-go="syncBtn" data-mms><span class="mms-icon" style="--ico:var(--i-cloud)"></span><span>Sincronizar</span></button>
-      <button class="mms-item mrd-only mrd-mms-mobile" data-go="themeBtn" data-mms><span class="mms-icon" style="--ico:var(--i-sliders-horizontal)"></span><span>Aparência</span></button>
+      <button class="mms-item mrd-only mrd-mms-mobile" data-go="themeBtn" data-mms><span class="mms-icon" style="--ico:var(--i-sliders-horizontal)"></span><span>Tema &amp; Design</span></button>
       <button class="mms-item mrd-only" data-go="reloadBtn" data-mms><span class="mms-icon" style="--ico:var(--i-rotate-cw)"></span><span>Recarregar</span></button>
       <!-- no celular o topo do Meridiano tem uma linha só: a gaveta (calendários) e os alertas vêm para cá -->
       <button class="mms-item mrd-only mrd-mms-mobile" data-go="hamburgerBtn" data-mms><span class="mms-icon" style="--ico:var(--i-calendar-range)"></span><span>Calendários</span></button>
@@ -7246,6 +7251,96 @@ document.addEventListener('keydown',e=>{
   // Exibe automaticamente na primeira visita
   window._openOnboarding=()=>{cur=0;paint();ov.classList.add('open');};
   if(!localStorage.getItem(DONE_KEY))setTimeout(()=>{paint();ov.classList.add('open');},600);
+})();
+
+/* ═══════ CONVITE DO MERIDIANO ═══════
+   v2.15.0: o Meridiano deixou de ser teste e é oferecido a todos. Depois de atualizar, quem não
+   está nele vê UMA vez por aparelho este convite — Experimentar liga na hora; Agora não (ou Esc)
+   fecha e não volta; nos dois casos o design fica em Tema & Design. Nunca junto das boas-vindas:
+   na primeira visita elas têm a vez e o convite fica para a abertura seguinte. Pedido do usuário
+   (2026-10-05): para o usuário, clicar em Atualizar tem de bastar — sem gesto escondido. */
+(function initMrdConvite(){
+  const KEY='cal_mrd_convite';
+  try{if(localStorage.getItem(KEY)||localStorage.getItem('cal_design')==='meridiano'||!localStorage.getItem('cal_onboarding_done'))return;}catch(e){return;}
+  const css=document.createElement('style');
+  css.textContent=
+    `.mrd-cv .ob-title{margin-bottom:8px}
+    .mrd-cv-amostra{display:flex;gap:10px;justify-content:center;margin:0 0 18px}
+    .mrd-cv-tela{width:96px;height:62px;box-sizing:border-box;border-radius:12px;padding:9px 11px;display:flex;flex-direction:column;justify-content:space-between;text-align:left;font-family:"Inter Meridiano",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+    .mrd-cv-tela b{font-size:19px;font-weight:700;letter-spacing:-.02em;line-height:1}
+    .mrd-cv-tela span{display:flex;flex-direction:column;gap:4px}
+    .mrd-cv-tela i{display:block;height:5px;border-radius:3px}
+    .mrd-cv-tela i:first-child{width:62%;background:var(--accent)}
+    .mrd-cv-tela i+i{width:84%}
+    .mrd-cv-claro{background:#ffffff;color:#14161b;border:1px solid #d9dde3}
+    .mrd-cv-claro i+i{background:#e4e7ec}
+    .mrd-cv-escuro{background:#0e1014;color:#eef0f3;border:1px solid #2a2e36}
+    .mrd-cv-escuro i+i{background:#262a31}
+    .mrd-cv .ob-skip{font-size:13px;padding:9px 12px}
+    .mrd-cv .ob-body,.mrd-cv .ob-skip{color:var(--text)}
+    .mrd-cv .ob-skip:hover{text-decoration:underline}
+    .mrd-cv .ob-btn:hover{background:var(--accent);text-decoration:underline}
+    .mrd-cv button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}`;
+  document.head.appendChild(css);
+  const ov=document.createElement('div');
+  ov.className='overlay';
+  ov.id='mrdConviteOverlay';
+  ov.innerHTML=`<div class="ob-wrap mrd-cv" role="dialog" aria-modal="true" aria-labelledby="mrdConviteTit" aria-describedby="mrdConviteTxt">
+    <div class="mrd-cv-amostra" aria-hidden="true">
+      <div class="mrd-cv-tela mrd-cv-claro"><b>Aa</b><span><i></i><i></i></span></div>
+      <div class="mrd-cv-tela mrd-cv-escuro"><b>Aa</b><span><i></i><i></i></span></div>
+    </div>
+    <div class="ob-title" id="mrdConviteTit">Novo design: Meridiano</div>
+    <div class="ob-body" id="mrdConviteTxt">Claro, escuro ou automático, com navegação nova. Para voltar ao design atual, é só escolher em Tema &amp; Design.</div>
+    <div class="ob-nav">
+      <button class="ob-skip" id="mrdConviteNao">Agora não</button>
+      <button class="ob-btn" id="mrdConviteSim">Experimentar</button>
+    </div>
+  </div>`;
+  document.body.appendChild(ov);
+  let origem=null;
+  const sim=document.getElementById('mrdConviteSim'),nao=document.getElementById('mrdConviteNao');
+  // Texto do botão: branco ou escuro, o que contrastar mais com a cor do tema (branco sobre o
+  // acento claro do Ardósia dava 2,1:1 e sobre o do Marfim 3,3:1 — o mínimo é 4,5:1)
+  const tinta=()=>{
+    const c=getComputedStyle(sim).backgroundColor.replace(/[^0-9.,]/g,'').split(',').map(Number);
+    if(c.length<3||c.some(isNaN))return;
+    const lin=v=>{v/=255;return v<=.04045?v/12.92:Math.pow((v+.055)/1.055,2.4);};
+    const L=.2126*lin(c[0])+.7152*lin(c[1])+.0722*lin(c[2]);
+    sim.style.color=1.05/(L+.05)>=(L+.05)/.0578?'#ffffff':'#14161b';
+  };
+  const responder=r=>{
+    try{localStorage.setItem(KEY,r);}catch(e){}
+    ov.classList.remove('open');
+    document.removeEventListener('keydown',tecla,true);
+    if(origem&&origem.focus)origem.focus();
+  };
+  // Esc = Agora não (o mesmo clique, com a dica). Na captura, antes do Esc geral (que fecharia sem
+  // registrar, e o convite voltaria).
+  // Tab fica entre os dois botões: a janela é modal e o resto da tela está coberto.
+  function tecla(e){
+    if(!ov.classList.contains('open'))return;
+    if(e.key==='Escape'){e.stopPropagation();e.preventDefault();nao.click();}
+    else if(e.key==='Tab'){e.preventDefault();(document.activeElement===sim?nao:sim).focus();}
+  }
+  sim.addEventListener('click',()=>{
+    responder('sim');
+    _applyDesign('meridiano');
+    const cel=window.matchMedia&&window.matchMedia('(max-width:768px)').matches;
+    toast('Meridiano ligado. Para voltar: '+(cel?'Mais → Tema & Design':'Tema & Design, no topo'));
+  });
+  nao.addEventListener('click',()=>{
+    responder('nao');
+    toast('Quando quiser, o Meridiano está em Tema & Design');
+  });
+  setTimeout(()=>{
+    if(document.querySelector('.overlay.open'))return; // outra janela aberta: fica para a próxima abertura
+    origem=document.activeElement;
+    ov.classList.add('open');
+    tinta();
+    document.addEventListener('keydown',tecla,true);
+    sim.focus();
+  },1200);
 })();
 
 /* ═══════ WEEK SLOT TOOLTIP ═══════ */
@@ -11237,7 +11332,6 @@ document.getElementById('btnDesignExtra').classList.toggle('density-active',_sav
 document.getElementById('btnDesignCrystal').classList.toggle('density-active',_savedDesign==='crystal');
 document.getElementById('btnDesignMeridiano').classList.toggle('density-active',_savedDesign==='meridiano');
 if(_savedDesign==='meridiano')document.body.classList.add('design-meridiano');
-if(_savedDesign==='meridiano'||localStorage.getItem('cal_mrd_beta')==='1')document.getElementById('btnDesignMeridiano').hidden=false;
 mrdSync();
 // Pre-fill Supabase config modal with stored values
 document.getElementById('sbUrl').value=localStorage.getItem(SB_URL_KEY)||'';
@@ -11496,17 +11590,10 @@ setInterval(()=>getActiveSW()?.postMessage({type:'PING'}),25000);
    mecanismo desligado — além de envelhecer sozinho se o hook não rodar.
    A detecção de "existe versão nova no servidor" continua no banner do Supabase
    (app_config) logo abaixo. */
-const APP_VERSION='2.14.1';
+const APP_VERSION='2.15.0';
 {const _vSpan=document.getElementById('appVersion');if(_vSpan)_vSpan.textContent='© MGC · v'+APP_VERSION;}
-/* Meridiano em teste: 5 toques seguidos na versão do rodapé liberam a opção em Tema & Design
-   neste aparelho. O app instalado não tem barra de endereço para o ?design=meridiano (e no
-   iPhone o app da tela de início nem divide dados com o Safari). Pedido do usuário, 2026-10-04. */
-{const _vEl=document.getElementById('appVersion');let _vN=0,_vT=0;
- if(_vEl)_vEl.addEventListener('click',()=>{const a=Date.now();_vN=a-_vT<1500?_vN+1:1;_vT=a;if(_vN<5)return;_vN=0;
-   try{localStorage.setItem('cal_mrd_beta','1');}catch(e){}
-   const b=document.getElementById('btnDesignMeridiano');if(b)b.hidden=false;
-   toast('Meridiano liberado neste aparelho: escolha em Tema & Design');});}
 try{localStorage.removeItem('mgc_app_version');}catch(e){} // remove o cache de versão antigo (não é mais usado)
+try{localStorage.removeItem('cal_mrd_beta');}catch(e){} // marca do gesto que liberava o Meridiano em teste (v2.14.1); sem uso desde a v2.15.0
 
 /* ── Verificação de nova versão via Supabase ── */
 (async()=>{

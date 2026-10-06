@@ -5,6 +5,33 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 
 ---
 
+## [2.15.0] — Outubro 2026
+
+### 🆕 Meridiano para todos
+
+O design **Meridiano** deixou de ser teste. Depois de atualizar, quem não está nele vê, uma vez por aparelho, um convite: **Experimentar** liga o novo design na hora; **Agora não** fecha e não volta. Nos dois casos o Meridiano fica em **Tema & Design**, ao lado de Classic, Lumina e Crystal — e é lá que se volta ao design de antes.
+
+- Basta clicar em **Atualizar** no aviso de atualização. Saem o gesto escondido da v2.14.1 (5 toques na versão do rodapé) e o endereço especial `?design=meridiano`.
+- O convite não aparece junto das boas-vindas: quem abre o app pela primeira vez o vê na abertura seguinte.
+
+### 🔧 Melhorado
+
+- **Celular com o Meridiano:** na folha **Mais**, o item que abre a janela de tema, design e modo (Claro, Escuro, Automático) se chamava **Aparência** — nome diferente do botão do Classic, do computador e do título da própria janela — e ficava na 3ª linha. Agora se chama **Tema & Design** e abre a 2ª linha, ao lado de Alertas e Sincronizar.
+- **Computador com o Meridiano:** o botão de Tema & Design, que no Meridiano é só um ícone, mostra o nome ao passar o mouse.
+
+### ♿ Acessibilidade
+
+- O convite é uma janela com nome para leitores de tela. O foco começa em Experimentar, `Tab` fica entre os dois botões, `Esc` vale como Agora não, e ao fechar o foco volta para onde estava.
+- O texto do botão Experimentar é branco ou escuro, conforme a cor do tema: com branco fixo, o Ardósia dava 2,1:1 e o Marfim 3,3:1. Medido nos 5 temas, no Classic, no Lumina e no Crystal: o botão fica entre 4,8:1 e 8,5:1 e os textos entre 11:1 e 16:1.
+- **Declaração de Acessibilidade v1.3** — a revisão que ela previa para quando o Meridiano deixasse de ser teste. A página de apresentação acompanha.
+
+### 🔧 Interno
+
+- Smoke 256 → 261 ✓ · 0 ✗: saem os testes do gesto e do `?design=meridiano`; entram os do convite (aparece para quem atualizou; Experimentar; Agora não sem voltar; teclado; nada na primeira visita nem para quem já usa o Meridiano) e o do nome na folha Mais. Campanha de mutação: 9 de 9 confirmadas.
+- Atualização testada de ponta a ponta com Service Worker de verdade: aparelho na v2.14.1, no Classic → aviso "Atualização baixada" → Atualizar → v2.15.0 com o convite na tela e a opção em Tema & Design.
+
+> ℹ️ **Nada a fazer no banco de dados** além do `app_config.version` de sempre.
+
 ## [2.14.1] — Outubro 2026
 
 ### 🆕 Meridiano também no app instalado

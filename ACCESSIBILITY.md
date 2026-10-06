@@ -1,14 +1,16 @@
 # Declaração de Acessibilidade — Rumo
 
-**Versão:** 1.2 · **Última atualização:** 2026-10-04 · **App:** v2.14.0
+**Versão:** 1.3 · **Última atualização:** 2026-10-06 · **App:** v2.15.0
 
 > Este documento atende ao **Art. 63 da Lei nº 13.146/2015** (Lei Brasileira de Inclusão — Estatuto da Pessoa com Deficiência) e segue as **Diretrizes de Acessibilidade para Conteúdo Web (WCAG) 2.2** do W3C e a norma **ABNT NBR 17225:2025**.
+
+> ✅ **O que mudou na versão 2.15.0 do app (2026-10-06).** O design **Meridiano** deixou de ser teste e é oferecido a todos, em Tema & Design; depois de atualizar, quem não está nele recebe um convite, uma vez por aparelho. O convite é uma janela com nome; o foco começa no botão Experimentar, `Tab` fica entre os dois botões, `Esc` fecha (vale como "Agora não") e o foco volta para onde estava. Contraste do convite medido nos 5 temas, no Classic, no Lumina e no Crystal: textos de 11,2 a 16,2 : 1 e botão Experimentar de 4,8 a 8,5 : 1 — a cor do texto do botão é escolhida pelo contraste com a cor do tema (com branco fixo, o Ardósia dava 2,1 : 1 e o Marfim 3,3 : 1). No celular, o item que abre Tema & Design no Meridiano passou a ter o mesmo nome do resto do app (era "Aparência").
 
 > ✅ **O que mudou na versão 2.14.0 do app (2026-10-04).** Em **todos os designs**: as 17 janelas (modais e folhas) se anunciam como diálogo, com nome; os 14 rótulos do formulário de evento estão ligados aos campos; 86 botões e controles que só tinham ícone ou símbolo ganharam nome para leitores de tela. No novo design **Meridiano**, em teste: todo texto de evento passa do contraste mínimo nos modos claro e escuro, o foco do teclado aparece em todos os controles, a preferência "reduzir movimento" do sistema é respeitada e nenhum controle do celular fica abaixo de 24 px. Os problemas de contraste, foco e toque continuam no design Classic — estão descritos abaixo, com os números.
 
 > ⚠️ **Nota de correção (2026-10-03, versão 1.1).** A versão 1.0 marcava como cumpridos vários itens que nunca tinham sido medidos — entre eles "contraste mínimo 4,5:1 em todos os temas", "modais com `role="dialog"`", "rótulos associados aos campos" e "fontes em unidades relativas". Desde a 1.1, este documento traz o que foi **medido**, com o número ao lado, e marca como "não verificado" o que ainda não foi conferido.
 >
-> **Como foi medido:** app aberto no Chrome (1440×900 e 390×844; para alvos de toque e cortes, também 360, 375 e 430 px de largura), com dados de demonstração; contraste calculado pela fórmula da WCAG entre a cor de **cada texto** e o fundo efetivo atrás dele (transparências compostas); contagens feitas no `calendario-mgc.html`. Medições da v2.14.0 em 2026-10-04; as do Classic que não mudaram vêm da medição de 2026-10-03.
+> **Como foi medido:** app aberto no Chrome (1440×900 e 390×844; para alvos de toque e cortes, também 360, 375 e 430 px de largura), com dados de demonstração; contraste calculado pela fórmula da WCAG entre a cor de **cada texto** e o fundo efetivo atrás dele (transparências compostas); contagens feitas no `calendario-mgc.html`. Medições da v2.14.0 em 2026-10-04 e do convite da v2.15.0 em 2026-10-05 (1440 px, 412 px e 360 px); as do Classic que não mudaram vêm da medição de 2026-10-03.
 
 ---
 
@@ -44,6 +46,7 @@ O Rumo é desenvolvido com o compromisso de **inclusão e usabilidade para todas
   - `?` — exibir lista de atalhos
 - ✅ Atalhos desativados quando foco está em campo de texto (evita conflito)
 - ✅ **Meridiano:** foco visível em todos os controles (`:focus-visible` com contorno na cor de destaque; campos com anel de foco)
+- ✅ **Convite do Meridiano** (v2.15.0, em todos os designs): o foco começa em Experimentar, `Tab` fica entre os dois botões, `Esc` fecha valendo como "Agora não", contorno de foco visível
 - ⚠️ **Classic, Lumina e Crystal:** 14 regras do CSS removem o contorno de foco (`outline:none`) sem um estilo substituto; nesses controles o foco do teclado não aparece
 
 ### 3.2 Contraste de cor (WCAG 1.4.3)
@@ -117,9 +120,10 @@ Medido em 2026-10-04 (v2.14.0), cada texto contra o fundo efetivo:
 
 ### 3.10 Compatibilidade com leitores de tela (WCAG 4.1.2)
 
-- ✅ As 17 janelas (modais e folhas, no computador e no celular) declaram `role="dialog"`, `aria-modal="true"` e um nome (o título da janela ou um rótulo)
+- ✅ As 17 janelas (modais e folhas, no computador e no celular) declaram `role="dialog"`, `aria-modal="true"` e um nome (o título da janela ou um rótulo) — e também o convite do Meridiano (v2.15.0), que só existe no aparelho enquanto é oferecido
 - ✅ ARIA nos controles: 91 `aria-label` no código (eram 2 na v2.13.2)
-- ℹ️ Gerenciamento de foco ao abrir e fechar modais: não verificado
+- ✅ Convite do Meridiano (v2.15.0): ao abrir, o foco vai para Experimentar; ao fechar, volta para onde estava (conferido no Chrome com teclas de verdade: Tab, Tab, Tab, Esc)
+- ℹ️ Gerenciamento de foco ao abrir e fechar as demais janelas: não verificado
 - ⚠️ Algumas interações dinâmicas (drag & drop) podem ter limitações
 
 ---
@@ -190,7 +194,7 @@ Sua participação é fundamental para melhorar a acessibilidade do projeto.
 - 📋 Issues marcadas com `accessibility` têm prioridade no roadmap
 - 📋 Atualização desta declaração quando houver mudança material
 
-**Próxima revisão prevista:** quando o Meridiano deixar de ser teste (passar a ser oferecido a todos), e no máximo em 2027-05-16
+**Próxima revisão prevista:** quando o design padrão mudar (Meridiano no lugar do Classic) ou o Classic receber as correções de contraste, foco e toque, e no máximo em 2027-05-16. A revisão prevista para quando o Meridiano deixasse de ser teste é a versão 1.3 (2026-10-06)
 
 ---
 
@@ -203,7 +207,7 @@ Sua participação é fundamental para melhorar a acessibilidade do projeto.
 | 3. Compreensível | 🟢 Rótulos associados aos campos desde a v2.14.0 (§3.3); sem pendência medida |
 | 4. Robusto | 🟡 Parcialmente conforme (janelas e botões com nome desde a v2.14.0; foco ao abrir janelas e teste com leitor de tela pendentes — §3.10, §5) |
 
-**Nível geral:** **WCAG 2.2 níveis A e AA parciais.** O design Meridiano, em teste, atende aos itens de contraste, foco visível, movimento reduzido e alvos de toque medidos acima; o Classic ainda não.
+**Nível geral:** **WCAG 2.2 níveis A e AA parciais.** O design Meridiano — oferecido a todos desde a v2.15.0, em Tema & Design — atende aos itens de contraste, foco visível, movimento reduzido e alvos de toque medidos acima; o Classic ainda não.
 
 ---
 
@@ -228,6 +232,7 @@ Sua participação é fundamental para melhorar a acessibilidade do projeto.
 
 | Versão | Data | Mudanças |
 |---|---|---|
+| 1.3 | 2026-10-06 | App v2.15.0. Meridiano oferecido a todos (Tema & Design + convite depois de atualizar, uma vez por aparelho). Convite medido: janela com nome, foco inicial e de volta, `Tab` preso entre os dois botões, `Esc` = Agora não; textos de 11,2 a 16,2 : 1 e botão de 4,8 a 8,5 : 1 nos 5 temas e 3 designs em que aparece (a cor do texto do botão segue o contraste com o tema). Item da folha Mais do Meridiano renomeado para Tema & Design. Próxima revisão: mudança do design padrão ou correções do Classic |
 | 1.2 | 2026-10-04 | App v2.14.0. Em todos os designs: janelas como diálogo com nome (17), rótulos do formulário ligados aos campos (14), nome acessível nos botões só com ícone (86). Contraste medido de novo, texto por texto: no Meridiano todo texto de evento passa do mínimo nos dois modos; o Classic segue abaixo no Mês e na Semana dos temas escuros. Meridiano com foco visível, movimento reduzido, campos de 16 px e alvos de toque ≥24 px no celular |
 | 1.1 | 2026-10-03 | Correção: os itens da 1.0 foram medidos no app (v2.13.2) e vários não se confirmaram — contraste (eventos no Mês e na Semana dos temas escuros), rótulos dos campos, `role="dialog"`, cabeçalhos, foco visível, fontes em `px`, alvos de toque e testes com leitor de tela sem registro. Cada item traz agora o valor medido ou "não verificado" |
 | 1.0 | 2026-05-16 | Versão inicial — WCAG 2.2 nível AA parcial, ABNT NBR 17225:2025, LBI Art. 63 |

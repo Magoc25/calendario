@@ -1538,8 +1538,9 @@ function ler(ap, expr) { try { return ap.w.eval(expr); } catch (e) { return unde
    ícone usado tem definição (r123: as duas metades amarradas); (3) NENHUMA regra
    do bloco do Meridiano vale fora dele — é o que mantém o Classic idêntico; e (4)
    um cenário que ANDA pelo caminho do usuário a partir do estado inicial (r113):
-   abrir com ?design=meridiano, ligar o escuro, navegar pela barra lateral nova,
-   voltar ao Classic. */
+   abrir com o design gravado no aparelho, ligar o escuro, navegar pela barra lateral
+   nova, voltar ao Classic. Desde a v2.15.0 o Meridiano é oferecido a todos (convite
+   depois de atualizar + opção em Tema & Design). */
 function bootMeridiano(query, ls) {
   return new Promise((resolve, reject) => {
     const vcM = new VirtualConsole();
@@ -1621,18 +1622,18 @@ async function cenarioMeridiano() {
   check('Meridiano: nenhuma regra do design vale fora dele (Classic intocado)',
     sels.length >= 100 && fora.length === 0, 'seletores=' + sels.length + ' fora do escopo: ' + fora.slice(0, 4).join(' | '));
 
-  // (4) No Classic a opção fica escondida (o app principal deste smoke abriu sem parâmetro)
-  check('Meridiano: no Classic a opção fica escondida e o design não liga sozinho',
-    $('btnDesignMeridiano') && $('btnDesignMeridiano').hidden === true && !window.document.body.classList.contains('design-meridiano'),
+  // (4) v2.15.0: no Classic a opção aparece para todos em Tema & Design, e o design não liga sozinho
+  check('Meridiano: no Classic a opção aparece em Tema & Design e o design não liga sozinho',
+    $('btnDesignMeridiano') && $('btnDesignMeridiano').hidden === false && !window.document.body.classList.contains('design-meridiano'),
     'hidden=' + ($('btnDesignMeridiano') && $('btnDesignMeridiano').hidden));
 
   // (5) r113 — o caminho do usuário, a partir do estado inicial
-  const M = await bootMeridiano('?design=meridiano');
+  const M = await bootMeridiano('', { cal_design: 'meridiano' });
   const doc = M.w.document, body = doc.body, q = (s) => doc.querySelector(s);
   const clicar = (sel) => { const el = q(sel); if (el) el.click(); return !!el; };
-  check('Meridiano: ?design=meridiano liga o design e revela a opção no Tema & Design',
+  check('Meridiano: o design gravado no aparelho liga na abertura, com a opção marcada em Tema & Design',
     body.classList.contains('design-meridiano') && q('#btnDesignMeridiano') && q('#btnDesignMeridiano').hidden === false &&
-    M.w.localStorage.getItem('cal_design') === 'meridiano' && M.w.localStorage.getItem('cal_mrd_beta') === '1',
+    q('#btnDesignMeridiano').classList.contains('density-active'),
     'classes=' + body.className + ' cal_design=' + M.w.localStorage.getItem('cal_design'));
   clicar('#btnModeDark');
   check('Meridiano: o botão Escuro liga o modo escuro e grava a escolha',
@@ -1661,6 +1662,23 @@ async function cenarioMeridiano() {
     /:is\(#bnMonth,#bnWeek,#bnRoutines\)\{display:none!important\}/.test(blocoCss) && /#bnNotes\{order:4\}/.test(blocoCss) &&
     !/\.mobile-fab\{display:none/.test(blocoCss),
     'view=' + body.dataset.view + ' bnMrdAdd=' + !!q('#bnMrdAdd') + ' fab=' + !!q('#mobileFab'));
+  // Pedido de 2026-10-04: no celular o usuário procurou "Tema & Design" e não achou — na folha "Mais"
+  // o item se chamava "Aparência". Mesmo nome do botão do topo (Classic e computador) e do título da
+  // janela; e o toque abre a janela (o data-go aciona o botão do topo, escondido no celular).
+  {
+    const nome = (el) => (el ? el.textContent : '').replace(/\p{Extended_Pictographic}|\uFE0F/gu, '').replace(/\s+/g, ' ').trim();
+    const item = q('.mms-grid [data-go="themeBtn"]');
+    q('#themePopup').classList.remove('open');
+    clicar('.mms-grid [data-go="themeBtn"]');
+    await new Promise(r => setTimeout(r, 400));
+    const aberta = q('#themePopup').classList.contains('open');
+    check('Meridiano celular: na folha "Mais", Tema & Design tem o nome do botão do topo e da janela, abre a 2ª linha e abre a janela',
+      !!item && nome(item) === 'Tema & Design' && nome(q('#themeBtn')) === 'Tema & Design' && nome(q('#themePopup h4')) === 'Tema & Design' &&
+      /\[data-go="themeBtn"\]\{order:6\}/.test(blocoCss) && /\[data-go="statsBtn"\]\{order:5\}/.test(blocoCss) &&
+      /\[data-go="notifBtn"\]\{order:7\}/.test(blocoCss) && aberta,
+      'item=' + JSON.stringify(nome(item)) + ' topo=' + JSON.stringify(nome(q('#themeBtn'))) + ' aberta=' + aberta);
+    q('#themePopup').classList.remove('open');
+  }
   clicar('.theme-item[data-theme="aurora"]');
   check('Meridiano: o tema escolhido vira o acento (data-acc)', body.getAttribute('data-acc') === 'aurora', 'data-acc=' + body.getAttribute('data-acc'));
   // HTML estático: o emoji vira ícone (banner) ou só sai (nome do design); o texto fica
@@ -1682,7 +1700,7 @@ async function cenarioMeridiano() {
   // (6) Mesmas funções nas janelas: nenhum controle que o Classic mostra numa janela pode
   // sumir no Meridiano. Pegou a regra que escondia o seletor Mês/Semana do cabeçalho e
   // levava junto o das Estatísticas (mesma classe). Os dois recém-abertos, mesmo estado.
-  const C = await bootMeridiano(''), M2 = await bootMeridiano('?design=meridiano');
+  const C = await bootMeridiano(''), M2 = await bootMeridiano('', { cal_design: 'meridiano' });
   const ocultos = (w) => {
     const out = {}, cache = new Map();
     const esc = (el) => { if (!cache.has(el)) cache.set(el, el.hidden || w.getComputedStyle(el).display === 'none'); return cache.get(el); };
@@ -1699,24 +1717,71 @@ async function cenarioMeridiano() {
   check('Meridiano: nenhum controle de janela visível no Classic some no Meridiano',
     M2.w.document.body.classList.contains('design-meridiano') && Object.keys(vc).length >= 100 && 'saveBtn' in vc && sumiram.length === 0,
     'controles=' + Object.keys(vc).length + ' sumiram: ' + sumiram.join(', '));
-  // (9) App instalado não tem barra de endereço para o ?design=meridiano (e no iPhone o app da tela
-  // de início nem divide dados com o Safari): 5 toques seguidos na versão do rodapé liberam a opção
-  // em Tema & Design no aparelho. 4 não bastam; o 5º revela e grava; a próxima abertura já vem com
-  // a opção visível — sem ligar o design sozinho (pedido do usuário, 2026-10-04).
-  const G = await bootMeridiano('');
-  const gq = (sel) => G.w.document.querySelector(sel);
-  const toques = (n) => { for (let i = 0; i < n; i++) gq('#appVersion').click(); };
-  toques(4);
-  const com4 = gq('#btnDesignMeridiano').hidden;
-  toques(1);
-  const com5 = gq('#btnDesignMeridiano').hidden, gravou = G.w.localStorage.getItem('cal_mrd_beta');
-  G.dom.window.close();
-  const G2 = await bootMeridiano('', { cal_mrd_beta: '1' });
-  const reaberto = G2.w.document.querySelector('#btnDesignMeridiano').hidden, ligouSozinho = G2.w.document.body.classList.contains('design-meridiano');
-  G2.dom.window.close();
-  check('Meridiano: 5 toques na versão do rodapé liberam a opção no aparelho (app instalado sem barra de endereço)',
-    com4 === true && com5 === false && gravou === '1' && reaberto === false && ligouSozinho === false,
-    '4 toques: hidden=' + com4 + ' · 5: hidden=' + com5 + ' gravou=' + gravou + ' · reaberto: hidden=' + reaberto + ' design ligado=' + ligouSozinho);
+  // (9) v2.15.0 — convite do Meridiano (pedido de 2026-10-05: para o usuário, clicar em Atualizar tem de
+  // bastar; o gesto escondido da v2.14.1 saiu). Quem já passou das boas-vindas e não está no Meridiano
+  // vê o convite UMA vez por aparelho. Experimentar liga o design; Agora não (ou Esc) fecha sem voltar.
+  const esperaConvite = () => new Promise(r => setTimeout(r, 1500));
+  const estadoConvite = (B) => {
+    const d = B.w.document, ov = d.getElementById('mrdConviteOverlay'), dlg = ov && ov.querySelector('[role="dialog"]');
+    const tit = dlg && d.getElementById(dlg.getAttribute('aria-labelledby'));
+    return { existe: !!ov, aberto: !!ov && ov.classList.contains('open'), modal: !!dlg && dlg.getAttribute('aria-modal') === 'true',
+      nome: tit ? tit.textContent.trim() : '', foco: d.activeElement ? d.activeElement.id : '',
+      botoes: dlg ? [...dlg.querySelectorAll('button')].map(b => b.textContent.trim()).join('|') : '' };
+  };
+  const V1 = await bootMeridiano('', { cal_onboarding_done: '1' });
+  await esperaConvite();
+  const cv1 = estadoConvite(V1), gesto = (() => { for (let i = 0; i < 5; i++) V1.w.document.getElementById('appVersion').click(); return V1.w.localStorage.getItem('cal_mrd_beta'); })();
+  check('Meridiano: depois de atualizar, o Classic recebe o convite (janela com nome, foco em Experimentar) — sem gesto',
+    cv1.aberto && cv1.modal && cv1.nome === 'Novo design: Meridiano' && cv1.foco === 'mrdConviteSim' && cv1.botoes === 'Agora não|Experimentar' &&
+    !V1.w.document.body.classList.contains('design-meridiano') && gesto === null,
+    JSON.stringify(cv1) + ' gesto=' + gesto);
+  V1.w.document.getElementById('mrdConviteSim').click();
+  await new Promise(r => setTimeout(r, 80));
+  const toast1 = (V1.w.document.getElementById('toast') || {}).textContent || '';
+  check('Meridiano: Experimentar liga o design, grava a resposta, fecha o convite e diz como voltar',
+    V1.w.document.body.classList.contains('design-meridiano') && V1.w.localStorage.getItem('cal_design') === 'meridiano' &&
+    V1.w.localStorage.getItem('cal_mrd_convite') === 'sim' && !estadoConvite(V1).aberto && /Tema & Design/.test(toast1),
+    'classes=' + V1.w.document.body.className + ' convite=' + V1.w.localStorage.getItem('cal_mrd_convite') + ' toast=' + JSON.stringify(toast1));
+  V1.dom.window.close();
+  // Agora não: quem usa Lumina continua nele, e o convite não volta na abertura seguinte
+  const V2 = await bootMeridiano('', { cal_onboarding_done: '1', cal_design: 'extra' });
+  await esperaConvite();
+  const abriuV2 = estadoConvite(V2).aberto;
+  V2.w.document.getElementById('mrdConviteNao').click();
+  const respV2 = V2.w.localStorage.getItem('cal_mrd_convite'), ficouLumina = V2.w.document.body.classList.contains('design-extra') && !V2.w.document.body.classList.contains('design-meridiano');
+  V2.dom.window.close();
+  const V3 = await bootMeridiano('', { cal_onboarding_done: '1', cal_design: 'extra', cal_mrd_convite: 'nao' });
+  await esperaConvite();
+  const voltouV3 = estadoConvite(V3).aberto;
+  V3.dom.window.close();
+  check('Meridiano: Agora não fecha, mantém o design de quem recusou e o convite não volta',
+    abriuV2 && respV2 === 'nao' && ficouLumina && voltouV3 === false, 'abriu=' + abriuV2 + ' resposta=' + respV2 + ' lumina=' + ficouLumina + ' voltou=' + voltouV3);
+  // Teclado: Tab fica entre os dois botões (janela modal, o resto da tela está coberto) e Esc = Agora
+  // não, registrado (o Esc geral fecharia sem registrar e o convite voltaria toda vez)
+  const V4 = await bootMeridiano('', { cal_onboarding_done: '1' });
+  await esperaConvite();
+  const abriuV4 = estadoConvite(V4).aberto;
+  const teclaV4 = (key) => V4.w.document.dispatchEvent(new V4.w.KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }));
+  const focoV4 = () => (V4.w.document.activeElement || {}).id;
+  teclaV4('Tab'); const tab1 = focoV4();
+  teclaV4('Tab'); const tab2 = focoV4();
+  teclaV4('Escape');
+  const respV4 = V4.w.localStorage.getItem('cal_mrd_convite'), fechouV4 = !estadoConvite(V4).aberto;
+  V4.dom.window.close();
+  check('Meridiano: no convite, Tab alterna entre os dois botões e Esc vale como Agora não (fecha e registra)',
+    abriuV4 && tab1 === 'mrdConviteNao' && tab2 === 'mrdConviteSim' && fechouV4 && respV4 === 'nao',
+    'abriu=' + abriuV4 + ' tab=' + tab1 + '>' + tab2 + ' fechou=' + fechouV4 + ' resposta=' + respV4);
+  // Sem convite: na primeira visita (as boas-vindas têm a vez) e para quem já está no Meridiano
+  const V5 = await bootMeridiano('');
+  await esperaConvite();
+  const boasVindas = !!V5.w.document.querySelector('#onboardOverlay.open'), cv5 = estadoConvite(V5);
+  V5.dom.window.close();
+  const V6 = await bootMeridiano('', { cal_onboarding_done: '1', cal_design: 'meridiano' });
+  await esperaConvite();
+  const cv6 = estadoConvite(V6);
+  V6.dom.window.close();
+  check('Meridiano: sem convite na primeira visita (boas-vindas) nem para quem já está no Meridiano',
+    boasVindas && !cv5.existe && !cv6.existe, 'boas-vindas=' + boasVindas + ' 1ª visita=' + JSON.stringify(cv5) + ' meridiano=' + JSON.stringify(cv6));
 
   // (8) Acessibilidade (os dois designs): janela = role=dialog + aria-modal + nome; botão só com
   // ícone/símbolo precisa de nome (o title não vira nome quando há conteúdo: lia-se "✕", "bell")

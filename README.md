@@ -6,7 +6,7 @@ Desenvolvido por **Marlon Gomes da Costa (MGC Dev)**
 
 > ⚠️ **Este é um projeto pessoal**, desenvolvido de forma independente pelo autor. Não representa, não é financiado e não tem vínculo institucional com o IFMA ou qualquer outra organização. O autor é professor do IFMA Campus São Raimundo das Mangabeiras, mas o Rumo é uma iniciativa exclusivamente pessoal.
 
-[![Versão](https://img.shields.io/badge/versão-2.14.1-blue)](./CHANGELOG.md)
+[![Versão](https://img.shields.io/badge/versão-2.15.0-blue)](./CHANGELOG.md)
 [![Licença](https://img.shields.io/badge/licença-não%20comercial-orange)](#licença)
 [![PIX](https://img.shields.io/badge/apoie-PIX-brightgreen)](#apoiar)
 [![Dispositivos ativos](https://img.shields.io/badge/dynamic/json?url=https://raw.githubusercontent.com/Magoc25/calendario/main/stats.json&query=$.active_30d&label=dispositivos%20ativos%20(30d)&color=blue&suffix=%20dispositivos)](./stats.json)
@@ -130,8 +130,8 @@ Quando quiser sincronizar entre computadores ou acessar pelo celular, basta conf
 
 ### Interface
 - 5 temas visuais: Oceano, Sereno, Aurora, Marfim, Ardósia + cor personalizada
-- **3 modos de design** — Classic (padrão), ✨ Lumina (glass morphism + floating cards + aurora gradient) e 💎 Crystal (transparência máxima, vidro cristal em todos os elementos)
-- **Design Meridiano (em teste)** — claro, escuro ou automático, com navegação nova e ícones de traço; para experimentar, abra o app com `?design=meridiano` no fim do endereço
+- **4 modos de design** — Classic (padrão), ✨ Lumina (glass morphism + floating cards + aurora gradient), 💎 Crystal (transparência máxima, vidro cristal em todos os elementos) e **Meridiano** (claro, escuro ou automático, com navegação nova e ícones de traço)
+- Design escolhido em **Tema & Design** — no Meridiano do celular, em **Mais → Tema & Design**; depois de atualizar, quem não está no Meridiano recebe um convite para experimentar, uma vez por aparelho
 - 3 densidades: Compacto, Normal, Grande — aplicadas a todas as abas, modais e formulários, no desktop e no mobile
 - Feriados nacionais brasileiros automáticos (fixos + móveis via algoritmo da Páscoa)
 
