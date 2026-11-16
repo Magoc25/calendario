@@ -430,6 +430,28 @@ Para voltar ao normal: [supabase.com](https://supabase.com) → seu projeto → 
 
 > 💡 **Por que não agendar uma consulta automática (`pg_cron`)?** É a receita que circula por aí, e ela **não evita a pausa**: o agendamento roda *dentro* do banco, e o Supabase conta acesso ao **serviço**, não consulta interna. Medido num projeto real — o job rodou dez semanas seguidas sem falhar e o projeto pausou mesmo assim, cinco dias depois da última execução. Não vale o esforço.
 
+**Se o Supabase avisar que o banco passou do limite (500 MB no plano gratuito):**
+
+O calendário guarda **uma linha só** no seu projeto — menos de 1 MB, mesmo com anos de uso. Quando o espaço estoura, a causa costuma ser um **agendamento (`pg_cron`)** criado à parte: o Supabase guarda o registro de **cada execução, para sempre**, e um agendamento que roda a cada minuto enche o limite em poucos meses — **mesmo que esteja falhando todas as vezes**, sem nenhum aviso.
+
+Para conferir: no Supabase, **Database → Database Size**. Se a maior tabela for `cron.job_run_details`, rode no **SQL Editor**, um bloco por vez:
+
+```sql
+-- 1. Ver os agendamentos que existem
+select jobid, jobname, schedule, command from cron.job;
+```
+
+```sql
+-- 2. Remover o agendamento que você não usa e apagar o registro acumulado
+begin;
+set transaction read write;                     -- libera a gravação, caso o Supabase tenha travado o banco pelo excesso
+select cron.unschedule('nome-do-agendamento');  -- troque pelo nome que apareceu no passo 1
+truncate table cron.job_run_details;            -- apaga só o histórico do agendador
+commit;
+```
+
+Seus eventos, notas e configurações **não são tocados**. Se você criou o agendamento que as versões antigas deste guia sugeriam (`calendario-mgc-keep-alive`), pode removê-lo também: ele não evita a pausa (veja acima).
+
 #### 3. Copiar as chaves
 Vá em **Settings → Data API**:
 - **Project URL** — `https://xxxx.supabase.co` (role para cima para encontrar)
